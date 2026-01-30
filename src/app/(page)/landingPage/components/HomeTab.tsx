@@ -134,7 +134,7 @@ const HomeTab = () => {
                     </SubHeadingSection>
 
                 </Stack>
-                <RegisButton onClick={() => handleClickChangePage()}>Đăng ký ngay</RegisButton>
+                <RegisButton onClick={() => handleClickChangePage()}>Tham gia Zalo ngay</RegisButton>
 
             </Container>
             <StackVideo>

@@ -1,0 +1,18 @@
+{
+      "// ============================== AUTHENTICATE ==============================": "",
+  "REGIS.FIREBASE.REQUIRED": "Thiếu xác thực Firebase. Vui lòng thử lại.",
+
+  "REGIS.FULLNAME_MIN": "Họ tên phải có ít nhất 2 ký tự",
+  "REGIS.FULLNAME_REQUIRED": "Vui lòng nhập họ tên",
+
+  "REGIS.EMAIL_INVALID": "Email không hợp lệ",
+  "REGIS.EMAIL_REQUIRED": "Vui lòng nhập email",
+
+  "REGIS.PASSWORD_MIN": "Mật khẩu tối thiểu 6 ký tự",
+  "REGIS.PASSWORD_RULE": "Mật khẩu phải chứa ít nhất 1 chữ cái và 1 số",
+  "REGIS.PASSWORD_REQUIRED": "Vui lòng nhập mật khẩu",
+
+  "REGIS.DOB_REQUIRED": "Vui lòng chọn ngày sinh",
+
+  "REGIS.GENDER_REQUIRED": "Vui lòng chọn giới tính"
+}

@@ -1,0 +1,15 @@
+{
+    "// ============================== AUTHENTICATE ==============================": "",
+
+        "REGIS.FIREBASE.REQUIRED": "Firebase authentication token is required.",
+        "REGIS.FULLNAME_MIN": "Full name must be at least 2 characters long",
+        "REGIS.FULLNAME_REQUIRED": "Full name is required",
+        "REGIS.EMAIL_INVALID": "Invalid email address",
+        "REGIS.EMAIL_REQUIRED": "Email is required",
+        "REGIS.PASSWORD_MIN": "Password must be at least 6 characters",
+        "REGIS.PASSWORD_RULE": "Password must contain at least one letter and one number",
+        "REGIS.PASSWORD_REQUIRED": "Password is required",
+        "REGIS.DOB_REQUIRED": "Date of birth is required",
+        "REGIS.GENDER_REQUIRED": "Gender is required"
+   
+}
