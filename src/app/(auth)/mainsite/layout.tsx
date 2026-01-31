@@ -1,4 +1,5 @@
 "use client"
+import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { Box, Container, Grid, Stack, styled, Typography } from "@mui/material";
 import Image from "next/image";
 import { ReactNode } from "react";
@@ -34,9 +35,9 @@ const ContainerBox = styled(Box)({
     margin: "24px 0px",
     flex: 1,
     display: "flex",
-    backgroundColor:"#FFFFFF",
+    backgroundColor: "#FFFFFF",
     borderRadius: "8px",
-    padding:"80px 50px"
+    padding: "80px 50px"
 })
 const StackChildren = styled(Stack)({
     flex: 1,
@@ -50,6 +51,8 @@ const GridMenuItem = styled(Grid)({
 });
 const AuthLayout = ({ children }: { children: ReactNode }) => {
     console.log("children", children);
+    const { authData, setAuthData } = useAuthStore();
+
     return (
         <MainSiteStack width="100vw" minHeight="100vh">
             <GridMenu alignItems="center" container minHeight="60px" size={12}>
@@ -64,7 +67,7 @@ const AuthLayout = ({ children }: { children: ReactNode }) => {
                     <MenuAuth>TRỢ GIÚP</MenuAuth>
                     <MenuAuth>LIÊN HỆ</MenuAuth>
                     <MenuAuth>BÁO CÁO VI PHẠM</MenuAuth>
-                    <MenuAuth>ĐĂNG NHẬP</MenuAuth>
+                    <MenuAuth>{authData?.data.tokens.accessToken ? <Image src={(authData.data.user.avatarUrl as string) ?? "https://www.pinterest.com/oqnabbzz/avt/"} alt="" /> : "ĐĂNG NHẬP"}</MenuAuth>
                 </GridMenuItem>
                 <Grid size={2}></Grid>
             </GridMenu>

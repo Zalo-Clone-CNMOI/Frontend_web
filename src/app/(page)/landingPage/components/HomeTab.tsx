@@ -134,7 +134,7 @@ const HomeTab = () => {
                     </SubHeadingSection>
 
                 </Stack>
-                <RegisButton onClick={() => handleClickChangePage()}>Đăng ký ngay</RegisButton>
+                <RegisButton onClick={() => handleClickChangePage()}>Tham gia Zalo ngay</RegisButton>
 
             </Container>
             <StackVideo>
@@ -367,7 +367,7 @@ const HomeTab = () => {
                     container
                     direction="column"
                     height="100%"
-                    spacing={2} // khoảng cách giữa 2 block trên – dưới
+                    spacing={2} 
                 >
                     <Grid>
                         <Stack spacing={2}>

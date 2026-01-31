@@ -7,6 +7,7 @@ import CloudDownloadRoundedIcon from '@mui/icons-material/CloudDownloadRounded';
 import LanguageRoundedIcon from '@mui/icons-material/LanguageRounded';
 import React from "react";
 import { useRouter } from 'next/navigation';
+import { useAuthStore } from "@/src/common/store/useAuthStore";
 
 const MainSiteTitle = styled(Typography)({
     fontWeight: 700,
@@ -53,7 +54,7 @@ const OutlineButton = styled(Button)({
     },
 
     "& .MuiButton-startIcon > *:nth-of-type(1)": {
-        fontSize: "25px", 
+        fontSize: "25px",
     },
 });
 
@@ -68,8 +69,11 @@ const MainSite = () => {
         "Đồng bộ tin nhắn với điện thoại",
         "Tối ưu cho chat nhóm và trao đổi công việc",
     ];
-    const handleChangePage = (url: string)=>{
-        router.push(url);
+    const { authData, setAuthData } = useAuthStore();
+    const handleChangePage = (token: string) => {
+        if (token && token !== "") {
+            router.push("/me");
+        } router.push("/login")
     }
     return <Stack width="100vw" spacing={3} data-testid="main-site-page">
         <Stack>
@@ -108,7 +112,7 @@ const MainSite = () => {
                         <OutlineButton
                             variant="outlined"
                             startIcon={<LanguageRoundedIcon />}
-                            onClick={() => { handleChangePage('/login') }
+                            onClick={() => { handleChangePage(authData?.data.tokens.accessToken as string) }
                             }
                         >
                             Dùng bản web
@@ -117,7 +121,7 @@ const MainSite = () => {
 
                 </Stack>
             </Grid>
-            <Grid  justifyContent="right" display="flex"  size={6}>
+            <Grid justifyContent="right" display="flex" size={6}>
                 <Image src="https://stc-zaloprofile.zdn.vn/pc/v1/images/img_pc.png" alt="Zalo PC" width={400} height={300}></Image>
             </Grid>
         </Grid>

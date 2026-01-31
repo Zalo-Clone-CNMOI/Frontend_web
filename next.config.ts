@@ -10,10 +10,25 @@ const nextConfig: NextConfig = {
       },
       {
         protocol: "https",
-        hostname: "stc-zaloprofile.zdn.vn",   
+        hostname: "stc-zaloprofile.zdn.vn",
+        pathname: "/**",
+      },
+      {
+        protocol: "https",
+        hostname: "stc-zlogin.zdn.vn",
         pathname: "/**",
       },
     ],
+  },
+
+  // ===== Proxy API để né CORS =====
+  async rewrites() {
+    return [
+      {
+        source: "/api/:path*",
+        destination: "http://175.41.136.189:5000/:path*",
+      },
+    ];
   },
 };
 
