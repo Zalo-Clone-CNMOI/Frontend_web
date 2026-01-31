@@ -35,6 +35,7 @@ export default function LoginPage() {
 
     const { loadingAuth, setLoadingAuth, errorAuth, setErrorAuth } = useAuthStore();
     const [token, setToken] = useState<string | null>(null);
+    const { authData, setAuthData } = useAuthStore();
     const formik = useFormik({
         initialValues,
         validationSchema: validationSchemaLogin(Trans),
@@ -43,10 +44,10 @@ export default function LoginPage() {
             setLoadingAuth(true);
 
             try {
-                const raw = String(values.phone || "").replace(/\D/g, ""); 
+                const raw = String(values.phone || "").replace(/\D/g, "");
                 let phoneNormalized = raw;
                 if (raw.length === 10 && raw.startsWith("0")) {
-                    phoneNormalized = raw.slice(1); 
+                    phoneNormalized = raw.slice(1);
                 }
                 if (raw.length === 9) {
                     phoneNormalized = raw;
@@ -60,6 +61,7 @@ export default function LoginPage() {
                 if (result.ok && payload.success) {
                     localStorage.setItem("accessToken", payload.data.tokens.accessToken);
                     localStorage.setItem("refreshToken", payload.data.tokens.refreshToken);
+                    // setAuthData(result.payload.data)
                     router.push("/me");
                 } else {
                     setErrorAuth(payload.message ?? "Đăng nhập thất bại");

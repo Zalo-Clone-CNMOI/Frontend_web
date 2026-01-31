@@ -10,4 +10,5 @@ export const authService = {
   authLogin(body: ILoginPayload) {
     return http.post<IApiResponse<IAuthData>>(API.API_AUTH_LOGIN, body);
   },
+  
 };

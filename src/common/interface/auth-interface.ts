@@ -37,7 +37,6 @@ export interface IAuthData {
     tokens: ITokens;
 }
 
-// common/interface/api-response.ts
 export interface IApiResponse<T> {
     success: boolean;
     data: T;
