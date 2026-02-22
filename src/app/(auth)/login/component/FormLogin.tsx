@@ -20,19 +20,18 @@ export interface FormLoginProps {
 }
 
 export default function FormLogin(props: FormLoginProps) {
-    const { country, setCountry, formik, loading, errorMsg, onGoRegister } = props;
-
+    const { country, setCountry, formik, loading, errorMsg, onGoRegister, tab } = props;
     return (
-        <>
-            <LoginQrTab />
-            <LoginPasswordTab
-                country={country}
-                setCountry={setCountry}
-                formik={formik}
-                loading={loading}
-                errorMsg={errorMsg}
-                onGoRegister={onGoRegister}
-            />
+        <>{tab === "loginQR" ? <LoginQrTab /> : <LoginPasswordTab
+            country={country}
+            setCountry={setCountry}
+            formik={formik}
+            loading={loading}
+            errorMsg={errorMsg}
+            onGoRegister={onGoRegister}
+        />}
+
+
         </>
     );
 }

@@ -138,7 +138,7 @@ const HomeTab = () => {
 
             </Container>
             <StackVideo>
-                <video src="https://zalo-site.zadn.vn/videos/home-vi.mp4" autoPlay muted loop playsInline />
+                <video width="100%" src="https://zalo-site.zadn.vn/videos/home-vi.mp4" autoPlay muted loop playsInline />
             </StackVideo>
         </ContentSection>
         <ContentSection data-testid="home-tab-effort-section" spacing={5}>
@@ -289,6 +289,7 @@ const HomeTab = () => {
                             muted
                             loop
                             playsInline
+                            width="100%"
                         />
                     </Grid>
 

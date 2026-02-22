@@ -1,3 +1,7 @@
+import { styled } from "@mui/material/styles";
+import { Box, Tab, Typography, Grid } from "@mui/material";
+import { FilterCategoryKey } from "../../src/app/(page)/me/page";
+
 export interface Country {
   code: string;
   name: string;
@@ -36,3 +40,22 @@ export const COUNTRIES: Country[] = [
 { code: "UK", name: "United Kingdom", dial: "+44" },
 { code: "US", name: "United States", dial: "+1" },
 ];
+
+export const categories: FilterCategoryKey[] = [
+    "Customer",
+    "Family",
+    "Work",
+    "Friends",
+    "Reply later",
+    "Colleague",
+    "Other",
+];
+export const categoryColors: Record<FilterCategoryKey, string> = {
+    Customer: "rgb(217, 27, 27)",
+    Family: "rgb(243, 27, 200)",
+    Work: "rgb(255, 105, 5)",
+    Friends: "rgb(255, 105, 5)",
+    "Reply later": "rgb(75, 195, 119)",
+    Colleague: "rgb(0, 104, 255)",
+    Other: "black",
+};

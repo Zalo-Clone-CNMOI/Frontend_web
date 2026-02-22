@@ -9,15 +9,19 @@ import { QRCodeCanvas } from "qrcode.react";
 import { socket } from "@/src/common/socket/socket";
 
 const QRBox = styled(Box)({
+  boxSizing: "border-box",
   width: "100%",
+  margin: "0 auto",
   border: "1px solid #E5E7EB",
-  borderRadius: 12,
-  padding: 16,
+  borderRadius: 16,
+  padding: 24,
+  background: "#fff",
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
-  gap: 14,
+  gap: 16,
 });
+
 
 const QRPlaceholder = styled(Box)({
   width: 260,
@@ -26,10 +30,12 @@ const QRPlaceholder = styled(Box)({
   background:
     "linear-gradient(135deg, rgba(5,115,255,0.08) 0%, rgba(5,115,255,0.02) 100%)",
   border: "1px dashed rgba(5,115,255,0.35)",
+
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
 });
+
 
 const HelperText = styled(Typography)({
   textAlign: "center",
@@ -259,7 +265,7 @@ export default function LoginQrTab() {
 
   return (
     <Panel value="loginQR">
-      <QRBox>
+      <QRBox data-testid="loggin-tab-QR-box">
         <QrWrapper>
           <QRPlaceholder>
             {qrValue && qrStatus === "WAITING" ? (
