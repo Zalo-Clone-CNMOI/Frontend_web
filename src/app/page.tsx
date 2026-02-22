@@ -1,9 +1,13 @@
 "use client";
 
+import { Box } from "@mui/material";
 import LandingPage from "./(page)/landingPage/page";
 
 export default function Home() {
   return (
-    <LandingPage />
+    <Box >
+      <LandingPage />
+
+    </Box>
   )
 }

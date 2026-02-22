@@ -23,11 +23,12 @@ export const TitleText = styled(Typography)(({ theme }) => ({
     fontSize: "32px",
     color: theme.palette.text.primary,
     lineHeight: 1.2,
+    marginTop:"32px"
 }));
 export const SubTitleText = styled(Typography)(({ theme }) => ({
     fontSize: "16px",
     fontWeight: "500",
-
+    paddingBottom:"32px"
 }))
 export const TextSatistics = styled(Typography)({
     color: "#0068FF",
@@ -38,13 +39,14 @@ export const TextSatistics = styled(Typography)({
 export const StatBox = styled(Box)({
     height: "100%",
     backgroundColor: "#fff",
-    padding: "32px",
     textAlign: "left",
-
+    padding:"0px 32px",
 })
 const StatGrid = styled(Grid)({
     width:"100%",
-    height:"100%"
+    height:"100%",
+    boxSizing:"border-box",
+    maxHeight:"350px"
 })
 const StatCard = ({
     title,
@@ -68,7 +70,7 @@ const StatCard = ({
                         </SubTitleText>
                     </Box>
 
-                    <Grid container width="100%">
+                    <Grid container width="100%" >
                         <Grid size={hasRight ? 6 : 12}>
                             <Stack>
                                 <TextSatistics>{leftHighlight.value}</TextSatistics>

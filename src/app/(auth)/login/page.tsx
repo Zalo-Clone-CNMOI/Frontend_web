@@ -91,8 +91,8 @@ export default function LoginPage() {
                     <Image
                         src="https://stc-zlogin.zdn.vn/images/zlogo.png"
                         alt="Zalo Logo"
-                        width={114}
-                        height={100}
+                        width={100  }
+                        height={40}
                         priority
                     />
                 </LogoWrap>
