@@ -34,12 +34,12 @@ const FilterCategogyTitle = styled(Typography)(() => ({
 }));
 
 const StyledCheckbox = styled(Checkbox)(() => ({
-    padding: 2,        // giảm padding
+    padding: 2,      
     width: 20,
     height: 20,
 
     "& .MuiSvgIcon-root": {
-        fontSize: 20,    // chỉnh size icon check
+        fontSize: 20,    
     },
 
     "&:hover": {
@@ -94,7 +94,7 @@ const FilterCategoryDropdown = ({ selected, onChange }: Props) => {
                                 color: categoryColors[item],
                             }}
                         />
-                        <Typography fontSize={14}>
+                        <Typography fontSize={13}>
                             {item}
                         </Typography>
                     </StyledMenuItem>

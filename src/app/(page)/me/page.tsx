@@ -1,34 +1,65 @@
 "use client";
 
-import {
-    Box, Stack, Grid, Button, Typography, ListItemText, MenuItem, MenuList,
-    Paper, Divider, Tab, Checkbox
-} from "@mui/material";
+import React, { useState } from "react";
+import { Box, Button, colors, Grid, Tab } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { useState } from "react";
+
 import ClickAwayListener from "@mui/material/ClickAwayListener";
-import SearchBar from "./components/SearchBar";
-import AppSidebar from "./components/AppSideBar";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
-import KeyboardArrowDownIcon from '@mui/icons-material/KeyboardArrowDown';
-import MoreHorizIcon from '@mui/icons-material/MoreHoriz';
-import { useAuthStore } from "@/src/common/store/useAuthStore";
+
+import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
+import MoreHorizIcon from "@mui/icons-material/MoreHoriz";
+import CancelIcon from "@mui/icons-material/Cancel";
+
+import SearchBar from "./components/SearchBar";
+import AppSidebar from "./components/AppSideBar";
 import FilterCategoryDropdown from "./components/DropdownCategory";
-const Panel = styled(Box)({
+import WelcomeSite from "./components/main-chat/OnBoard";
+import { useAuthStore } from "@/src/common/store/useAuthStore";
+
+/* ===================== styled ===================== */
+
+const Root = styled(Grid)(() => ({
+    height: "100vh",
+    width: "100vw",
+}));
+
+const LeftColumn = styled(Grid)(() => ({
+    minWidth: 345,
+    height: "100vh",
+    display: "flex",
+    flexDirection: "column",
+    borderRight: "1px solid #E5E7EB",
+}));
+
+const RightColumn = styled(Grid)(() => ({}));
+
+const Panel = styled(Box)(() => ({
     overflow: "hidden",
     height: "calc(100vh - 66.5px )",
-});
+}));
 
-export const ChatTabsWrapper = styled(Box)({
+const WelcomeWrap = styled(Box)(() => ({
+    padding: 16,
+    color: "#6B7280",
+}));
+
+export const ChatTabsWrapper = styled(Box)(() => ({
     borderBottom: "1px solid #E5E7EB",
     padding: "0 16px",
     display: "flex",
     justifyContent: "space-between",
-});
+}));
 
-export const TabListStyled = styled(TabList)({
+const TabsRight = styled(Box)(() => ({
+    display: "flex",
+    alignItems: "center",
+    gap: 4, // tương đương gap={.5} (0.5 * 8 = 4px)
+}));
+
+export const TabListStyled = styled(TabList)(() => ({
     minHeight: 24,
 
     "& .MuiTabs-flexContainer": {
@@ -39,9 +70,9 @@ export const TabListStyled = styled(TabList)({
         height: 2,
         backgroundColor: "#005AE0",
     },
-});
+}));
 
-export const TabStyled = styled(Tab)({
+export const TabStyled = styled(Tab)(() => ({
     minHeight: 32,
     height: 32,
     padding: "0",
@@ -50,6 +81,7 @@ export const TabStyled = styled(Tab)({
     fontWeight: 600,
     minWidth: "unset",
     width: "auto",
+
     "&:hover": {
         backgroundColor: "transparent",
         color: "#005AE0",
@@ -63,14 +95,15 @@ export const TabStyled = styled(Tab)({
     "&.Mui-selected": {
         color: "#005AE0",
     },
-});
+}));
 
-const TabPanelStyled = styled(TabPanel)({
+const TabPanelStyled = styled(TabPanel)(() => ({
     padding: 16,
     flex: 1,
     minHeight: 0,
     overflowY: "auto",
-});
+}));
+
 const CategoryFilterButton = styled(Button)(({ theme }) => ({
     textTransform: "none",
     fontSize: 13,
@@ -79,12 +112,13 @@ const CategoryFilterButton = styled(Button)(({ theme }) => ({
     borderRadius: 12,
     padding: "0 12px",
     color: theme.palette.text.primary,
+
     "&:hover": {
         backgroundColor: "#EBECF0",
     },
-
     "&.active": {
         backgroundColor: "#E5F1FF",
+        color: "#005ae0",
     },
 }));
 
@@ -92,7 +126,6 @@ export const DropdownWrapper = styled(Box)(() => ({
     position: "relative",
     display: "inline-block",
 }));
-
 
 export const StyledMoreIcon = styled(MoreHorizIcon)(() => ({
     fontSize: 20,
@@ -105,13 +138,16 @@ export const StyledMoreIcon = styled(MoreHorizIcon)(() => ({
         backgroundColor: "#EBECF0",
     },
 }));
-type SidebarKey =
-    | "chat"
-    | "contact"
-    | "cloud"
-    | "folder"
-    | "business"
-    | "settings";
+
+const CancelIconStyled = styled(CancelIcon)(() => ({
+    "&&": {
+        fontSize: 16,
+    },
+    color: "#005AE0",
+}));
+/* ===================== types ===================== */
+
+type SidebarKey = "chat" | "contact" | "cloud" | "folder" | "business" | "settings";
 
 export type FilterCategoryKey =
     | "Customer"
@@ -122,60 +158,67 @@ export type FilterCategoryKey =
     | "Colleague"
     | "Other";
 
+/* ===================== component ===================== */
+
 const Me = () => {
     const { authData, setAuthData } = useAuthStore();
     const [selectedIcon, setSelectedIcon] = useState<SidebarKey>("chat");
     const [chatTab, setChatTab] = useState<string>("allChats");
     const [isSelectedCategory, setSelectedCategory] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
+
     const handleSelectedIcon = (iconName: SidebarKey) => {
         setSelectedIcon(iconName);
         console.log("Selected icon:", iconName);
     };
 
-    const handleChangeChatTab = (event: React.SyntheticEvent, newTab: string) => {
+    const handleChangeChatTab = (_event: React.SyntheticEvent, newTab: string) => {
         setChatTab(newTab);
         console.log("Selected chat tab:", newTab);
     };
+
     const getCategoryLabel = () => {
         if (selectedCategories.length === 0) return "Phân loại";
-
-        if (selectedCategories.length === 1) {
-            return selectedCategories[0];
-        }
-
+        if (selectedCategories.length === 1) return selectedCategories[0];
         return `${selectedCategories.length} thẻ`;
     };
+
     return (
-        <Grid container sx={{ height: "100vh", width: "100vw" }}>
+        <Root container>
             <AppSidebar selectedIcon={selectedIcon} onSelect={handleSelectedIcon} />
 
-            <Grid
-                sx={{
-                    minWidth: 345,
-                    height: "100vh",
-                    display: "flex",
-                    flexDirection: "column",
-                    borderRight: "1px solid #E5E7EB",
-                }}
-            >
+            <LeftColumn>
                 <SearchBar />
 
                 <TabContext value={chatTab}>
                     <ChatTabsWrapper data-testid="chat-tabs">
-                        <TabListStyled
-                            onChange={handleChangeChatTab}
-                            aria-label="lab API tabs example"
-                        >
+                        <TabListStyled onChange={handleChangeChatTab} aria-label="lab API tabs example">
                             <TabStyled label="Tất cả" value="allChats" />
                             <TabStyled label="Chưa đọc" value="unRead" />
                         </TabListStyled>
-                        <Grid alignItems="center" display="flex" gap={.5}>
+
+                        <TabsRight>
                             <ClickAwayListener onClickAway={() => setSelectedCategory(false)}>
                                 <DropdownWrapper>
                                     <CategoryFilterButton
                                         className={selectedCategories.length > 0 ? "active" : ""}
-                                        endIcon={<KeyboardArrowDownIcon fontSize="small" />}
+                                        sx={
+                                            isSelectedCategory
+                                                ? { backgroundColor: "#E5F1FF", color: "#005AE0" }
+                                                : null
+                                        }
+                                        endIcon={
+                                            selectedCategories.length > 0 ? (
+                                                <CancelIconStyled
+                                                    onClick={(e) => {
+                                                        e.stopPropagation();
+                                                        setSelectedCategories([]);
+                                                    }}
+                                                />
+                                            ) : (
+                                                <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+                                            )
+                                        }
                                         onClick={() => setSelectedCategory((prev) => !prev)}
                                     >
                                         {getCategoryLabel()}
@@ -189,29 +232,40 @@ const Me = () => {
                                     )}
                                 </DropdownWrapper>
                             </ClickAwayListener>
+
                             <StyledMoreIcon />
-                        </Grid >
+                        </TabsRight>
                     </ChatTabsWrapper>
 
                     <TabPanelStyled value="allChats">all chats</TabPanelStyled>
                     <TabPanelStyled value="unRead">Unread</TabPanelStyled>
-
                 </TabContext>
-            </Grid>
+            </LeftColumn>
 
-            <Grid size="grow">
+            <RightColumn size="grow">
                 <Panel>
-                    {/* <Box p={2} fontWeight={700}>
-                Main
-            </Box> */}
-
-                    <Box p={2} color="#6B7280">
-                        {/* Tab đang chọn: {selectedIcon} */}
-                        chát bên đây nè
-                    </Box>
+                    <WelcomeWrap>
+                        <WelcomeSite
+                            slides={[
+                                {
+                                    imageSrc:
+                                        "https://chat.zalo.me/assets/inapp-welcome-screen-06-darkmode.336078e876ae12bf42474586745397f0.png",
+                                    title: "Giao diện Dark Mode",
+                                    description: "Thư giãn và bảo vệ mắt với chế độ giao diện tối trên Zalo PC",
+                                },
+                                {
+                                    imageSrc:
+                                        "https://chat.zalo.me/assets/zbiz_onboard_vi_3x.62514921c8505730d07aff3fa8c4e9c3.png",
+                                    title: "Kinh doanh hiệu quả với Buisiness Pro",
+                                    description:
+                                        "Trải nghiệm giao diện sáng trên Zalo PC, mang đến sự tươi mới và dễ nhìn cho mọi cuộc trò chuyện của bạn.",
+                                },
+                            ]}
+                        />
+                    </WelcomeWrap>
                 </Panel>
-            </Grid>
-        </Grid>
+            </RightColumn>
+        </Root>
     );
 };
 
