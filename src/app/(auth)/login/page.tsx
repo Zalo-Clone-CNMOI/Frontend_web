@@ -33,9 +33,12 @@ export default function LoginPage() {
     const [tab, setTab] = useState("loginQR");
     const [country, setCountry] = React.useState<Country>(COUNTRIES[0]);
 
-    const { loadingAuth, setLoadingAuth, errorAuth, setErrorAuth } = useAuthStore();
-    const [token, setToken] = useState<string | null>(null);
-    const { authData, setAuthData } = useAuthStore();
+    const loadingAuth = useAuthStore((s) => s.loadingAuth);
+    const setLoadingAuth = useAuthStore((s) => s.setLoadingAuth);
+    const errorAuth = useAuthStore((s) => s.errorAuth);
+    const setErrorAuth = useAuthStore((s) => s.setErrorAuth);
+    const setAuthData = useAuthStore((s) => s.setAuthData);
+    const setTokenData = useAuthStore((s) => s.setTokenData); const [token, setToken] = useState<string | null>(null);
     const formik = useFormik({
         initialValues,
         validationSchema: validationSchemaLogin(Trans),
@@ -61,7 +64,8 @@ export default function LoginPage() {
                 if (result.ok && payload.success) {
                     localStorage.setItem("accessToken", payload.data.tokens.accessToken);
                     localStorage.setItem("refreshToken", payload.data.tokens.refreshToken);
-                    // setAuthData(result.payload.data)
+                    setAuthData(result.payload);
+                    setTokenData(payload.data.tokens);
                     router.push("/me");
                 } else {
                     setErrorAuth(payload.message ?? "Đăng nhập thất bại");
@@ -91,7 +95,7 @@ export default function LoginPage() {
                     <Image
                         src="https://stc-zlogin.zdn.vn/images/zlogo.png"
                         alt="Zalo Logo"
-                        width={100  }
+                        width={100}
                         height={40}
                         priority
                     />

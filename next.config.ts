@@ -18,6 +18,11 @@ const nextConfig: NextConfig = {
         hostname: "stc-zlogin.zdn.vn",
         pathname: "/**",
       },
+      {
+        protocol: "https",
+        hostname: "chat.zalo.me",
+        pathname: "/**",
+      },
     ],
   },
 
