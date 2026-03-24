@@ -3,10 +3,11 @@
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { Panel } from "../../Auth.styles";
-import { useEffect, useRef, useState } from "react";
+import { use, useEffect, useRef, useState } from "react";
 import { qrService } from "@/src/common/service/qr-service";
 import { QRCodeCanvas } from "qrcode.react";
-import { socket } from "@/src/common/socket/socket";
+import { useTrans } from "@/src/common/utilities/hook/trans";
+import { connectSocket, getSocket } from "@/src/common/socket/socket";
 
 const QRBox = styled(Box)({
   boxSizing: "border-box",
@@ -87,6 +88,7 @@ type UiStatus =
   | "ERROR";
 
 export default function LoginQrTab() {
+  const Trans = useTrans();
   const qrExp = 30;
 
   const [qrValue, setQrValue] = useState("");
@@ -124,37 +126,49 @@ export default function LoginQrTab() {
   };
 
   const ensureSocketConnected = async () => {
-    if (socket.connected) {
-      console.log("[QR] ✅ Already connected:", socket.id);
-      return;
+    const socket = connectSocket();
+
+    if (socket.connected && socket.id) {
+      console.log("[QR] Already connected:", socket.id);
+      return socket;
     }
 
-    console.log("[QR] 🔌 Attempting to connect...");
-    socket.connect();
+    return await new Promise<typeof socket>((resolve, reject) => {
+      let lastError: any = null;
 
-    await new Promise<void>((resolve, reject) => {
-      const timeout = setTimeout(() => {
+      const cleanup = () => {
+        clearTimeout(timeoutId);
         socket.off("connect", onConnect);
         socket.off("connect_error", onError);
-        reject(new Error("Socket connection timeout after 10s"));
-      }, 10000);
+      };
 
       const onConnect = () => {
-        clearTimeout(timeout);
-        socket.off("connect_error", onError);
-        console.log("[QR] ✅ Socket connected:", socket.id);
-        resolve();
+        cleanup();
+        console.log("[QR] Socket connected:", socket.id);
+        resolve(socket);
       };
 
       const onError = (err: any) => {
-        clearTimeout(timeout);
-        socket.off("connect", onConnect);
-        console.error("[QR] ❌ Connection error:", err);
-        reject(err);
+        lastError = err;
+        console.warn("[QR] Temporary connect_error:", err?.message || err);
       };
 
-      socket.once("connect", onConnect);
-      socket.once("connect_error", onError);
+      const timeoutId = window.setTimeout(() => {
+        cleanup();
+        reject(
+          lastError instanceof Error
+            ? lastError
+            : new Error("Socket connection timeout after 20s")
+        );
+      }, 20000);
+
+      socket.on("connect", onConnect);
+      socket.on("connect_error", onError);
+
+      if (!socket.active) {
+        console.log("[QR] Attempting to connect...");
+        socket.connect();
+      }
     });
   };
 
@@ -163,35 +177,56 @@ export default function LoginQrTab() {
       console.log("[QR] Already starting, skipping...");
       return;
     }
+
     startingRef.current = true;
 
     try {
-      console.log("[QR] 🚀 Starting QR login flow...");
+      console.log("[QR] Starting QR login flow...");
+
       stopAll();
+      currentSessionRef.current = "";
+
+      const existingSocket = getSocket();
+      existingSocket?.off("qr:confirmed");
+      existingSocket?.off("qr:rejected");
+
       setQrStatus("LOADING");
       setQrValue("");
       setTimeLeft(qrExp);
       setError("");
 
-      await ensureSocketConnected();
+      const socket = await ensureSocketConnected();
 
       const socketId = socket.id;
-      console.log("[QR] ✅ Socket ready, ID:", socketId);
+      console.log("[QR] Socket ready, ID:", socketId);
 
       if (!socketId) {
         throw new Error("Socket connected but no ID assigned");
       }
 
-      console.log("[QR] 📡 Setting up event listeners...");
+      console.log("[QR] Generating QR session...");
+      const gen = await qrService.generate({
+        socketId,
+        deviceInfo: navigator.userAgent,
+      });
+
+      const sessionId = String(gen?.payload?.data?.sessionId ?? "").trim();
+
+      if (!sessionId) {
+        throw new Error("Failed to get session ID from API");
+      }
+
+      currentSessionRef.current = sessionId;
+      console.log("[QR] QR session created:", sessionId);
 
       socket.off("qr:confirmed");
+      socket.off("qr:rejected");
 
-      socket.on("qr:confirmed", (data: any) => {
-        console.log("[QR] ✅ Received qr:confirmed:", data);
+      socket.once("qr:confirmed", (data: any) => {
+        console.log("[QR] Received qr:confirmed:", data);
 
-        // Verify session ID matches
-        if (String(data?.sessionId) !== currentSessionRef.current) {
-          console.warn("[QR] ⚠️ Session ID mismatch", {
+        if (String(data?.sessionId ?? "").trim() !== currentSessionRef.current) {
+          console.warn("[QR] Session ID mismatch", {
             received: data?.sessionId,
             expected: currentSessionRef.current,
           });
@@ -201,55 +236,53 @@ export default function LoginQrTab() {
         stopCountdown();
         setQrStatus("APPROVED");
 
-        // Store tokens and redirect
-        if (data.accessToken) {
+        if (data?.accessToken) {
           localStorage.setItem("accessToken", data.accessToken);
-          localStorage.setItem("refreshToken", data.refreshToken);
-          console.log("[QR] ✅ Tokens stored, redirecting...");
+          localStorage.setItem("refreshToken", data.refreshToken ?? "");
+          localStorage.setItem("currentUserId", data.user.id)
+
+
           setTimeout(() => {
             window.location.href = "/chat";
           }, 1000);
         }
       });
 
-      socket.on("qr:rejected", (data: any) => {
-        console.log("[QR] ❌ Received qr:rejected:", data);
+      socket.once("qr:rejected", (data: any) => {
+        console.log("[QR] Received qr:rejected:", data);
 
-        if (String(data?.sessionId) === currentSessionRef.current) {
-          stopCountdown();
-          setQrStatus("ERROR");
-          setError("Login was rejected on mobile");
+        if (String(data?.sessionId ?? "").trim() !== currentSessionRef.current) {
+          console.warn("[QR] Reject event session mismatch", {
+            received: data?.sessionId,
+            expected: currentSessionRef.current,
+          });
+          return;
         }
+
+        stopCountdown();
+        setQrStatus("ERROR");
+        setError("Login was rejected on mobile");
       });
-
-      console.log("[QR] 📝 Generating QR session...");
-      const gen = await qrService.generate({
-        socketId,
-        deviceInfo: navigator.userAgent,
-      });
-
-      const sessionId = String(gen?.payload?.data?.sessionId ?? "").trim();
-      if (!sessionId) {
-        throw new Error("Failed to get session ID from API");
-      }
-
-      console.log("[QR] ✅ QR session created:", sessionId);
-      currentSessionRef.current = sessionId;
 
       setQrValue(sessionId);
       setQrStatus("WAITING");
       startCountdown();
 
-      console.log("[QR] ✅ QR login flow ready, waiting for mobile scan...");
+      console.log("[QR] QR login flow ready, waiting for mobile scan...");
     } catch (e) {
-      console.error("[QR] ❌ Error:", e);
+      console.error("[QR] Error:", e);
+
+      const socket = getSocket();
+      socket?.off("qr:confirmed");
+      socket?.off("qr:rejected");
+
+      stopCountdown();
       setQrStatus("ERROR");
       setError(e instanceof Error ? e.message : "Unknown error occurred");
     } finally {
       startingRef.current = false;
     }
   };
-
   useEffect(() => {
     console.log("[QR] Component mounted, starting QR login...");
     startQrLogin();
@@ -257,8 +290,10 @@ export default function LoginQrTab() {
     return () => {
       console.log("[QR] Component unmounting, cleaning up...");
       stopAll();
-      socket.off("qr:confirmed");
-      socket.off("qr:rejected");
+
+      const socket = getSocket();
+      socket?.off("qr:confirmed");
+      socket?.off("qr:rejected");
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
@@ -273,15 +308,20 @@ export default function LoginQrTab() {
             ) : qrStatus === "LOADING" ? (
               <CircularProgress />
             ) : qrStatus === "APPROVED" ? (
-              <Typography fontSize={32}>✅</Typography>
+              <Typography fontSize={18}>
+                {Trans("QR.LOGIN_SUCCESS")}
+              </Typography>
             ) : null}
           </QRPlaceholder>
 
           {qrStatus === "EXPIRED" && (
             <QrOverlay>
-              <Typography fontWeight={700}>QR đã hết hạn</Typography>
+              <Typography fontWeight={700}>
+                {Trans("QR.EXPIRED_TITLE")}
+              </Typography>
+
               <Typography fontSize={13} color="#6B7280">
-                Bấm "Tạo QR mới" để tiếp tục
+                {Trans("QR.EXPIRED_DESC")}
               </Typography>
             </QrOverlay>
           )}
@@ -289,10 +329,11 @@ export default function LoginQrTab() {
           {qrStatus === "ERROR" && (
             <QrOverlay>
               <Typography fontWeight={700} color="error">
-                ❌ Lỗi
+                {Trans("QR.ERROR_TITLE")}
               </Typography>
+
               <Typography fontSize={13} color="#6B7280">
-                {error || "Có lỗi xảy ra"}
+                {error || Trans("QR.ERROR_DESC")}
               </Typography>
             </QrOverlay>
           )}
@@ -300,22 +341,27 @@ export default function LoginQrTab() {
 
         {(qrStatus === "WAITING" || qrStatus === "SCANNED") && (
           <CountdownText>
-            Hết hạn sau: <b>{timeLeft}s</b>
+            {Trans("QR.EXPIRE_AFTER")} <b>{timeLeft}s</b>
           </CountdownText>
         )}
 
-        <HelperText>Chỉ dùng để đăng nhập</HelperText>
-        <HelperText2>Zalo trên máy tính</HelperText2>
+        <HelperText>
+          {Trans("QR.ONLY_FOR_LOGIN")}
+        </HelperText>
+
+        <HelperText2>
+          {Trans("QR.ZALO_PC")}
+        </HelperText2>
 
         {qrStatus === "SCANNED" && (
           <Typography fontSize={14} color="#111827">
-            Đã quét. Vui lòng xác nhận trên điện thoại…
+            {Trans("QR.SCANNED_CONFIRM")}
           </Typography>
         )}
 
         {qrStatus === "APPROVED" && (
           <Typography fontSize={14} color="success.main" fontWeight={600}>
-            ✅ Đăng nhập thành công!
+            {Trans("QR.LOGIN_SUCCESS")}
           </Typography>
         )}
 
@@ -325,7 +371,9 @@ export default function LoginQrTab() {
             onClick={startQrLogin}
             disabled={startingRef.current}
           >
-            {startingRef.current ? "Đang tạo..." : "Tạo QR mới"}
+            {startingRef.current
+              ? Trans("QR.CREATING")
+              : Trans("QR.CREATE_NEW")}
           </Button>
         )}
       </QRBox>

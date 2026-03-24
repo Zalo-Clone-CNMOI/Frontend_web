@@ -7,12 +7,17 @@ export const initialValues = {
     email: "",
     dateOfBirth: "",
     gender: "male" as Gender,
-    fullName:""
+    fullName: ""
 };
 
 export const validationSchemaRegisForm = (Trans: (key: string) => string) =>
     yup.object({
-        email: yup.string().trim().email(Trans("REGIS.EMAIL_INVALID")).required(Trans("REGIS.EMAIL_REQUIRED")),
+        // email: yup
+        //     .string()
+        //     .trim()
+        //     .email(Trans("REGIS.EMAIL_INVALID"))
+        //     .required(Trans("REGIS.EMAIL_REQUIRED")),
+        
         password: yup
             .string()
             .min(6, Trans("REGIS.PASSWORD_MIN"))
@@ -22,14 +27,23 @@ export const validationSchemaRegisForm = (Trans: (key: string) => string) =>
 
 export const schemaRegisAfterOtp = (Trans: (key: string) => string) =>
     yup.object({
-        firebaseIdToken: yup.string().required(Trans("REGIS.FIREBASE.REQUIRED")),
-        dateOfBirth: yup.string().required(Trans("REGIS.DOB_REQUIRED")),
-        gender: yup.mixed<Gender>().oneOf(["male", "female", "other"]).required(Trans("REGIS.GENDER_REQUIRED")),
-        fullName: yup
-        .string()
-        .min(2,Trans("REGIS.FULLNAME_MIN"))
-        .required()
+        firebaseIdToken: yup
+            .string()
+            .required(Trans("REGIS.FIREBASE.REQUIRED")),
 
+        dateOfBirth: yup
+            .string()
+            .required(Trans("REGIS.DOB_REQUIRED")),
+
+        gender: yup
+            .mixed<Gender>()
+            .oneOf(["male", "female", "other"])
+            .required(Trans("REGIS.GENDER_REQUIRED")),
+
+        fullName: yup
+            .string()
+            .min(2, Trans("REGIS.FULLNAME_MIN"))
+            .required(Trans("REGIS.FULLNAME_REQUIRED")),
     });
 
 export const validationSchemaRegisFull = (Trans: (key: string) => string) =>

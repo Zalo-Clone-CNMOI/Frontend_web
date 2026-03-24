@@ -1,7 +1,7 @@
 "use client";
 
-import React, { useState } from "react";
-import { Box, Button, colors, Grid, Tab } from "@mui/material";
+import React, { useState, useEffect } from "react";
+import { Box, Button, Grid, Tab } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import ClickAwayListener from "@mui/material/ClickAwayListener";
@@ -16,9 +16,13 @@ import CancelIcon from "@mui/icons-material/Cancel";
 import SearchBar from "./components/SearchBar";
 import AppSidebar from "./components/AppSideBar";
 import FilterCategoryDropdown from "./components/DropdownCategory";
-import WelcomeSite from "./components/main-chat/OnBoard";
-import { useAuthStore } from "@/src/common/store/useAuthStore";
+import WelcomeSite from "./components/WelcomeSite";
 
+import { useAuthStore } from "@/src/common/store/useAuthStore";
+import ChatPanel from "./components/chat/ChatPanel";
+import ConversationList from "./components/chat/ConversationList";
+import { useChatStore } from "@/src/common/store/useChatStore";
+import { getcurrentUserId, getRefreshToken, getSessionToken } from "@/src/common/utilities/utils";
 /* ===================== styled ===================== */
 
 const Root = styled(Grid)(() => ({
@@ -34,16 +38,20 @@ const LeftColumn = styled(Grid)(() => ({
     borderRight: "1px solid #E5E7EB",
 }));
 
-const RightColumn = styled(Grid)(() => ({}));
+const RightColumn = styled(Grid)(() => ({
+    minWidth: 0,
+    height: "100vh",
+}));
 
 const Panel = styled(Box)(() => ({
     overflow: "hidden",
-    height: "calc(100vh - 66.5px )",
+    height: "100%",
 }));
 
 const WelcomeWrap = styled(Box)(() => ({
     padding: 16,
     color: "#6B7280",
+    height: "100%",
 }));
 
 export const ChatTabsWrapper = styled(Box)(() => ({
@@ -56,7 +64,7 @@ export const ChatTabsWrapper = styled(Box)(() => ({
 const TabsRight = styled(Box)(() => ({
     display: "flex",
     alignItems: "center",
-    gap: 4, // tương đương gap={.5} (0.5 * 8 = 4px)
+    gap: 4,
 }));
 
 export const TabListStyled = styled(TabList)(() => ({
@@ -145,6 +153,7 @@ const CancelIconStyled = styled(CancelIcon)(() => ({
     },
     color: "#005AE0",
 }));
+
 /* ===================== types ===================== */
 
 type SidebarKey = "chat" | "contact" | "cloud" | "folder" | "business" | "settings";
@@ -161,20 +170,21 @@ export type FilterCategoryKey =
 /* ===================== component ===================== */
 
 const Me = () => {
-    const { authData, setAuthData } = useAuthStore();
     const [selectedIcon, setSelectedIcon] = useState<SidebarKey>("chat");
     const [chatTab, setChatTab] = useState<string>("allChats");
     const [isSelectedCategory, setSelectedCategory] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
+    const authData = useAuthStore((s) => s.authData);
+    const tokenData = useAuthStore((s) => s.tokenData);
+
+    const activeConversationId = useChatStore((s) => s.activeConversationId);
 
     const handleSelectedIcon = (iconName: SidebarKey) => {
         setSelectedIcon(iconName);
-        console.log("Selected icon:", iconName);
     };
 
     const handleChangeChatTab = (_event: React.SyntheticEvent, newTab: string) => {
         setChatTab(newTab);
-        console.log("Selected chat tab:", newTab);
     };
 
     const getCategoryLabel = () => {
@@ -182,6 +192,33 @@ const Me = () => {
         if (selectedCategories.length === 1) return selectedCategories[0];
         return `${selectedCategories.length} thẻ`;
     };
+
+    useEffect(() => {
+        const accessToken = getSessionToken() || "";
+        const refreshToken = getRefreshToken() || "";
+        const currentUserId = getcurrentUserId() || "";
+        useAuthStore.getState().setTokenData({
+            accessToken,
+            refreshToken,
+            expiresIn: 0,
+        });
+
+        useChatStore.getState().initChat(accessToken, currentUserId);
+
+        return () => {
+            useChatStore.getState().cleanupChat();
+        };
+    }, []);
+
+    const accessToken =
+        authData?.data?.tokens?.accessToken ||
+        tokenData?.accessToken ||
+        "";
+
+    const currentUserId =
+        authData?.data?.user?.id ||
+        getcurrentUserId() ||
+        "";
 
     return (
         <Root container>
@@ -192,7 +229,7 @@ const Me = () => {
 
                 <TabContext value={chatTab}>
                     <ChatTabsWrapper data-testid="chat-tabs">
-                        <TabListStyled onChange={handleChangeChatTab} aria-label="lab API tabs example">
+                        <TabListStyled onChange={handleChangeChatTab} aria-label="chat tabs">
                             <TabStyled label="Tất cả" value="allChats" />
                             <TabStyled label="Chưa đọc" value="unRead" />
                         </TabListStyled>
@@ -237,32 +274,45 @@ const Me = () => {
                         </TabsRight>
                     </ChatTabsWrapper>
 
-                    <TabPanelStyled value="allChats">all chats</TabPanelStyled>
+                    <TabPanelStyled value="allChats">
+                        <ConversationList />
+                    </TabPanelStyled>
+
                     <TabPanelStyled value="unRead">Unread</TabPanelStyled>
                 </TabContext>
             </LeftColumn>
 
             <RightColumn size="grow">
-                <Panel>
-                    <WelcomeWrap>
-                        <WelcomeSite
-                            slides={[
-                                {
-                                    imageSrc:
-                                        "https://chat.zalo.me/assets/inapp-welcome-screen-06-darkmode.336078e876ae12bf42474586745397f0.png",
-                                    title: "Giao diện Dark Mode",
-                                    description: "Thư giãn và bảo vệ mắt với chế độ giao diện tối trên Zalo PC",
-                                },
-                                {
-                                    imageSrc:
-                                        "https://chat.zalo.me/assets/zbiz_onboard_vi_3x.62514921c8505730d07aff3fa8c4e9c3.png",
-                                    title: "Kinh doanh hiệu quả với Buisiness Pro",
-                                    description:
-                                        "Trải nghiệm giao diện sáng trên Zalo PC, mang đến sự tươi mới và dễ nhìn cho mọi cuộc trò chuyện của bạn.",
-                                },
-                            ]}
-                        />
-                    </WelcomeWrap>
+                <Panel >
+                    {!activeConversationId ? (
+                        <WelcomeWrap>
+                            <WelcomeSite
+                                slides={[
+                                    {
+                                        imageSrc:
+                                            "https://chat.zalo.me/assets/inapp-welcome-screen-06-darkmode.336078e876ae12bf42474586745397f0.png",
+                                        title: "Giao diện Dark Mode",
+                                        description:
+                                            "Thư giãn và bảo vệ mắt với chế độ giao diện tối trên Zalo PC",
+                                    },
+                                    {
+                                        imageSrc:
+                                            "https://chat.zalo.me/assets/zbiz_onboard_vi_3x.62514921c8505730d07aff3fa8c4e9c3.png",
+                                        title: "Kinh doanh hiệu quả với Buisiness Pro",
+                                        description:
+                                            "Trải nghiệm giao diện sáng trên Zalo PC, mang đến sự tươi mới và dễ nhìn cho mọi cuộc trò chuyện của bạn.",
+                                    },
+                                ]}
+                            />
+                        </WelcomeWrap>
+                    ) : (
+                            <ChatPanel
+                                accessToken={accessToken}
+                                currentUserId={currentUserId}
+                                conversationId={activeConversationId}
+                                title="Tin nhắn"
+                            />
+                    )}
                 </Panel>
             </RightColumn>
         </Root>

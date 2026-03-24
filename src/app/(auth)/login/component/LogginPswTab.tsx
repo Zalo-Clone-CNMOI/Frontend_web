@@ -24,11 +24,8 @@ import {
 } from "../../Auth.styles";
 import { FormikLike } from "@/src/common/interface/formik-interface";
 
-const PasswordForm = (Stack as any).styled
-    ? undefined
-    : undefined;
-
 import { styled } from "@mui/material/styles";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 const PasswordFormStyled = styled(Stack)({
     gap: 16,
     padding: "16px 72px",
@@ -50,6 +47,7 @@ export interface LoginPasswordTabProps {
 
 export default function LoginPasswordTab(props: LoginPasswordTabProps) {
     const { country, setCountry, formik, loading, errorMsg, onGoRegister } = props;
+    const Trans = useTrans();
     const allowOnlyNumberKey = (e: React.KeyboardEvent<HTMLInputElement>) => {
         const allowKeys = [
             "Backspace",
@@ -61,13 +59,9 @@ export default function LoginPasswordTab(props: LoginPasswordTabProps) {
             "End",
         ];
 
-        // Cho phép các phím điều hướng, xoá
         if (allowKeys.includes(e.key)) return;
 
-        // Cho phép Ctrl / Cmd (copy, paste, select all...)
         if (e.ctrlKey || e.metaKey) return;
-
-        // Nếu không phải số => chặn
         if (!/^\d$/.test(e.key)) {
             e.preventDefault();
         }
@@ -121,7 +115,7 @@ export default function LoginPasswordTab(props: LoginPasswordTabProps) {
                                 value={formik.values.phone ?? ""}
                                 onChange={formik.handleChange}
                                 onBlur={formik.handleBlur}
-                                placeholder="Số điện thoại"
+                                placeholder={Trans("LOGIN.PHONE_PLACEHOLDER")}
                                 inputMode="numeric"
                                 fullWidth
                                 autoComplete="new-password"
@@ -157,7 +151,7 @@ export default function LoginPasswordTab(props: LoginPasswordTabProps) {
                                     value={formik.values.password ?? ""}
                                     onChange={formik.handleChange}
                                     onBlur={formik.handleBlur}
-                                    placeholder="Mật khẩu"
+                                    placeholder={Trans("LOGIN.PASSWORD_PLACEHOLDER")}
                                     type="password"
                                     fullWidth
                                     autoComplete="new-password"
@@ -173,22 +167,31 @@ export default function LoginPasswordTab(props: LoginPasswordTabProps) {
                             </Grid>
                         )}
                     </Box>
-                    {/* ERROR */}
                     {errorMsg ? (
                         <Typography color="error" fontSize={13}>
                             {errorMsg}
                         </Typography>
                     ) : null}
 
-                    {/* LOGIN BUTTON */}
-                    <LoginButton type="submit" disabled={Boolean(loading)} fullWidth sx={{ mt: 2, mb: 1 }}>
-                        {loading ? "Đang đăng nhập..." : "Đăng nhập"}
+                    <LoginButton
+                        type="submit"
+                        disabled={Boolean(loading)}
+                        fullWidth
+                        sx={{ mt: 2, mb: 1 }}
+                    >
+                        {loading ? Trans("LOGIN.LOADING") : Trans("LOGIN.SUBMIT")}
                     </LoginButton>
 
-                    <Forgot>Quên mật khẩu?</Forgot>
+                    <Forgot>
+                        {Trans("LOGIN.FORGOT_PASSWORD")}
+                    </Forgot>
 
-                    <ToRegisPage onClick={onGoRegister} variant="body2" color="text.secondary">
-                        Bạn chưa có tài khoản?
+                    <ToRegisPage
+                        onClick={onGoRegister}
+                        variant="body2"
+                        color="text.secondary"
+                    >
+                        {Trans("LOGIN.NO_ACCOUNT")}
                     </ToRegisPage>
                 </PasswordFormStyled>
             </form>

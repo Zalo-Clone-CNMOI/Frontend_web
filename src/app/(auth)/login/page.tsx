@@ -22,7 +22,7 @@ import {
 import FormLogin from "./component/FormLogin";
 import { useFormik } from "formik";
 import { initialValues, validationSchemaLogin } from "./validate";
-import { useTrans } from "@/src/common/utilities/trans";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { authService } from "@/src/common/service/auth-service";
 
@@ -32,7 +32,7 @@ export default function LoginPage() {
     const [mounted, setMounted] = useState(false);
     const [tab, setTab] = useState("loginQR");
     const [country, setCountry] = React.useState<Country>(COUNTRIES[0]);
-
+    const authData = useAuthStore((s) => s.authData);
     const loadingAuth = useAuthStore((s) => s.loadingAuth);
     const setLoadingAuth = useAuthStore((s) => s.setLoadingAuth);
     const errorAuth = useAuthStore((s) => s.errorAuth);
@@ -48,22 +48,27 @@ export default function LoginPage() {
 
             try {
                 const raw = String(values.phone || "").replace(/\D/g, "");
-                let phoneNormalized = raw;
-                if (raw.length === 10 && raw.startsWith("0")) {
-                    phoneNormalized = raw.slice(1);
-                }
-                if (raw.length === 9) {
-                    phoneNormalized = raw;
+                let phoneFinal = raw;
+
+                if (raw === "0901111111") {
+                    phoneFinal = raw;
+                } else if (raw.length === 10 && raw.startsWith("0")) {
+                    phoneFinal = `+84${raw.slice(1)}`;
+                } else if (raw.length === 9) {
+                    phoneFinal = `+84${raw}`;
                 }
 
-                const phoneFinal = `+84${phoneNormalized}`;
+                const result = await authService.authLogin({
+                    phone: phoneFinal,
+                    password: values.password,
+                });
 
-                const result = await authService.authLogin({ phone: phoneFinal, password: values.password });
                 const payload = result.payload;
 
                 if (result.ok && payload.success) {
                     localStorage.setItem("accessToken", payload.data.tokens.accessToken);
                     localStorage.setItem("refreshToken", payload.data.tokens.refreshToken);
+                    localStorage.setItem("currentUserId", payload.data.user.id)
                     setAuthData(result.payload);
                     setTokenData(payload.data.tokens);
                     router.push("/me");
@@ -108,11 +113,16 @@ export default function LoginPage() {
                         <TabContainer>
                             <CardHeader>
                                 <Tabs onChange={handleChangeTab} aria-label="login tabs">
-                                    <TabItem label="Đăng nhập qua mã QR" value="loginQR" />
-                                    <TabItem label="Đăng nhập với mật khẩu" value="loginPsw" />
+                                    <TabItem
+                                        label={Trans("LOGIN.QR_TAB")}
+                                        value="loginQR"
+                                    />
+                                    <TabItem
+                                        label={Trans("LOGIN.PASSWORD_TAB")}
+                                        value="loginPsw"
+                                    />
                                 </Tabs>
                             </CardHeader>
-
                             <FormLogin
                                 tab={tab}
                                 country={country}

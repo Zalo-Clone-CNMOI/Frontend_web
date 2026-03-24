@@ -37,10 +37,10 @@ export interface IAuthData {
     tokens: ITokens;
 }
 
-export interface IApiResponse<T> {
+export interface IApiResponse<T, M = unknown> {
     success: boolean;
     data: T;
+    meta?: M;
     message?: string;
     timestamp?: string;
 }
-
