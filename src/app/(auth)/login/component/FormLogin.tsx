@@ -1,6 +1,5 @@
 "use client";
 
-import * as React from "react";
 import { Country } from "../../../constant";
 import { FormikLike } from "@/src/common/interface/formik-interface";
 import LoginPasswordTab, { LoginFormValues } from "./LogginPswTab";

@@ -9,7 +9,7 @@ export type CustomOptions = Omit<RequestInit, "method" | "body"> & {
   skipAuth?: boolean;
 };
 
-export interface ApiResponse<T = any> {
+export interface IHttpresponse<T = any> {
   statusCode: number;
   payload: T;
   ok: boolean;
@@ -53,15 +53,14 @@ const buildBodyAndHeaders = (options?: CustomOptions) => {
     const token = getSessionToken();
     if (token) headers.Authorization = `Bearer ${token}`;
   }
-
-  return { body, headers };
+  ; return { body, headers };
 };
 
 export const request = async <T = any>(
   method: HttpMethod,
   url: string,
   options?: CustomOptions
-): Promise<ApiResponse<T>> => {
+): Promise<IHttpresponse<T>> => {
   const baseUrl = options?.baseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL;
 
   if (!baseUrl) {

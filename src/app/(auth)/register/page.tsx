@@ -16,7 +16,7 @@ import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { ConfirmationResult } from "firebase/auth";
 import { initialValues, validationSchemaRegisForm, validationSchemaRegisFull, } from "./validate";
 import { authService } from "@/src/common/service/auth-service";
-import { useTrans } from "@/src/common/utilities/trans";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 import { sendOtp, verifyOtp, setupRecaptcha, clearRecaptcha } from "@/src/common/firebase/phone-auth";
 import FormRegis from "./component/FormRegis";
 
@@ -211,8 +211,8 @@ export default function RegisterPage() {
                     <Image
                         src="https://stc-zlogin.zdn.vn/images/zlogo.png"
                         alt="Zalo Logo"
-                        width={114}
-                        height={100}
+                        width={80}
+                        height={35}
                         priority
                     />
                 </LogoWrap>

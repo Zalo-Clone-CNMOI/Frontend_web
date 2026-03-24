@@ -7,6 +7,7 @@ export interface Country {
   name: string;
   dial: string;
 }
+export const RESPONSE_PAYLOAD_DATA_PATH = ["payload","Data"];
 export const COUNTRIES: Country[] = [
 { code: "VN", name: "Vietnam", dial: "+84" },
 { code: "AF", name: "Afghanistan", dial: "+93" },

@@ -56,4 +56,19 @@ export const API = {
         `/api/conversations/${conversationId}/settings`,
     API_CONVERSATIONS_READ: (conversationId: string) =>
         `/api/conversations/${conversationId}/read`,
+
+    /* ================= MESSAGES ================= */
+
+
+    API_MESSAGES: (conversationId: string) =>
+      `/api/messages/${conversationId}`,
+
+    API_MESSAGE_DETAIL: (
+      conversationId: string,
+      createdAt: number | string,
+      messageId: string
+    ) => `/api/messages/${conversationId}/${createdAt}/${messageId}`,
+
+    API_MESSAGE_REACTIONS: (messageId: string) =>
+      `/api/messages/${messageId}/reactions`,
 } as const;

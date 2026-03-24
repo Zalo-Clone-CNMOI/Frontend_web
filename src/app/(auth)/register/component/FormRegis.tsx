@@ -92,7 +92,7 @@ export default function FormRegis(props: FormRegisProps) {
 
   const captchaSetupRef = React.useRef(false);
   const { otpSent, otpVerified, otpMsg, otpArr, otpLength } = otp;
-  const onSendOtpRef = React.useRef(onSendOtp); // ✅ Lưu vào ref
+  const onSendOtpRef = React.useRef(onSendOtp);
   const setOtpMsgRef = React.useRef(setOtpMsg);
   React.useEffect(() => {
     onSendOtpRef.current = onSendOtp;
