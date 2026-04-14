@@ -1,5 +1,6 @@
 "use client";
 
+import { useChatStore } from "@/src/common/store/useChatStore";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -7,20 +8,25 @@ interface ChatHeaderProps {
   title?: string;
   socketConnected: boolean;
   error?: string | null;
+  conversationId: string | null
 }
 
 const HeaderRoot = styled(Box)({
   width: "100%",
   background: "#fff",
-  borderBottom: "1px solid #EEF1F4",
+  minHeight:70,
+  display:"flex",
+  flexDirection:"column",
+  justifyContent:"center",
+  paddingLeft:"16px"
 });
 
 const HeaderTop = styled(Box)({
-  maxHeight: 68,
-  padding: "14px 18px",
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
+  height:"100%",
+  width:"100%"
 });
 
 const HeaderLeft = styled(Box)({
@@ -53,28 +59,16 @@ const StatusDot = styled("span")<{ online?: boolean }>(({ online }) => ({
   marginRight: 8,
 }));
 
-const ErrorBar = styled(Box)({
-  width: "100%",
-  padding: "10px 16px",
-  background: "#FFF1F2",
-  borderTop: "1px solid #FFE4E6",
-});
-
-const ErrorText = styled(Typography)({
-  fontSize: 13,
-  color: "#DC2626",
-});
-
 export default function ChatHeader({
-  title,
   socketConnected,
-  error,
+  conversationId
 }: ChatHeaderProps) {
+  const listConversation = useChatStore((s) => s.listConversation)
   return (
     <HeaderRoot>
       <HeaderTop>
         <HeaderLeft>
-          <HeaderTitle>{title || "Tin nhắn"}</HeaderTitle>
+          <HeaderTitle>{listConversation.find((n)=> n.id === conversationId)?.name}</HeaderTitle>
           <HeaderSubtitle>
             <StatusDot online={socketConnected} />
             {socketConnected ? "Đã kết nối" : "Mất kết nối"}

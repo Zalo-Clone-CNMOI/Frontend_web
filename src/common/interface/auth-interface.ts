@@ -1,7 +1,7 @@
 export type Gender = "male" | "female" | "other";
 
 export interface IBase {
-    email: string;
+    email?: string;
     fullName: string;
     gender: Gender | string;
     dateOfBirth: string | null;
@@ -16,6 +16,16 @@ export interface IUser extends IBase {
     createdAt: string;
 }
 
+
+
+export interface IRefreshPayload {
+    refreshToken: string;
+}
+
+export interface IRefreshResponse {
+    accessToken: string;
+    expiresIn: number;
+}
 export interface ITokens {
     accessToken: string;
     refreshToken: string;

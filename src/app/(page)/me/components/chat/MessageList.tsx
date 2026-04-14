@@ -1,21 +1,24 @@
 "use client";
-
-import { RefObject, useEffect } from "react";
 import { Box, Button, CircularProgress, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { PaginationState, UiMessage } from "@/src/common/interface/chat-interface";
+import { useChatStore } from "@/src/common/store/useChatStore";
 
 interface MessageListProps {
-  listRef: RefObject<HTMLDivElement | null>;
+  listRef: React.RefObject<HTMLDivElement | null>;
   messages: UiMessage[];
   currentUserId: string;
   conversationId: string;
   pagination?: PaginationState;
   onLoadMore: (conversationId: string) => void;
   onDeleteMessage: (conversationId: string, messageId: string) => void;
+  onScroll: () => void;
+  showScrollbar: boolean;
 }
 
-const MessagesWrap = styled(Box)({
+const MessagesWrap = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "showScrollbar",
+})<{ showScrollbar: boolean }>(({ showScrollbar }) => ({
   flex: 1,
   overflowY: "auto",
   background: "#F7F8FA",
@@ -23,8 +26,33 @@ const MessagesWrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 12,
-});
 
+  scrollbarGutter: "stable",
+
+  "&::-webkit-scrollbar": {
+    width: 8,
+  },
+
+  "&::-webkit-scrollbar-thumb": {
+    backgroundColor: showScrollbar ? "rgba(0,0,0,0.25)" : "rgba(0,0,0,0)",
+    borderRadius: 8,
+    transition: "background-color 0.2s ease",
+  },
+
+  "&::-webkit-scrollbar-track": {
+    background: "transparent",
+  },
+
+  "&::-webkit-scrollbar-corner": {
+    background: "transparent",
+  },
+}));
+const MessagesContent = styled(Box)({
+  display: "flex",
+  flexDirection: "column",
+  gap: 12,
+  marginTop: "auto",
+});
 const LoadMoreWrap = styled(Box)({
   display: "flex",
   justifyContent: "center",
@@ -65,7 +93,7 @@ const Bubble = styled(Box, {
 })<{ mine?: boolean }>(({ mine }) => ({
   maxWidth: "72%",
   padding: "10px 12px",
-  borderRadius:"8px",
+  borderRadius: "8px",
   border: mine ? "1px solid #D7E8FF" : "1px solid #E5E7EB",
   background: mine ? "#E5F1FF" : "#FFFFFF",
   boxShadow: "0 1px 2px rgba(16, 24, 40, 0.04)",
@@ -102,14 +130,6 @@ const MetaText = styled(Typography)({
   lineHeight: 1.2,
 });
 
-const ActionButton = styled(Button)({
-  minWidth: "unset",
-  padding: 0,
-  fontSize: 11,
-  textTransform: "none",
-  lineHeight: 1.2,
-});
-
 const AttachmentList = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -127,41 +147,23 @@ export default function MessageList({
   messages,
   currentUserId,
   conversationId,
-  pagination,
-  onLoadMore,
-  onDeleteMessage,
+  onScroll,
+  showScrollbar,
 }: MessageListProps) {
-  useEffect(() => {
-    console.log("[mine check]", {
-      currentUserId,
-      messages: messages.map((m) => ({
-        body: m.body,
-        senderId: m.senderId,
-        mine: String(m.senderId) === String(currentUserId),
-      })),
-    });
-  }, [messages, currentUserId]);
+  const paginationByConversation = useChatStore((s) => s.paginationByConversation);
   return (
-    <MessagesWrap ref={listRef}>
-      {pagination?.hasMore && (
+    <MessagesWrap
+      ref={listRef}
+      onScroll={onScroll}
+      showScrollbar={showScrollbar}
+    >
+      {paginationByConversation[conversationId]?.loadingMore && (
         <LoadMoreWrap>
-          <Button
-            size="small"
-            variant="outlined"
-            onClick={() => onLoadMore(conversationId)}
-            disabled={pagination.loadingMore}
-            sx={{
-              textTransform: "none",
-              borderRadius: "999px",
-              fontSize: 12,
-            }}
-          >
-            {pagination.loadingMore ? "Đang tải..." : "Tải tin nhắn cũ hơn"}
-          </Button>
+          <CircularProgress size={18} />
         </LoadMoreWrap>
       )}
 
-      {pagination?.loading ? (
+      {paginationByConversation[conversationId]?.loading ? (
         <EmptyState>
           <CircularProgress size={28} />
           <EmptyDesc>Đang tải tin nhắn...</EmptyDesc>
@@ -169,51 +171,59 @@ export default function MessageList({
       ) : messages.length === 0 ? (
         <EmptyState>
           <EmptyTitle>Chưa có tin nhắn</EmptyTitle>
-          <EmptyDesc>Hãy bắt đầu cuộc trò chuyện bằng một tin nhắn đầu tiên.</EmptyDesc>
+          <EmptyDesc>
+            Hãy bắt đầu cuộc trò chuyện bằng một tin nhắn đầu tiên.
+          </EmptyDesc>
         </EmptyState>
       ) : (
-        messages.map((msg) => {
-          const mine = msg.senderId === currentUserId;
+        <MessagesContent>
+          {
+            messages.map((msg) => {
+              const mine = msg.senderId === currentUserId;
 
-          return (
-            <MessageRow data-testid ="message-row" key={msg.messageId} mine={mine}>
-              <Bubble mine={mine}>
-                <MessageText>
-                  {msg.isDeleted ? "Tin nhắn đã được thu hồi" : msg.body}
-                </MessageText>
+              return (
+                <MessageRow data-testid="message-row" key={msg.messageId} mine={mine}>
+                  <Bubble mine={mine}>
+                    <MessageText>
+                      {msg.isDeleted ? "Tin nhắn đã được thu hồi" : msg.body}
+                    </MessageText>
 
-                {!!msg.attachments?.length && (
-                  <AttachmentList>
-                    {msg.attachments.map((file) => (
-                      <AttachmentItem key={file.key}>{file.name}</AttachmentItem>
-                    ))}
-                  </AttachmentList>
-                )}
+                    {!!msg.attachments?.length && (
+                      <AttachmentList>
+                        {msg.attachments.map((file) => (
+                          <AttachmentItem key={file.key}>{file.name}</AttachmentItem>
+                        ))}
+                      </AttachmentList>
+                    )}
 
-                <MetaRow>
-                  <MetaLeft>
-                    <MetaText>
-                      {new Date(msg.createdAt).toLocaleTimeString()}
-                    </MetaText>
+                    <MetaRow>
+                      <MetaLeft>
+                        <MetaText>
+                          {new Date(msg.createdAt).toLocaleTimeString("vi-VN", {
+                            hour: "2-digit",
+                            minute: "2-digit",
+                          })}                    </MetaText>
 
-                    {msg.pending && <MetaText>• Đang gửi</MetaText>}
-                    {msg.failed && <MetaText>• Gửi lỗi</MetaText>}
-                    {msg.editedAt && <MetaText>• Đã sửa</MetaText>}
-                  </MetaLeft>
+                        {/* {msg.pending && !msg.failed ? <MetaText>Đang gửi</MetaText> : null} */}
+                        {msg.failed && <MetaText>Gửi thất bại</MetaText>}
+                        {msg.editedAt && <MetaText>Đã sửa</MetaText>}
+                      </MetaLeft>
 
-                  {mine && !msg.isDeleted && (
+                      {/* {mine && !msg.isDeleted && (
                     <ActionButton
                       color="error"
                       onClick={() => onDeleteMessage(conversationId, msg.messageId)}
                     >
                       Xóa
                     </ActionButton>
-                  )}
-                </MetaRow>
-              </Bubble>
-            </MessageRow>
-          );
-        })
+                  )} */}
+                    </MetaRow>
+                  </Bubble>
+                </MessageRow>
+              );
+            })
+          }
+        </MessagesContent>
       )}
     </MessagesWrap>
   );

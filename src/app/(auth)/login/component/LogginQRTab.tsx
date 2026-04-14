@@ -8,6 +8,7 @@ import { qrService } from "@/src/common/service/qr-service";
 import { QRCodeCanvas } from "qrcode.react";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { connectSocket, getSocket } from "@/src/common/socket/socket";
+import { setRefreshToken, setSessionToken, setSessionTokenExpiresIn } from "@/src/common/utilities/utils";
 
 const QRBox = styled(Box)({
   boxSizing: "border-box",
@@ -237,13 +238,18 @@ export default function LoginQrTab() {
         setQrStatus("APPROVED");
 
         if (data?.accessToken) {
-          localStorage.setItem("accessToken", data.accessToken);
-          localStorage.setItem("refreshToken", data.refreshToken ?? "");
-          localStorage.setItem("currentUserId", data.user.id)
+          setSessionToken(data.accessToken, data.user?.id ?? null);
 
+          if (data?.refreshToken) {
+            setRefreshToken(data.refreshToken);
+          }
+
+          if (data?.expiresIn) {
+            setSessionTokenExpiresIn(data.expiresIn);
+          }
 
           setTimeout(() => {
-            window.location.href = "/chat";
+            window.location.href = "/me";
           }, 1000);
         }
       });
@@ -270,12 +276,9 @@ export default function LoginQrTab() {
 
       console.log("[QR] QR login flow ready, waiting for mobile scan...");
     } catch (e) {
-      console.error("[QR] Error:", e);
-
       const socket = getSocket();
       socket?.off("qr:confirmed");
       socket?.off("qr:rejected");
-
       stopCountdown();
       setQrStatus("ERROR");
       setError(e instanceof Error ? e.message : "Unknown error occurred");

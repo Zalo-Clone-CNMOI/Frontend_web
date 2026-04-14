@@ -1,105 +1,93 @@
 import { create } from "zustand";
+import type {
+  AttachmentDto,
+  ConversationDto,
+  UiMessage,
+} from "@/src/common/interface/chat-interface";
+// import { patchConversationLastMessage, updateConversationLastMessage } from "../helpers/chat.helpers";
+import { moveConversationToTopWithLastMessage } from "../action/chat.action";
 import { chatService } from "../service/chat-service";
-import type { IChat } from "@/src/common/interface/chat-interface";
-import { connectSocket, getSocket } from "../socket/socket";
 
-const normalizeMessage = (raw: any) => {
-  const senderId =
-    raw?.senderId ??
-    raw?.sender_id ??
-    raw?.sender?.id ??
-    raw?.sender?.userId ??
-    raw?.userId ??
-    raw?.user_id ??
-    "";
-
-  const messageId =
-    raw?.messageId ??
-    raw?.message_id ??
-    raw?.id ??
-    raw?._id ??
-    raw?.clientMessageId ??
-    raw?.client_message_id ??
-    `msg-${Date.now()}-${Math.random()}`;
-
-  return {
-    messageId: String(messageId),
-    clientMessageId: raw?.clientMessageId ?? raw?.client_message_id ?? null,
-    conversationId: String(
-      raw?.conversationId ??
-      raw?.conversation_id ??
-      raw?.conversation?.id ??
-      raw?.conversation?._id ??
-      ""
-    ),
-    senderId: String(senderId),
-    body: raw?.body ?? raw?.content ?? "",
-    createdAt: Number(
-      raw?.createdAt ??
-      raw?.created_at ??
-      raw?.sent_at ??
-      raw?.timestamp ??
-      Date.now()
-    ),
-    attachments: Array.isArray(raw?.attachments) ? raw.attachments : [],
-    replyToMessageId:
-      raw?.replyToMessageId ??
-      raw?.reply_to_message_id ??
-      raw?.replyTo?.id ??
-      null,
-    editedAt: raw?.editedAt ?? raw?.edited_at ?? null,
-    deletedAt: raw?.deletedAt ?? raw?.deleted_at ?? null,
-    isDeleted: Boolean(raw?.isDeleted ?? raw?.is_deleted ?? false),
-    pending: Boolean(raw?.pending ?? false),
-    failed: Boolean(raw?.failed ?? false),
-    errorMessage: raw?.errorMessage ?? null,
-  };
+type PaginationState = {
+  nextCursor: string | null;
+  hasMore: boolean;
+  loading: boolean;
+  loadingMore: boolean;
 };
 
-const sortMessages = (items: any[]) =>
-  [...items].sort((a, b) => Number(a.createdAt) - Number(b.createdAt));
+type MessageMap = Record<string, UiMessage[]>;
+type PaginationMap = Record<string, PaginationState>;
+type AttachmentMap = Record<string, AttachmentDto[]>;
+type LinkMap = Record<string, string[]>;
 
-const dedupeByMessageId = (items: any[]) => {
-  const map = new Map<string, any>();
+export interface ChatState {
+  initialized: boolean;
+  socketConnected: boolean;
+  activeConversationId: string | null;
+  currentUserId: string | null;
+  error: string | null;
 
-  for (const item of items) {
-    const msg = normalizeMessage(item);
-    const key = String(msg.messageId);
-    map.set(key, {
-      ...(map.get(key) || {}),
-      ...msg,
-    });
-  }
+  messagesByConversation: MessageMap;
+  paginationByConversation: PaginationMap;
 
-  return sortMessages(Array.from(map.values()));
-};
+  listConversation: ConversationDto[];
+  conversationMeta: any;
+  conversationLoading: boolean;
+  conversationFetched: boolean;
 
-const upsertIncomingMessage = (items: any[], raw: any) => {
-  const incoming = normalizeMessage(raw);
+  heartbeatId: ReturnType<typeof setInterval> | null;
+  mediaByConversation: AttachmentMap;
+  filesByConversation: AttachmentMap;
+  linksByConversation: LinkMap;
+}
 
-  const existedIndex = items.findIndex(
-    (msg) =>
-      msg.messageId === incoming.messageId ||
-      (incoming.clientMessageId &&
-        msg.clientMessageId === incoming.clientMessageId)
-  );
+export interface ChatSetters {
+  setInitialized: (value: boolean) => void;
+  setSocketConnected: (value: boolean) => void;
+  setActiveConversationId: (value: string | null) => void;
+  setCurrentUserId: (value: string | null) => void;
+  setError: (value: string | null) => void;
 
-  if (existedIndex === -1) {
-    return dedupeByMessageId([...items, incoming]);
-  }
+  setListConversation: (items: ConversationDto[]) => void;
+  setConversationMeta: (meta: any) => void;
+  setConversationLoading: (value: boolean) => void;
+  setConversationFetched: (value: boolean) => void;
+  setHeartbeatId: (value: ReturnType<typeof setInterval> | null) => void;
 
-  const next = [...items];
-  next[existedIndex] = {
-    ...next[existedIndex],
-    ...incoming,
-    pending: false,
-    failed: false,
-  };
+  setMessages: (conversationId: string, messages: UiMessage[]) => void;
+  appendMessages: (
+    conversationId: string,
+    messages: UiMessage[],
+    moveToTop?: boolean
+  ) => void;
+  prependMessages: (conversationId: string, messages: UiMessage[]) => void;
+  appendRealtimeMessage: (conversationId: string, message: UiMessage) => void;
 
-  return dedupeByMessageId(next);
-};
+  setPagination: (
+    conversationId: string,
+    value: Partial<PaginationState>
+  ) => void;
 
-export const useChatStore = create<IChat>((set, get) => ({
+  setMediaByConversation: (
+    conversationId: string,
+    items: AttachmentDto[]
+  ) => void;
+  setFilesByConversation: (
+    conversationId: string,
+    items: AttachmentDto[]
+  ) => void;
+  setLinksByConversation: (
+    conversationId: string,
+    items: string[]
+  ) => void;
+
+  fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
+  resetChatState: () => void;
+}
+
+export type ChatStore = ChatState & ChatSetters;
+
+export const initialChatState: ChatState = {
   initialized: false,
   socketConnected: false,
   activeConversationId: null,
@@ -115,315 +103,169 @@ export const useChatStore = create<IChat>((set, get) => ({
   conversationFetched: false,
 
   heartbeatId: null,
+  mediaByConversation: {},
+  filesByConversation: {},
+  linksByConversation: {},
+};
 
-  setListConversation: (items) => {
+export const useChatStore = create<ChatStore>((set, get) => ({
+  ...initialChatState,
+
+  setInitialized: (value) => set({ initialized: value }),
+  setSocketConnected: (value) => set({ socketConnected: value }),
+  setActiveConversationId: (value) => set({ activeConversationId: value }),
+  setCurrentUserId: (value) => set({ currentUserId: value }),
+  setError: (value) => set({ error: value }),
+
+  setListConversation: (items) =>
     set({
       listConversation: items,
       conversationFetched: true,
-    });
-  },
+    }),
 
-  fetchListConversation: async (params = {}) => {
-    set({
-      conversationLoading: true,
-      error: null,
-    });
+  setConversationMeta: (meta) => set({ conversationMeta: meta }),
+  setConversationLoading: (value) => set({ conversationLoading: value }),
+  setConversationFetched: (value) => set({ conversationFetched: value }),
+  setHeartbeatId: (value) => set({ heartbeatId: value }),
 
-    try {
-      const res = await chatService.fetchListConversations({
-        page: (params as any).page ?? 1,
-        limit: (params as any).limit ?? 10,
-      });
+  setMessages: (conversationId: string, messages: UiMessage[]) =>
+    set((state) => ({
+      messagesByConversation: {
+        ...state.messagesByConversation,
+        [conversationId]: messages,
+      },
+    })),
 
-      const payload = res?.payload;
+  appendRealtimeMessage: (conversationId: string, message: UiMessage) =>
+    set((state) => {
+      const prevMessages = state.messagesByConversation[conversationId] || [];
 
-      const items = Array.isArray(payload?.data) ? payload.data : [];
-      const meta = payload?.meta ?? null
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: [...prevMessages, message],
+        },
+        listConversation: moveConversationToTopWithLastMessage(
+          state.listConversation,
+          conversationId,
+          message
+        ),
+      };
+    }),
 
-      set({
-        listConversation: items,
-        conversationMeta: meta,
-        conversationLoading: false,
-        conversationFetched: true,
-      });
-    } catch (err: any) {
+  prependMessages: (conversationId: string, messages: UiMessage[]) =>
+    set((state) => {
+      const prevMessages = state.messagesByConversation[conversationId] || [];
 
-      set({
-        listConversation: [],
-        conversationMeta: null,
-        conversationLoading: false,
-        conversationFetched: true,
-        error: err?.message || "Không lấy được danh sách cuộc trò chuyện",
-      });
-    }
-  },
-  openMockConversation: (conversationId) => {
-    set({ activeConversationId: conversationId });
-  },
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: [...messages, ...prevMessages],
+        },
+      };
+    }),
 
-  initChat: (accessToken, currentUserId) => {
-    if (!accessToken || !currentUserId) return;
+  appendMessages: (
+    conversationId: string,
+    messages: UiMessage[],
+    moveToTop: boolean = false
+  ) =>
+    set((state : any) => {
+      const prevMessages = state.messagesByConversation[conversationId] || [];
+      const mergedMessages = [...prevMessages, ...messages];
+      const latestMessage = mergedMessages[mergedMessages.length - 1];
 
-    const socket = connectSocket(accessToken);
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: mergedMessages,
+        },
+        listConversation: latestMessage
+          ? moveToTop
+            // ? updateConversationLastMessage(
+            //     state.listConversation,
+            //     conversationId,
+            //     latestMessage
+            //   )
+            // : patchConversationLastMessage(
+            //     state.listConversation,
+            //     conversationId,
+            //     latestMessage
+            //   )
+          : state.listConversation,
+      };
+    }),
 
-    const oldHeartbeat = get().heartbeatId;
-    if (oldHeartbeat) clearInterval(oldHeartbeat);
-
-    socket.off("connect");
-    socket.off("disconnect");
-    socket.off("connect_error");
-    socket.off("chat:new");
-    socket.off("chat:message");
-    socket.offAny();
-
-    const handleIncomingMessage = (raw: any) => {
-      const msg = normalizeMessage(raw);
-      if (!msg.conversationId) return;
-
-      set((state) => {
-        const oldMessages = state.messagesByConversation[msg.conversationId] || [];
-
-        return {
-          messagesByConversation: {
-            ...state.messagesByConversation,
-            [msg.conversationId]: upsertIncomingMessage(oldMessages, msg),
-          },
-        };
-      });
-    };
-
-    socket.on("connect", () => {
-      console.log("[socket] connected:", socket.id);
-
-      const activeConversationId = get().activeConversationId;
-      if (activeConversationId) {
-        socket.emit("chat:join", {
-          conversation_id: activeConversationId,
-        });
-      }
-
-      set({
-        socketConnected: true,
-        initialized: true,
-        currentUserId,
-        error: null,
-      });
-    });
-
-    socket.on("disconnect", (reason) => {
-      console.log("[socket] disconnected:", reason);
-      set({ socketConnected: false });
-    });
-
-    socket.on("connect_error", (err) => {
-      console.error("[socket] connect error:", err);
-      set({
-        socketConnected: false,
-        error: err?.message || "Socket connect failed",
-      });
-    });
-
-    socket.on("chat:new", handleIncomingMessage);
-    socket.on("chat:message", handleIncomingMessage);
-
-    socket.onAny((event, ...args) => {
-      console.log("[socket event]", event, args);
-    });
-
-    const heartbeatId = setInterval(() => {
-      if (!socket.connected) return;
-
-      socket.emit("presence:heartbeat", {
-        user_id: currentUserId,
-        ts: Date.now(),
-      });
-    }, 30000);
-
-    set({
-      initialized: true,
-      currentUserId,
-      heartbeatId,
-    });
-  },
-
-  openConversation: async (conversationId) => {
-    const socket = getSocket();
-
-    set({
-      activeConversationId: conversationId,
-      error: null,
-    });
-
-    if (socket?.connected) {
-      socket.emit("chat:join", { conversation_id: conversationId });
-    }
-
+  setPagination: (conversationId, value) =>
     set((state) => ({
       paginationByConversation: {
         ...state.paginationByConversation,
         [conversationId]: {
           nextCursor:
             state.paginationByConversation[conversationId]?.nextCursor ?? null,
-          hasMore: state.paginationByConversation[conversationId]?.hasMore ?? false,
-          loading: true,
-          loadingMore: false,
+          hasMore:
+            state.paginationByConversation[conversationId]?.hasMore ?? false,
+          loading:
+            state.paginationByConversation[conversationId]?.loading ?? false,
+          loadingMore:
+            state.paginationByConversation[conversationId]?.loadingMore ?? false,
+          ...value,
         },
       },
-    }));
+    })),
+
+  setMediaByConversation: (conversationId, items) =>
+    set((state) => ({
+      mediaByConversation: {
+        ...state.mediaByConversation,
+        [conversationId]: items,
+      },
+    })),
+
+  setFilesByConversation: (conversationId, items) =>
+    set((state) => ({
+      filesByConversation: {
+        ...state.filesByConversation,
+        [conversationId]: items,
+      },
+    })),
+
+  setLinksByConversation: (conversationId, items) =>
+    set((state) => ({
+      linksByConversation: {
+        ...state.linksByConversation,
+        [conversationId]: items,
+      },
+    })),
+
+  fetchListConversation: async (params = { page: 1, limit: 10 }) => {
+    const { conversationLoading } = get();
+    if (conversationLoading) return;
 
     try {
-      const res = await chatService.fetchMessages(conversationId, { limit: 50 });
-      console.log("messages after fetch", res);
-
-      const page = res?.payload?.data;
-      const items = Array.isArray(page?.items)
-        ? dedupeByMessageId(page.items)
-        : [];
-
-      set((state) => {
-        const oldItems = state.messagesByConversation[conversationId] || [];
-        const merged = dedupeByMessageId([...oldItems, ...items]);
-
-        return {
-          messagesByConversation: {
-            ...state.messagesByConversation,
-            [conversationId]: merged,
-          },
-          paginationByConversation: {
-            ...state.paginationByConversation,
-            [conversationId]: {
-              nextCursor: page?.nextCursor ?? null,
-              hasMore: page?.hasMore ?? false,
-              loading: false,
-              loadingMore: false,
-            },
-          },
-        };
+      set({
+        conversationLoading: true,
+        error: null,
       });
-    } catch (err: any) {
-      console.error("openConversation error:", err);
 
-      set((state) => ({
-        error: err?.message || "Không lấy được tin nhắn",
-        messagesByConversation: {
-          ...state.messagesByConversation,
-          [conversationId]: [],
-        },
-        paginationByConversation: {
-          ...state.paginationByConversation,
-          [conversationId]: {
-            nextCursor: null,
-            hasMore: false,
-            loading: false,
-            loadingMore: false,
-          },
-        },
-      }));
+      const res = await chatService.fetchListConversations(params);
+
+      set({
+        listConversation: res?.payload?.data ?? [],
+        conversationMeta: res?.payload?.meta ?? null,
+        conversationFetched: true,
+      });
+    } catch (error: any) {
+      set({
+        error: error?.message || "Không thể tải danh sách cuộc trò chuyện",
+        conversationFetched: true,
+      });
+    } finally {
+      set({
+        conversationLoading: false,
+      });
     }
   },
 
-  loadMoreMessages: async (conversationId) => { },
-
-  sendMessage: async (conversationId, body, attachments = []) => {
-    const currentUserId = get().currentUserId;
-    const trimmedBody = body?.trim?.() || "";
-    const socket = getSocket();
-
-    if (!currentUserId || !trimmedBody || !socket?.connected) {
-      console.warn("[sendMessage] socket chưa sẵn sàng");
-      return;
-    }
-
-    const tempId = `temp-${Date.now()}`;
-    const now = Date.now();
-
-    set((state) => ({
-      messagesByConversation: {
-        ...state.messagesByConversation,
-        [conversationId]: (state.messagesByConversation[conversationId] || []).map(
-          (msg) =>
-            msg.messageId === tempId
-              ? { ...msg, pending: false, failed: false }
-              : msg
-        ),
-      },
-    }));
-    socket.emit("chat:join", { conversation_id: conversationId });
-
-    socket.emit(
-      "chat:send",
-      {
-        message_id: tempId,
-        conversation_id: conversationId,
-        body: trimmedBody,
-        sent_at: now,
-      },
-      async (ack: any) => {
-        if (!ack?.success) {
-          set((state) => ({
-            messagesByConversation: {
-              ...state.messagesByConversation,
-              [conversationId]: (state.messagesByConversation[conversationId] || []).map(
-                (msg) =>
-                  msg.messageId === tempId
-                    ? { ...msg, pending: false, failed: true }
-                    : msg
-              ),
-            },
-          }));
-          return;
-        }
-
-        set((state) => ({
-          messagesByConversation: {
-            ...state.messagesByConversation,
-            [conversationId]: (state.messagesByConversation[conversationId] || []).map(
-              (msg) =>
-                msg.messageId === tempId
-                  ? { ...msg, pending: false, failed: false }
-                  : msg
-            ),
-          },
-        }));
-
-        // await get().openConversation(conversationId);
-        await get().fetchListConversation({ page: 1, limit: 10 });
-      }
-    );
-  },
-
-  editMessage: (conversationId, messageId, newBody) => { },
-
-  deleteMessage: (conversationId, messageId) => { },
-
-  cleanupChat: () => {
-    const socket = getSocket();
-    const heartbeatId = get().heartbeatId;
-
-    if (heartbeatId) clearInterval(heartbeatId);
-
-    socket?.off("connect");
-    socket?.off("disconnect");
-    socket?.off("connect_error");
-    socket?.off("chat:new");
-    socket?.off("chat:message");
-    socket?.offAny();
-
-    if (socket?.connected) socket.disconnect();
-
-    set({
-      initialized: false,
-      socketConnected: false,
-      heartbeatId: null,
-      activeConversationId: null,
-      currentUserId: null,
-      error: null,
-      messagesByConversation: {},
-      paginationByConversation: {},
-      listConversation: [],
-      conversationMeta: null,
-      conversationLoading: false,
-      conversationFetched: false,
-    });
-  },
+  resetChatState: () => set(initialChatState),
 }));
