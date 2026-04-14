@@ -10,7 +10,7 @@ import {
   setSessionTokenExpiresIn,
 } from "../utilities/utils";
 
-export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE"| "PATCH";
+export type HttpMethod = "GET" | "POST" | "PUT" | "DELETE" | "PATCH";
 
 export type CustomOptions = Omit<RequestInit, "method" | "body"> & {
   baseUrl?: string;
@@ -272,11 +272,11 @@ const http = {
     return request<T>("DELETE", url, { ...options, body });
   },
   patch<T = any>(path: string, body?: any, options?: CustomOptions) {
-  return request<T>("PATCH", path, {
-    ...options,
-    body,
-  });
-},
+    return request<T>("PATCH", path, {
+      ...options,
+      body,
+    });
+  },
 };
 
 export default http;

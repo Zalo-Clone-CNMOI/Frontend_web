@@ -1,6 +1,9 @@
 import { useAuthStore } from "../store/useAuthStore";
 import { useChatStore } from "../store/useChatStore";
 import { authService } from "../service/auth-service";
+import { userService } from "../service/user-service";
+import { getRefreshToken, getSessionToken, getTokenExpiresIn } from "../utilities/utils";
+import { string } from "yup";
 
 /**
  * FETCH AUTH DATA từ server
@@ -8,52 +11,39 @@ import { authService } from "../service/auth-service";
  */
 export const fetchAuthData = async () => {
     try {
-        useAuthStore.getState().setLoadingAuth(true);
-
-        // Gọi API để lấy current user data
-        // Tùy vào API của bạn, có thể là getMe hoặc authRefresh
-        // Ví dụ dưới đây giả sử bạn có method để lấy user hiện tại
-
-        // Option 1: Nếu có API getMe
-        const userData = await authService.userGetMe();
-        const payload = userData?.payload?.data;
-        // const response = await authService.getMe();
-        // useAuthStore.getState().setAuthData(response.data);
-
-        // Option 2: Nếu dùng refresh token
-        // const tokenData = useAuthStore.getState().tokenData;
-        // if (tokenData?.refreshToken) {
-        //   const response = await authService.authRefresh({
-        //     refreshToken: tokenData.refreshToken,
-        //   });
-
-        if (userData?.payload?.data?.tokens?.accessToken) {
-            // useAuthStore.getState().setAuthData(userData?.payload?.data?.user );
-            useAuthStore.getState().setAuthData({
+        const authStore = useAuthStore.getState();
+        authStore.setLoadingAuth(true);
+        authStore.setErrorAuth(null);
+        const userData = await userService.userGetMe();
+        const user = userData?.payload?.data ?? null;
+        if (user) {
+            authStore.setAuthData({
                 success: true,
                 data: {
-                    user: payload.user,
-                    tokens: {
-                        accessToken: payload.tokens.accessToken ?? "",
-                        expiresIn: payload.tokens.expiresIn ?? 0,
-                        refreshToken: payload.tokens.refreshToken ?? "",
+                    user: {
+                        ...user,
+                        avatarUrl: user.avatarResolvedUrl ?? user.avatarUrl ?? null,
+                    },
+                    tokens: authStore.authData?.data?.tokens ?? {
+                        accessToken: String(getSessionToken()),
+                        refreshToken: String(getRefreshToken()) ,
+                        expiresIn: Number(getTokenExpiresIn()),
                     },
                 },
-                meta: null,
+                meta: userData?.payload?.meta ?? null,
                 message: userData?.payload?.message,
                 timestamp: userData?.payload?.timestamp,
             });
         }
-    }
-    // useAuthStore.getState().setErrorAuth(null);
-    catch (error: any) {
+    } catch (error: any) {
         console.error("Failed to fetch auth data:", error);
-        useAuthStore.getState().setErrorAuth(error?.message || "Lỗi khi tải thông tin người dùng");
+        useAuthStore
+            .getState()
+            .setErrorAuth(error?.message || "Lỗi khi tải thông tin người dùng");
     } finally {
         useAuthStore.getState().setLoadingAuth(false);
     }
-}
-
+};
 /**
  * FETCH CONVERSATIONS từ server
  * Gọi hàm này trong useEffect của chat/message pages

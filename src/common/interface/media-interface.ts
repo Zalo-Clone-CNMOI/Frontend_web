@@ -8,7 +8,7 @@ export interface UploadMediaParams {
 
 export interface IUploadedMedia {
     key: string;
-    url: string | null;
+    url?: string | null;
     visibility: MediaVisibility;
     thumbnailKey?: string;
     contentType: string;

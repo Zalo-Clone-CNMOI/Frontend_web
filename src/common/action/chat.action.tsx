@@ -114,8 +114,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     const oldMessages = current.messagesByConversation[msg.conversationId] || [];
 
     const tempIndex = oldMessages.findIndex((m) =>
-      m.messageId === msg.clientMessageId ||
-      m.clientMessageId === msg.clientMessageId
+      m.messageId === msg.messageId
+      // m.clientMessageId === msg.clientMessageId
     );
 
     if (tempIndex !== -1) {
@@ -189,7 +189,6 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     if (!socket.connected) return;
 
     socket.emit("presence:heartbeat", {
-      user_id: currentUserId,
       ts: Date.now(),
     });
   }, 30000);
@@ -352,12 +351,11 @@ export const sendMessage = async (
     return;
   }
 
-  const tempId = `temp-${Date.now()}`;
+  const clientMessageId = crypto.randomUUID();
   const now = Date.now();
 
   const optimisticMessage = normalizeMessage({
-    messageId: tempId,
-    clientMessageId: tempId,
+    messageId: clientMessageId,
     conversationId,
     senderId: currentUserId,
     body: trimmedBody,
@@ -375,15 +373,15 @@ export const sendMessage = async (
   socket.emit(
     "chat:send",
     {
-      message_id: tempId,
-      client_message_id: tempId,
+      message_id: clientMessageId,
       conversation_id: conversationId,
       body: trimmedBody,
       attachments,
       sent_at: now,
     },
     (ack: any) => {
-console.log("[chat:send ack]", ack);
+      console.log("[chat:send ack]", ack);
+
       const current = useChatStore.getState();
       const messages = current.messagesByConversation[conversationId] || [];
       const isSuccess = ack?.success === true;
@@ -391,7 +389,7 @@ console.log("[chat:send ack]", ack);
       current.setMessages(
         conversationId,
         messages.map((msg: any) => {
-          if (msg.messageId !== tempId) return msg;
+          if (msg.messageId !== clientMessageId) return msg;
 
           if (!isSuccess) {
             return {
@@ -406,8 +404,6 @@ console.log("[chat:send ack]", ack);
             pending: false,
             failed: false,
             messageId: ack?.data?.messageId ?? ack?.messageId ?? msg.messageId,
-            clientMessageId:
-              ack?.data?.clientMessageId ?? ack?.clientMessageId ?? tempId,
             createdAt: ack?.data?.createdAt ?? ack?.createdAt ?? msg.createdAt,
           };
         })

@@ -4,10 +4,10 @@ import { IApiResponse, IAuthData, IUser } from "../interface/auth-interface";
 
 export const userService = {
     userGetMe() {
-        return http.get<IApiResponse<IAuthData>>(API.API_USERS_ME);
+        return http.get<IApiResponse<IUser>>(API.API_USERS_ME);
     },
     userUpdateProfile(body: Partial<IUser>) {
-        return http.patch<IApiResponse<IAuthData>>(API.API_USERS_UPDATE_ME, body);
+        return http.patch<IApiResponse<IUser>>(API.API_USERS_UPDATE_ME, body);
     },
     
 }

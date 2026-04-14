@@ -38,9 +38,10 @@ export default function RegisterPage() {
     const [otpMsg, setOtpMsg] = useState<string | null>(null);
     const [step, setStep] = useState<Step>("FORM");
 
-    const { loadingAuth, setLoadingAuth,
-        errorAuth, setErrorAuth,
-        authData, setAuthData } = useAuthStore();
+    const {
+        setLoadingAuth,
+        setErrorAuth,
+        setAuthData } = useAuthStore();
 
     const onlyNumber = phone.replace(/\D/g, "");
     const national = onlyNumber.startsWith("0") ? onlyNumber.slice(1) : onlyNumber;
@@ -94,7 +95,7 @@ export default function RegisterPage() {
         setOtpMsg("Đang gửi OTP...");
 
         try {
-            console.log("Sending OTP to:", phoneE164);
+            // console.log("Sending OTP to:", phoneE164);
             const c = await sendOtp(phoneE164);
             console.log("OTP sent successfully");
 

@@ -25,6 +25,7 @@ import { useChatStore } from "@/src/common/store/useChatStore";
 import { getcurrentUserId, getRefreshToken, getSessionToken } from "@/src/common/utilities/utils";
 import InfConvColumn from "./components/conversation-infor/page";
 import { cleanupChat, initChat } from "@/src/common/action/chat.action";
+import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
 /* ===================== styled ===================== */
 
 const Root = styled(Grid)(() => ({
@@ -185,6 +186,7 @@ const Me = () => {
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
     const authData = useAuthStore((s) => s.authData);
     // console.log("SenderId", authData?.data?.user?.id)
+    
     const activeConversationId = useChatStore((s) => s.activeConversationId);
 
     const handleSelectedIcon = (iconName: SidebarKey) => {
@@ -205,9 +207,6 @@ const Me = () => {
         const accessToken = getSessionToken() || "";
         const refreshToken = getRefreshToken() || "";
         const currentUserId = getcurrentUserId() || "";
-
-        
-
         if (accessToken && currentUserId) {
             initChat(accessToken, currentUserId);
         }
@@ -216,10 +215,13 @@ const Me = () => {
             cleanupChat();
         };
     }, []);
+    useEffect(() => {
+        fetchAuthData()
+    }, [])
 
-    const accessToken =
-        authData?.data?.tokens?.accessToken ||
-        "";
+    
+    console.log("user data", authData)
+    const accessToken = getSessionToken() ?? ""
 
     const currentUserId =
         authData?.data?.user?.id ||

@@ -1,14 +1,16 @@
 "use client";
-import { Box, Button, CircularProgress, Typography } from "@mui/material";
+import { Box, Button, CircularProgress, IconButton, Tooltip, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { PaginationState, UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
-
+import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
+import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 interface MessageListProps {
   listRef: React.RefObject<HTMLDivElement | null>;
   messages: UiMessage[];
   currentUserId: string;
   conversationId: string;
+  onReplyMessage: (message: UiMessage) => void;
   pagination?: PaginationState;
   onLoadMore: (conversationId: string) => void;
   onDeleteMessage: (conversationId: string, messageId: string) => void;
@@ -86,6 +88,29 @@ const MessageRow = styled(Box, {
 })<{ mine?: boolean }>(({ mine }) => ({
   display: "flex",
   justifyContent: mine ? "flex-end" : "flex-start",
+  alignItems: "center",
+  gap: 8,
+  position: "relative",
+
+  "&:hover .message-actions": {
+    opacity: 1,
+    visibility: "visible",
+    transform: "translateY(0)",
+  },
+}));
+
+const MessageActions = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "mine",
+})<{ mine?: boolean }>(({ mine }) => ({
+  display: "flex",
+  alignItems: "center",
+  gap: 4,
+  opacity: 0,
+  visibility: "hidden",
+  transform: "translateY(4px)",
+  transition: "all 0.2s ease",
+  pointerEvents: "auto",
+  order: mine ? -1 : 1,
 }));
 
 const Bubble = styled(Box, {
@@ -147,6 +172,8 @@ export default function MessageList({
   messages,
   currentUserId,
   conversationId,
+  onReplyMessage,
+  onDeleteMessage,
   onScroll,
   showScrollbar,
 }: MessageListProps) {
@@ -180,9 +207,34 @@ export default function MessageList({
           {
             messages.map((msg) => {
               const mine = msg.senderId === currentUserId;
+              const canDelete = mine && !msg.isDeleted;
+              const canReply = !msg.isDeleted;
 
               return (
                 <MessageRow data-testid="message-row" key={msg.messageId} mine={mine}>
+                  {!mine && (
+                    <MessageActions className="message-actions" mine={mine}>
+                      {canReply && (
+                        <Tooltip title="Trả lời">
+                          <IconButton size="small" onClick={() => onReplyMessage(msg)}>
+                            <ReplyOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      {canDelete && (
+                        <Tooltip title="Xóa tin nhắn">
+                          <IconButton
+                            size="small"
+                            onClick={() => onDeleteMessage(conversationId, msg.messageId)}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </MessageActions>
+                  )}
+
                   <Bubble mine={mine}>
                     <MessageText>
                       {msg.isDeleted ? "Tin nhắn đã được thu hồi" : msg.body}
@@ -202,23 +254,37 @@ export default function MessageList({
                           {new Date(msg.createdAt).toLocaleTimeString("vi-VN", {
                             hour: "2-digit",
                             minute: "2-digit",
-                          })}                    </MetaText>
+                          })}
+                        </MetaText>
 
-                        {/* {msg.pending && !msg.failed ? <MetaText>Đang gửi</MetaText> : null} */}
                         {msg.failed && <MetaText>Gửi thất bại</MetaText>}
                         {msg.editedAt && <MetaText>Đã sửa</MetaText>}
                       </MetaLeft>
-
-                      {/* {mine && !msg.isDeleted && (
-                    <ActionButton
-                      color="error"
-                      onClick={() => onDeleteMessage(conversationId, msg.messageId)}
-                    >
-                      Xóa
-                    </ActionButton>
-                  )} */}
                     </MetaRow>
                   </Bubble>
+
+                  {mine && (
+                    <MessageActions className="message-actions" mine={mine}>
+                      {canReply && (
+                        <Tooltip title="Trả lời">
+                          <IconButton size="small" onClick={() => onReplyMessage(msg)}>
+                            <ReplyOutlinedIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+
+                      {canDelete && (
+                        <Tooltip title="Xóa tin nhắn">
+                          <IconButton
+                            size="small"
+                            onClick={() => onDeleteMessage(conversationId, msg.messageId)}
+                          >
+                            <DeleteOutlineIcon fontSize="small" />
+                          </IconButton>
+                        </Tooltip>
+                      )}
+                    </MessageActions>
+                  )}
                 </MessageRow>
               );
             })
