@@ -31,6 +31,7 @@ import { getCroppedImgFile } from "@/src/common/helpers/cropImage";
 import { userService } from "@/src/common/service/user-service";
 import { IUpdateMyProfilePayload } from "@/src/common/interface/user-interface";
 import { IUser } from "@/src/common/interface/auth-interface";
+import { useUserStore } from "@/src/common/store/useUserStore";
 
 const ProfileDialog = styled(Dialog)(({ theme }) => ({
   "& .MuiPaper-root": {
@@ -103,14 +104,13 @@ const ProfileModals = ({
   const {
     authData,
     setAuthData,
-    editProfileData,
-    openEditProfileModal,
-    setEditProfileField,
     setLoadingAuth,
     setErrorAuth,
-    setOpenEditProfileModal,
   } = useAuthStore();
-
+  const setOpenEditProfileModal = useUserStore((s)=> s.setOpenEditProfileModal)
+  const openEditProfileModal = useUserStore((s)=> s.openEditProfileModal)
+  const editProfileData = useUserStore((s)=> s.editProfileData)
+  const setEditProfileField = useUserStore((s)=> s.setEditProfileField)
   const [openCropDialog, setOpenCropDialog] = useState(false);
   const [selectedImageSrc, setSelectedImageSrc] = useState("");
   const [crop, setCrop] = useState({ x: 0, y: 0 });
@@ -231,7 +231,7 @@ const ProfileModals = ({
       setLoadingAuth(true);
       setErrorAuth(null);
 
-      let uploadedAvatarValue = user.avatarUrl ?? null;
+      let uploadedAvatarUrl = user.avatarUrl;
 
       if (avatarFile) {
         const uploadResult = await uploadMedia({
@@ -239,21 +239,19 @@ const ProfileModals = ({
           userId: String(userId),
         });
 
-        uploadedAvatarValue = uploadResult.key;
+        uploadedAvatarUrl = uploadResult.key;
       }
-
+      console.log("avatarKey before update profile:", uploadedAvatarUrl);
       const payload: IUpdateMyProfilePayload = {
         fullName,
         bio: bio || null,
         gender,
         dateOfBirth,
-        avatarUrl: uploadedAvatarValue,
+        avatarUrl: uploadedAvatarUrl ?? null,
       };
-
+      console.log("update profile payload:", payload);
       const response = await userService.userUpdateProfile(payload);
-      const returnedUser =
-        response?.payload?.data?.user ??
-        null;
+      const returnedUser = response?.payload?.data ?? null;
 
       const mergedUser: IUser = {
         ...user,
@@ -261,7 +259,7 @@ const ProfileModals = ({
         ...payload,
         avatarUrl:
           returnedUser?.avatarUrl ??
-          uploadedAvatarValue ??
+          uploadedAvatarUrl ??
           user.avatarUrl ??
           null,
       } as IUser;

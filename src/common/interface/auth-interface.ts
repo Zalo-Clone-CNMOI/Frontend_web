@@ -14,6 +14,7 @@ export interface IUser extends IBase {
     bio: string | null;
     status: "active" | "inactive" | "blocked";
     createdAt: string;
+    avatarResolvedUrl: string
 }
 
 
@@ -27,9 +28,9 @@ export interface IRefreshResponse {
     expiresIn: number;
 }
 export interface ITokens {
-    accessToken: string;
-    refreshToken: string;
-    expiresIn: number;
+    accessToken: string | "";
+    refreshToken: string | "";
+    expiresIn: number | null;
 }
 
 export interface IRegisterPayload extends IBase {

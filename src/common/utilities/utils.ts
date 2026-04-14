@@ -22,6 +22,10 @@ export const getCurrentUserId = (): string | null => {
   if (!isClientSide()) return null;
   return localStorage.getItem(CURRENT_USER_ID_KEY);
 };
+export const getTokenExpiresIn = () => {
+  if (!isClientSide()) return null;
+  return localStorage.getItem(EXPIRES_IN_KEY);
+}
 
 // giữ alias cũ để tránh vỡ import cũ
 export const getcurrentUserId = getCurrentUserId;

@@ -6,13 +6,6 @@ export type AttachmentType = "image" | "video" | "audio" | "document";
 const MEDIA_BASE_URL =
   process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "http://54.179.206.215:5000";
 
-const USER_BASE_URL =
-  process.env.NEXT_PUBLIC_API_BASE_URL || "http://54.179.206.215:5001";
-
-const S3_PUBLIC_BASE_URL =
-  process.env.NEXT_PUBLIC_S3_PUBLIC_BASE_URL ||
-  "https://zalo-bucket.s3.ca-central-1.amazonaws.com";
-
 export const getAttachmentType = (mimeType: string): AttachmentType => {
   if (mimeType.startsWith("image/")) return "image";
   if (mimeType.startsWith("video/")) return "video";
@@ -38,7 +31,7 @@ export async function uploadMedia({
     const authHeaders: Record<string, string> = {
       "Content-Type": "application/json",
       Authorization: `Bearer ${token}`,
-      "x-user-id": String(userId), // thêm dòng này
+      "x-user-id": String(userId),
     };
 
     // 1) presign
@@ -61,6 +54,8 @@ export async function uploadMedia({
 
     const key = presignData?.key;
     const uploadUrl = presignData?.uploadUrl;
+    console.log("presign key:", key);
+    console.log("uploadUrl:", uploadUrl);
     const visibility: MediaVisibility =
       presignData?.visibility === "private" ? "private" : "public";
 
@@ -68,17 +63,7 @@ export async function uploadMedia({
       throw new Error("Presign response thiếu key hoặc uploadUrl");
     }
 
-    // 2) upload S3
-    // 2) upload S3
-    console.log("=== STEP 2: UPLOAD S3 START ===");
-    console.log("uploadUrl:", uploadUrl);
-    console.log("key:", key);
-    console.log("file info:", {
-      name: file.name,
-      type: file.type,
-      size: file.size,
-    });
-
+    // 2) upload lên S3
     const uploadRes = await fetch(uploadUrl, {
       method: "PUT",
       headers: {
@@ -88,12 +73,6 @@ export async function uploadMedia({
     });
 
     const uploadText = await uploadRes.text().catch(() => "");
-
-    console.log("=== STEP 2: UPLOAD S3 RESULT ===");
-    console.log("upload status:", uploadRes.status);
-    console.log("upload ok:", uploadRes.ok);
-    console.log("upload statusText:", uploadRes.statusText);
-    console.log("upload response text:", uploadText);
 
     if (!uploadRes.ok) {
       throw new Error(uploadText || "Upload file lên S3 thất bại");
@@ -116,25 +95,16 @@ export async function uploadMedia({
 
     const confirmJson = await confirmRes.json();
     const confirmData = confirmJson?.data ?? confirmJson;
+    console.log("confirmData.key:", confirmData?.key || key);
+    console.log("final key:", confirmData?.key ?? key);
 
-    const thumbnailKey = confirmData?.thumbnailKey ?? null;
-    const confirmedUrl = confirmData?.url || null
-    // confirmData?.fileUrl ||
-    // confirmData?.mediaUrl ||
-    // confirmData?.publicUrl ||   buildPublicFileUrl(key);
-
-
-    // const fileUrl =
-    //   confirmedUrl ||
-    //   (visibility === "public" ? buildPublicFileUrl(key) : null);
-    console.log("confirmJson:", confirmJson);
-    console.log("confirmData:", confirmData);
+    const finalKey = confirmData?.key ?? key;
+    console.log("uploadMedia return key:", finalKey);
     return {
-      key,
-      // : confirmedUrl,
-      url: confirmedUrl,
+      key: confirmData?.key ?? key,
+      url: null, // hoặc bỏ hẳn field này nếu interface cho phép
       visibility,
-      thumbnailKey,
+      thumbnailKey: confirmData?.thumbnailKey ?? null,
       contentType: file.type,
       fileName: file.name,
       size: file.size,

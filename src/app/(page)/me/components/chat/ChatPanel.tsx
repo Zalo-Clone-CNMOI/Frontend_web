@@ -15,6 +15,7 @@ import {
   openConversation,
   sendMessage,
 } from "@/src/common/action/chat.action";
+import { UiMessage } from "@/src/common/interface/chat-interface";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -75,7 +76,7 @@ export default function ChatPanel({
   const scrollIntentRef = useRef<"none" | "open" | "load-more">("none");
 
   const [showScrollbar, setShowScrollbar] = useState(false);
-
+  const [replyMessageId,setReplyMessageId] = useState<string | null>(null)
   const {
     socketConnected,
     messagesByConversation,
@@ -157,7 +158,9 @@ export default function ChatPanel({
       void tryLoadMore();
     }
   };
-
+  const handleReplyMessage = (msgId: UiMessage) => {
+    setReplyMessageId(msgId.messageId);
+  };
   useEffect(() => {
     if (!accessToken || !currentUserId) return;
     initChat(accessToken, currentUserId);
@@ -184,7 +187,7 @@ export default function ChatPanel({
     if (intent === "open" && !loading && !loadingMore && messages.length > 0) {
       console.log("[layoutEffect:open -> scroll bottom]");
       scrollToBottomStable();
-      scrollIntentRef.current = "none"; 
+      scrollIntentRef.current = "none";
       prevFirstMessageIdRef.current = firstMessageId;
       prevLastMessageIdRef.current = lastMessageId;
       return;
@@ -248,6 +251,7 @@ export default function ChatPanel({
         <MessageList
           listRef={listRef}
           messages={messages}
+          onReplyMessage={handleReplyMessage}
           currentUserId={currentUserId}
           conversationId={conversationId}
           pagination={pagination}

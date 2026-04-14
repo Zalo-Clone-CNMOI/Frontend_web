@@ -23,7 +23,7 @@ import { ConversationDto } from "@/src/common/interface/chat-interface";
 import {
     userService,
 } from "@/src/common/service/user-service";
-import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
+// import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
 import { searchService } from "@/src/common/service/search-service";
 import { IUserSearchItem, SearchResult } from "@/src/common/interface/search-interface";
 import { useDebounce } from "@/src/common/utilities/hook/debounce";
@@ -261,7 +261,7 @@ const SearchBar = () => {
                                                 <Avatar
                                                     src={
                                                         result.avatarUrl
-                                                            ? resolveMediaUrl(result.avatarUrl)
+                                                            ? result.avatarUrl
                                                             : undefined
                                                     }
                                                 >
