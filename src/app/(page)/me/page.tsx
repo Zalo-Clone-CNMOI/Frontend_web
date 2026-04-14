@@ -23,6 +23,8 @@ import ChatPanel from "./components/chat/ChatPanel";
 import ConversationList from "./components/chat/ConversationList";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { getcurrentUserId, getRefreshToken, getSessionToken } from "@/src/common/utilities/utils";
+import InfConvColumn from "./components/conversation-infor/page";
+import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 /* ===================== styled ===================== */
 
 const Root = styled(Grid)(() => ({
@@ -30,7 +32,7 @@ const Root = styled(Grid)(() => ({
     width: "100vw",
 }));
 
-const LeftColumn = styled(Grid)(() => ({
+const ConversationColumn = styled(Grid)(() => ({
     minWidth: 345,
     height: "100vh",
     display: "flex",
@@ -38,10 +40,15 @@ const LeftColumn = styled(Grid)(() => ({
     borderRight: "1px solid #E5E7EB",
 }));
 
-const RightColumn = styled(Grid)(() => ({
-    minWidth: 0,
+const ChatColumn = styled(Grid)(() => ({
+    // minWidth: 0,
     height: "100vh",
 }));
+
+// const InfConvColumn = styled(Grid)(() => ({
+//     border: "1px solid black",
+//     minWidth: "300px"
+// }))
 
 const Panel = styled(Box)(() => ({
     overflow: "hidden",
@@ -106,10 +113,12 @@ export const TabStyled = styled(Tab)(() => ({
 }));
 
 const TabPanelStyled = styled(TabPanel)(() => ({
-    padding: 16,
+    padding: 8,
     flex: 1,
     minHeight: 0,
     overflowY: "auto",
+    // margin:"0px",
+    borderRadius: "8px",
 }));
 
 const CategoryFilterButton = styled(Button)(({ theme }) => ({
@@ -175,8 +184,7 @@ const Me = () => {
     const [isSelectedCategory, setSelectedCategory] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
     const authData = useAuthStore((s) => s.authData);
-    const tokenData = useAuthStore((s) => s.tokenData);
-
+    // console.log("SenderId", authData?.data?.user?.id)
     const activeConversationId = useChatStore((s) => s.activeConversationId);
 
     const handleSelectedIcon = (iconName: SidebarKey) => {
@@ -197,22 +205,20 @@ const Me = () => {
         const accessToken = getSessionToken() || "";
         const refreshToken = getRefreshToken() || "";
         const currentUserId = getcurrentUserId() || "";
-        useAuthStore.getState().setTokenData({
-            accessToken,
-            refreshToken,
-            expiresIn: 0,
-        });
 
-        useChatStore.getState().initChat(accessToken, currentUserId);
+        
+
+        if (accessToken && currentUserId) {
+            initChat(accessToken, currentUserId);
+        }
 
         return () => {
-            useChatStore.getState().cleanupChat();
+            cleanupChat();
         };
     }, []);
 
     const accessToken =
         authData?.data?.tokens?.accessToken ||
-        tokenData?.accessToken ||
         "";
 
     const currentUserId =
@@ -224,7 +230,7 @@ const Me = () => {
         <Root container>
             <AppSidebar selectedIcon={selectedIcon} onSelect={handleSelectedIcon} />
 
-            <LeftColumn>
+            <ConversationColumn>
                 <SearchBar />
 
                 <TabContext value={chatTab}>
@@ -280,9 +286,9 @@ const Me = () => {
 
                     <TabPanelStyled value="unRead">Unread</TabPanelStyled>
                 </TabContext>
-            </LeftColumn>
+            </ConversationColumn>
 
-            <RightColumn size="grow">
+            <ChatColumn size="grow">
                 <Panel >
                     {!activeConversationId ? (
                         <WelcomeWrap>
@@ -306,15 +312,23 @@ const Me = () => {
                             />
                         </WelcomeWrap>
                     ) : (
-                            <ChatPanel
-                                accessToken={accessToken}
-                                currentUserId={currentUserId}
-                                conversationId={activeConversationId}
-                                title="Tin nhắn"
-                            />
+                        <Box sx={{ display: "flex", height: "100%" }}>
+                            <Box sx={{ flex: 1, minWidth: 0 }}>
+                                <ChatPanel
+                                    accessToken={accessToken}
+                                    currentUserId={currentUserId}
+                                    conversationId={activeConversationId}
+                                    title="Tin nhắn"
+                                />
+                            </Box>
+
+                            <InfConvColumn conversationId={activeConversationId} />
+                        </Box>
+
+
                     )}
                 </Panel>
-            </RightColumn>
+            </ChatColumn>
         </Root>
     );
 };

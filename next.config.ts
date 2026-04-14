@@ -23,6 +23,12 @@ const nextConfig: NextConfig = {
         hostname: "chat.zalo.me",
         pathname: "/**",
       },
+      {
+        protocol: 'https',
+        hostname: 'avatar.iran.liara.run',
+        port: '',
+        pathname: '/**',
+      },
     ],
   },
 

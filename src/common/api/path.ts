@@ -4,7 +4,7 @@ export const API = {
     API_AUTH_LOGIN: "/api/auth/login",
     API_AUTH_REFRESH: "/api/auth/refresh",
     API_AUTH_LOGOUT: "/api/auth/logout",
-    API_AUTH_FORGOT_PASSWORD: "/api/auth/forgot-password",
+    // API_AUTH_FORGOT_PASSWORD: "/api/auth/forgot-password",
     API_AUTH_RESET_PASSWORD: "/api/auth/reset-password",
 
     /* ================= QR LOGIN ================= */

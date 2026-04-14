@@ -2,12 +2,12 @@
 
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
-
+import type { MouseEvent } from "react";
 interface BoxIconProps {
     outlined: React.ElementType;
     filled: React.ElementType;
     selected?: boolean;
-    onClick?: () => void;
+    onClick?:  (event: React.MouseEvent<HTMLDivElement>) => void;
 }
 
 const StyledBoxIcon = styled(Box, {

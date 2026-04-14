@@ -1,8 +1,11 @@
 "use client";
 
+import { openConversation, openMockConversation } from "@/src/common/action/chat.action";
 import { ConversationDto } from "@/src/common/interface/chat-interface";
 import { mockConversations } from "@/src/common/mockData/chat.mock.data";
+import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import AppAvatar from "@/src/shared/component/Avatar";
 import {
   Avatar,
   Badge,
@@ -17,6 +20,9 @@ const Root = styled(Box)({
   width: "100%",
   height: "100%",
   overflowY: "auto",
+  display: "flex",
+  flexDirection: "column",
+  gap: "8px",
 });
 
 const LoadingWrap = styled(Box)({
@@ -35,12 +41,12 @@ const LoadingText = styled(Typography)({
 const Item = styled(Box, {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ active }) => ({
-  padding: "14px 16px",
+  padding: "12px 16px",
   cursor: "pointer",
-  borderBottom: "1px solid #F1F5F9",
+  borderRadius: "6px",
   background: active ? "#E5F1FF" : "#fff",
   "&:hover": {
-    background: active ? "#E5F1FF" : "#F8FAFC",
+    background: active ? "#E5F1FF" : "#f1f2f4",
   },
 }));
 
@@ -50,13 +56,6 @@ const ItemRow = styled(Box)({
   gap: 12,
 });
 
-const StyledAvatar = styled(Avatar)({
-  width: 44,
-  height: 44,
-  flexShrink: 0,
-  fontSize: 16,
-  fontWeight: 600,
-});
 
 const Content = styled(Box)({
   flex: 1,
@@ -88,34 +87,25 @@ const LastMessage = styled(Typography)({
   textOverflow: "ellipsis",
 });
 
-const getInitials = (name?: string) => {
-  if (!name) return "?";
-  const words = name.trim().split(/\s+/);
-  if (words.length === 1) return words[0].charAt(0).toUpperCase();
-  return (
-    words[0].charAt(0) + words[words.length - 1].charAt(0)
-  ).toUpperCase();
-};
 
 export default function ConversationList() {
+  const authData = useAuthStore((s) => s.authData);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const listConversation = useChatStore((s) => s.listConversation);
   const conversationLoading = useChatStore((s) => s.conversationLoading);
   const conversationFetched = useChatStore((s) => s.conversationFetched);
   const fetchListConversation = useChatStore((s) => s.fetchListConversation);
-  const openConversation = useChatStore((s) => s.openConversation);
-  const openMockConversation = useChatStore((s) => s.openMockConversation);
-
+  console.log("render conversation list", listConversation);
   useEffect(() => {
     fetchListConversation({ page: 1, limit: 10 });
   }, [fetchListConversation]);
 
-  const usingApiData = conversationFetched && listConversation.length > 0;
+  const usingApiData = listConversation.length > 0;
 
   const displayConversations = useMemo<ConversationDto[]>(() => {
-  if (!conversationFetched) return [];
-  return usingApiData ? listConversation : mockConversations;
-}, [conversationFetched, usingApiData, listConversation]);
+    if (!conversationFetched) return [];
+    return usingApiData ? listConversation : mockConversations;
+  }, [conversationFetched, usingApiData, listConversation]);
 
   if (conversationLoading && !conversationFetched) {
     return (
@@ -127,42 +117,43 @@ export default function ConversationList() {
       </Root>
     );
   }
-
   return (
     <Root>
-      {displayConversations.map((item) => {
-        const avatarSrc =
-          item?.avatarUrl || "https:static.vecteezy.com/system/resources/previews/026/434/409/non_2x/default-avatar-profile-icon-social-media-user-photo-vector.jpg";
+      {displayConversations.map((item) => (
+        <Item
+          data-testid="conversation"
+          key={item.id}
+          active={activeConversationId === item.id}
+          onClick={() =>
+            usingApiData
+              ? openConversation(item.id)
+              : openMockConversation(item.id)
+          }
+        >
+          <ItemRow>
+            <AppAvatar
+              src={item.avatarUrl ?? ""}
+              name={item.name ?? null}
+              size={44}
+            />
 
-        return (
-          <Item
-            key={item.id}
-            active={activeConversationId === item.id}
-            onClick={() =>
-              usingApiData
-                ? openConversation(item.id)
-                : openMockConversation(item.id)
-            }
-          >
-            <ItemRow>
-              <StyledAvatar src={avatarSrc}>
-                {getInitials(item.name)}
-              </StyledAvatar>
+            <Content>
+              <Row>
+                <Name>{item.name}</Name>
+                {!!item.unreadCount && (
+                  <Badge color="primary" badgeContent={item.unreadCount} />
+                )}
+              </Row>
 
-              <Content>
-                <Row>
-                  <Name>{item.name}</Name>
-                  {!!item.unreadCount && (
-                    <Badge color="primary" badgeContent={item.unreadCount} />
-                  )}
-                </Row>
-
-                <LastMessage>{item.lastMessage || "Chưa có tin nhắn"}</LastMessage>
-              </Content>
-            </ItemRow>
-          </Item>
-        );
-      })}
+              <LastMessage>
+                {item?.lastMessage?.content
+                  ? `${item?.lastMessage?.senderId === authData?.data?.user?.id ? "Bạn: " : ""}${item.lastMessage.content}`
+                  : "Chưa có tin nhắn"}
+              </LastMessage>
+            </Content>
+          </ItemRow>
+        </Item>
+      ))}
     </Root>
   );
 }

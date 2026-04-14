@@ -3,15 +3,22 @@ export type ReactionType = "like" | "love" | "haha" | "sad" | "angry";
 
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
+export interface ConversationLastMessageDto {
+    id: string;
+    content: string;
+    createdAt: string | number | null;
+    senderId: string;
+    senderName: string;
+}
 export interface ConversationDto {
   id: string;
   name: string;
   avatarUrl?: string | null;
-  type: "direct" | "group" | string;
+  type:  string;
   memberCount?: number;
   unreadCount: number;
   isMuted?: boolean;
-  lastMessage?: string | null;
+  lastMessage?: ConversationLastMessageDto | null ;
   lastMessageAt?: string | number | null;
   createdAt?: string | null;
 }
@@ -39,7 +46,6 @@ export interface AttachmentDto {
   url?: string;
   thumbnailUrl?: string;
 }
-
 export interface UiMessage {
   messageId: string;
   conversationId: string;
@@ -81,13 +87,19 @@ export interface IChat {
 
   messagesByConversation: MessageMap;
   paginationByConversation: PaginationMap;
-conversationFetched: boolean
+  conversationFetched: boolean
   listConversation: ConversationDto[];
   conversationMeta: ConversationListMeta | null;
   conversationLoading: boolean;
 
   heartbeatId: ReturnType<typeof setInterval> | null;
+  mediaByConversation: Record<string, AttachmentDto[]>;
+  filesByConversation: Record<string, AttachmentDto[]>;
+  linksByConversation: Record<string, string[]>;
 
+  rebuildConversationDerivedData: (conversationId: string) => void;
+  appendMessageDerivedData: (message: UiMessage) => void;
+  clearConversationDerivedData: (conversationId: string) => void;
   setListConversation: (items: ConversationDto[]) => void;
   fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
 
