@@ -13,6 +13,7 @@ import {
   setSessionTokenExpiresIn,
 } from "@/src/common/utilities/utils";
 import { QrBindIssuedPayload, QrConfirmedPayload, QrRejectedPayload, UiStatus, WsErrorPayload } from "@/src/common/interface/qr-interface";
+import { qrService } from "@/src/common/service/qr-service";
 
 const QRBox = styled(Box)({
   boxSizing: "border-box",
@@ -96,6 +97,7 @@ export default function LoginQrTab() {
   const countdownRef = useRef<number | null>(null);
   const startingRef = useRef(false);
   const bindFlowIdRef = useRef(0);
+  const sessionIdRef = useRef<string | null>(null);
 
   const stopCountdown = () => {
     if (countdownRef.current) {
@@ -189,21 +191,44 @@ export default function LoginQrTab() {
 
       const socket = await ensureSocketConnected();
 
-      const handleBindIssued = (data: QrBindIssuedPayload) => {
+      const handleBindIssued = async (data: QrBindIssuedPayload) => {
         if (bindFlowIdRef.current !== flowId) return;
 
-        const token = String(data?.socketBindingToken ?? "").trim();
+        const socketBindingToken = String(data?.socketBindingToken ?? "").trim();
         const expires = Number(data?.expiresInSeconds ?? 0);
 
-        if (!token) {
+        if (!socketBindingToken) {
           setQrStatus("ERROR");
           setError("Không nhận được socket binding token");
           return;
         }
 
-        setQrValue(token);
-        setQrStatus("WAITING");
-        startCountdown(expires > 0 ? expires : 30);
+        try {
+          const deviceInfo = navigator.userAgent;
+          const response = await qrService.generate({
+            socketBindingToken,
+            deviceInfo,
+          });
+
+          const qrData = response?.payload?.data;
+          const qrToken = qrData?.qrToken;
+          const sessionId = qrData?.sessionId;
+          const qrExpires = qrData?.expiresInSeconds || expires;
+
+          if (!qrToken || !sessionId) {
+            setQrStatus("ERROR");
+            setError("Không nhận được qrToken hoặc sessionId");
+            return;
+          }
+
+          sessionIdRef.current = sessionId;
+          setQrValue(qrToken);
+          setQrStatus("WAITING");
+          startCountdown(qrExpires > 0 ? qrExpires : 30);
+        } catch (error: any) {
+          setQrStatus("ERROR");
+          setError(error?.message || "Không thể tạo QR session");
+        }
       };
 
       const handleConfirmed = (data: QrConfirmedPayload) => {

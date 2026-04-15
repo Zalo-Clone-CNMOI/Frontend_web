@@ -1,5 +1,17 @@
 export type UiStatus = "LOADING" | "WAITING" | "APPROVED" | "EXPIRED" | "ERROR";
 
+export interface IQRGeneratePayload {
+  socketBindingToken: string;
+  deviceInfo?: string;
+}
+
+export interface IQRGenerateData {
+  sessionId: string;
+  qrToken: string;
+  expiresAt: string;
+  expiresInSeconds: number;
+}
+
 export interface QrBindIssuedPayload {
   socketId: string;
   socketBindingToken: string;

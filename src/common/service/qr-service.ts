@@ -10,5 +10,4 @@ export const qrService = {
     status(sessionId: string) {
         return http.get(API.API_AUTH_QR_STATUS(sessionId));
     }
-
 };
