@@ -1,5 +1,8 @@
 import { buildDerivedDataFromMessages, dedupeByMessageId, extractFilesFromMessage, extractLinksFromMessage, extractMediaFromMessage, normalizeMessage, uniqAttachments, uniqStrings, upsertIncomingMessage } from "../helpers/chat.helpers";
+import { buildChatAttachmentsPayload } from "../helpers/chatAttachment.helpers";
+import { cleanMessageBody, HIDDEN_BODY } from "../helpers/cleanBodyMedia";
 import { ConversationDto, ConversationLastMessageDto, UiMessage } from "../interface/chat-interface";
+import { ChatAttachmentPayload, IUploadedMedia } from "../interface/media-interface";
 import { chatService } from "../service/chat-service";
 import { connectSocket, getSocket } from "../socket/socket";
 import { useChatStore } from "../store/useChatStore";
@@ -49,7 +52,47 @@ export const appendMessageDerivedData = (message: any) => {
     ])
   );
 };
+const applyDeletedMessage = (
+  messages: UiMessage[],
+  messageId: string,
+  deletedAt: number
+): UiMessage[] => {
+  return messages.map((msg) =>
+    msg.messageId === messageId
+      ? {
+        ...msg,
+        body: "",
+        isDeleted: true,
+        deletedAt,
+        attachments: [],
+        pending: false,
+        failed: false,
+      }
+      : msg
+  );
+};
 
+const patchConversationPreviewWhenDeleted = (
+  conversations: ConversationDto[],
+  conversationId: string,
+  messageId: string
+): ConversationDto[] => {
+  return conversations.map((cvs) => {
+    if (cvs.id !== conversationId) return cvs;
+
+    const lastMessage = cvs.lastMessage;
+    if (!lastMessage || lastMessage.id !== messageId) return cvs;
+
+    return {
+      ...cvs,
+      lastMessage: {
+        ...lastMessage,
+        content: "Tin nhắn đã được thu hồi",
+      },
+      lastMessageAt: Date.now(),
+    };
+  });
+};
 export const clearConversationDerivedData = (conversationId: string) => {
   const state = useChatStore.getState();
   state.setMediaByConversation(conversationId, []);
@@ -89,7 +132,27 @@ export const fetchListConversation = async (params: { page?: number; limit?: num
     state.setError(err?.message || "Không lấy được danh sách cuộc trò chuyện");
   }
 };
+const hydrateReplyMessages = (messages: UiMessage[]): UiMessage[] => {
+  const messageMap = new Map(messages.map((msg) => [msg.messageId, msg]));
 
+  return messages.map((msg) => {
+    if (msg.replyTo || !msg.replyToMessageId) return msg;
+
+    const repliedMessage = messageMap.get(msg.replyToMessageId);
+    if (!repliedMessage) return msg;
+
+    return {
+      ...msg,
+      replyTo: {
+        messageId: repliedMessage.messageId,
+        senderId: repliedMessage.senderId,
+        body: repliedMessage.body ?? "",
+        attachments: repliedMessage.attachments ?? [],
+        isDeleted: Boolean(repliedMessage.isDeleted),
+      },
+    };
+  });
+};
 export const initChat = (accessToken: string, currentUserId: string) => {
   if (!accessToken || !currentUserId) return;
 
@@ -104,52 +167,141 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("connect_error");
   socket.off("chat:new");
   socket.off("chat:message");
+  socket.off("chat:message:deleted");
+  socket.off("chat:message:updated");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
-    const msg = normalizeMessage(raw);
-    if (!msg.conversationId) return;
+    console.log("[receiver raw socket]", raw);
 
-    const current = useChatStore.getState();
-    const oldMessages = current.messagesByConversation[msg.conversationId] || [];
+    const normalized = normalizeMessage(raw);
 
-    const tempIndex = oldMessages.findIndex((m) =>
-      m.messageId === msg.messageId
-      // m.clientMessageId === msg.clientMessageId
-    );
+    console.log("[receiver normalized]", normalized);
 
-    if (tempIndex !== -1) {
-      const nextMessages = [...oldMessages];
-      nextMessages[tempIndex] = {
-        ...nextMessages[tempIndex],
-        ...msg,
-        pending: false,
-        failed: false,
+    if (!normalized.conversationId || !normalized.messageId) return;
+
+    let finalMessage = normalized;
+
+    useChatStore.setState((state) => {
+      const currentMessages =
+        state.messagesByConversation[normalized.conversationId] || [];
+
+      let msg = normalized;
+
+      if (!msg.replyTo && msg.replyToMessageId) {
+        const repliedMessage = currentMessages.find(
+          (item) => item.messageId === msg.replyToMessageId
+        );
+
+        if (repliedMessage) {
+          msg = {
+            ...msg,
+            replyTo: {
+              messageId: repliedMessage.messageId,
+              senderId: repliedMessage.senderId,
+              body: repliedMessage.body ?? "",
+              attachments: repliedMessage.attachments ?? [],
+              isDeleted: Boolean(repliedMessage.isDeleted),
+            },
+          };
+        }
+      }
+
+      finalMessage = msg;
+
+      const nextMessages = upsertIncomingMessage(currentMessages, msg);
+
+      const nextConversations = state.listConversation.some(
+        (cvs) => cvs.id === msg.conversationId
+      )
+        ? moveConversationToTopWithLastMessage(
+          state.listConversation,
+          msg.conversationId,
+          msg
+        )
+        : state.listConversation;
+
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [msg.conversationId]: nextMessages,
+        },
+        listConversation: nextConversations,
       };
+    });
 
-      current.setMessages(msg.conversationId, dedupeByMessageId(nextMessages));
-      appendMessageDerivedData(nextMessages[tempIndex]);
-      return;
-    }
+    appendMessageDerivedData(finalMessage);
+  };
+  const handleDeletedMessage = (raw: any) => {
+    const messageId = raw?.message_id ?? raw?.messageId;
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const deletedAt = raw?.deleted_at ?? raw?.deletedAt ?? Date.now();
 
-    const existed = oldMessages.some((m) => m.messageId === msg.messageId);
+    if (!messageId || !conversationId) return;
 
-    if (!existed) {
-      current.appendRealtimeMessage(msg.conversationId, {
-        ...msg,
-        pending: false,
-        failed: false,
-      });
-    } else {
-      const nextMessages = upsertIncomingMessage(oldMessages, {
-        ...msg,
-        pending: false,
-        failed: false,
-      });
-      current.setMessages(msg.conversationId, nextMessages);
-    }
+    useChatStore.setState((state) => ({
+      messagesByConversation: {
+        ...state.messagesByConversation,
+        [conversationId]: (state.messagesByConversation[conversationId] || []).map((msg) =>
+          msg.messageId === messageId
+            ? {
+              ...msg,
+              body: "",
+              isDeleted: true,
+              deletedAt,
+              attachments: [],
+              pending: false,
+              failed: false,
+            }
+            : msg
+        ),
+      },
+      listConversation: patchConversationPreviewWhenDeleted(
+        state.listConversation,
+        conversationId,
+        messageId
+      ),
+    }));
+  };
 
-    appendMessageDerivedData(msg);
+
+  const handleUpdatedMessage = (raw: any) => {
+    const messageId = raw?.message_id ?? raw?.messageId;
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const body = cleanMessageBody(raw?.body ?? "");
+    const editedAt = raw?.edited_at ?? raw?.editedAt ?? Date.now();
+
+    if (!messageId || !conversationId) return;
+
+    useChatStore.setState((state) => ({
+      messagesByConversation: {
+        ...state.messagesByConversation,
+        [conversationId]: (state.messagesByConversation[conversationId] || []).map((msg) =>
+          msg.messageId === messageId
+            ? {
+              ...msg,
+              body,
+              editedAt,
+            }
+            : msg
+        ),
+      },
+      listConversation: state.listConversation.map((cvs) => {
+        if (cvs.id !== conversationId) return cvs;
+
+        const lastMessage = cvs.lastMessage;
+        if (!lastMessage || lastMessage.id !== messageId) return cvs;
+
+        return {
+          ...cvs,
+          lastMessage: {
+            ...lastMessage,
+            content: body,
+          },
+          lastMessageAt: editedAt,
+        };
+      }),
+    }));
   };
 
   socket.on("connect", () => {
@@ -180,9 +332,12 @@ export const initChat = (accessToken: string, currentUserId: string) => {
 
   socket.on("chat:new", handleIncomingMessage);
   socket.on("chat:message", handleIncomingMessage);
+  socket.on("chat:message:deleted", handleDeletedMessage);
+  socket.on("chat:message:updated", handleUpdatedMessage);
 
   socket.onAny((event, ...args) => {
-    console.log("[socket event]", event, args);
+    console.log("[socket event]", event);
+    console.log("[socket args]", args);
   });
 
   const heartbeatId = setInterval(() => {
@@ -217,11 +372,13 @@ export const openConversation = async (conversationId: string) => {
   try {
     const res = await chatService.fetchMessages(conversationId, { limit: 50 });
     const page = res?.payload?.data;
-    const items = Array.isArray(page?.items) ? dedupeByMessageId(page.items) : [];
+    const rawItems = Array.isArray(page?.items) ? page.items : [];
+    const normalizedItems = dedupeByMessageId(rawItems.map(normalizeMessage));
+    const hydratedItems = hydrateReplyMessages(normalizedItems);
 
     const oldItems =
       useChatStore.getState().messagesByConversation[conversationId] || [];
-    const merged = dedupeByMessageId([...oldItems, ...items]);
+    const merged = dedupeByMessageId([...oldItems, ...hydratedItems]);
 
     state.setMessages(conversationId, merged);
 
@@ -277,9 +434,13 @@ export const loadMoreMessages = async (conversationId: string) => {
     });
 
     const payload = res?.payload?.data;
-    const oldMessages = Array.isArray(payload?.items)
-      ? dedupeByMessageId(payload.items)
+    const fetchedMessages = Array.isArray(payload?.items)
+      ? payload.items.map(normalizeMessage)
       : [];
+
+    const oldMessages = hydrateReplyMessages(
+      dedupeByMessageId(fetchedMessages)
+    );
 
     const latestState = useChatStore.getState();
     const currentMessages =
@@ -336,17 +497,36 @@ export const loadMoreMessages = async (conversationId: string) => {
   }
 };
 
+
 export const sendMessage = async (
   conversationId: string,
   body: string,
-  attachments: any[] = []
+  attachments: (ChatAttachmentPayload | IUploadedMedia | any)[] = [],
+  replyMessage?: UiMessage | null
 ) => {
   const state = useChatStore.getState();
   const currentUserId = state.currentUserId;
-  const trimmedBody = body?.trim?.() || "";
+  const displayBody = cleanMessageBody(body);
   const socket = getSocket();
 
-  if (!currentUserId || (!trimmedBody && attachments.length === 0) || !socket?.connected) {
+  const socketAttachments = buildChatAttachmentsPayload(
+    attachments.map((att) => ({
+      key: att.key,
+      type: att.type,
+      fileName: att.name ?? att.fileName ?? "",
+      size: att.size,
+      contentType: att.content_type ?? att.contentType ?? "",
+      thumbnailKey: att.thumbnail_key ?? att.thumbnailKey,
+      visibility: att.visibility,
+      url: att.url ?? null,
+    }))
+  );
+
+  if (
+    !currentUserId ||
+    (!displayBody && socketAttachments.length === 0) ||
+    !socket?.connected
+  ) {
     console.warn("[sendMessage] socket chưa sẵn sàng");
     return;
   }
@@ -358,11 +538,21 @@ export const sendMessage = async (
     messageId: clientMessageId,
     conversationId,
     senderId: currentUserId,
-    body: trimmedBody,
+    body: displayBody,
     attachments,
     createdAt: now,
     pending: true,
     failed: false,
+    replyTo: replyMessage
+      ? {
+        messageId: replyMessage.messageId,
+        senderId: replyMessage.senderId,
+        body: replyMessage.body ?? "",
+        attachments: replyMessage.attachments ?? [],
+        isDeleted: Boolean(replyMessage.isDeleted),
+      }
+      : null,
+    replyToMessageId: replyMessage?.messageId ?? null,
   });
 
   state.appendRealtimeMessage(conversationId, optimisticMessage);
@@ -370,54 +560,152 @@ export const sendMessage = async (
 
   socket.emit("chat:join", { conversation_id: conversationId });
 
-  socket.emit(
-    "chat:send",
-    {
-      message_id: clientMessageId,
-      conversation_id: conversationId,
-      body: trimmedBody,
-      attachments,
-      sent_at: now,
-    },
-    (ack: any) => {
-      console.log("[chat:send ack]", ack);
+  const payload: any = {
+    message_id: clientMessageId,
+    conversation_id: conversationId,
+    attachments: socketAttachments,
+    sent_at: now,
+    body: displayBody || HIDDEN_BODY, // BE bắt buộc body thì gửi ký tự ẩn
+  };
+  if (replyMessage?.messageId) {
+    payload.reply_to_message_id = replyMessage.messageId;
+  }
+  console.log("[partner send] payload", payload);
 
-      const current = useChatStore.getState();
-      const messages = current.messagesByConversation[conversationId] || [];
-      const isSuccess = ack?.success === true;
+  socket.emit("chat:send", payload, (ack: any) => {
+    console.log("[chat:send ack]", ack);
 
-      current.setMessages(
-        conversationId,
-        messages.map((msg: any) => {
-          if (msg.messageId !== clientMessageId) return msg;
+    const current = useChatStore.getState();
+    const messages = current.messagesByConversation[conversationId] || [];
+    const isSuccess = ack?.success === true;
 
-          if (!isSuccess) {
-            return {
-              ...msg,
-              pending: false,
-              failed: true,
-            };
-          }
+    current.setMessages(
+      conversationId,
+      messages.map((msg: any) => {
+        if (msg.messageId !== clientMessageId) return msg;
 
+        if (!isSuccess) {
           return {
             ...msg,
             pending: false,
-            failed: false,
-            messageId: ack?.data?.messageId ?? ack?.messageId ?? msg.messageId,
-            createdAt: ack?.data?.createdAt ?? ack?.createdAt ?? msg.createdAt,
+            failed: true,
           };
-        })
-      );
-    }
-  );
+        }
+
+        return {
+          ...msg,
+          pending: false,
+          failed: false,
+          messageId: ack?.data?.messageId ?? ack?.messageId ?? msg.messageId,
+          createdAt: ack?.data?.createdAt ?? ack?.createdAt ?? msg.createdAt,
+        };
+      })
+    );
+  });
 };
 
-export const editMessage = (conversationId: string, messageId: string, newBody: string) => {
-  // em làm tiếp nếu cần
+export const editMessage = async (
+  conversationId: string,
+  messageId: string,
+  newBody: string
+) => {
+  const state = useChatStore.getState();
+  const socket = getSocket();
+  const cleanBody = cleanMessageBody(newBody);
+
+  if (!socket?.connected) {
+    state.setError("Socket chưa kết nối");
+    return;
+  }
+
+  if (!cleanBody) {
+    state.setError("Nội dung chỉnh sửa không được để trống");
+    return;
+  }
+
+  const editedAt = Date.now();
+
+  useChatStore.setState((prev) => ({
+    messagesByConversation: {
+      ...prev.messagesByConversation,
+      [conversationId]: (prev.messagesByConversation[conversationId] || []).map((msg) =>
+        msg.messageId === messageId
+          ? {
+            ...msg,
+            body: cleanBody,
+            editedAt,
+            failed: false,
+          }
+          : msg
+      ),
+    },
+    listConversation: prev.listConversation.map((cvs) => {
+      if (cvs.id !== conversationId) return cvs;
+
+      const lastMessage = cvs.lastMessage;
+      if (!lastMessage || lastMessage.id !== messageId) return cvs;
+
+      return {
+        ...cvs,
+        lastMessage: {
+          ...lastMessage,
+          content: cleanBody,
+        },
+        lastMessageAt: editedAt,
+      };
+    }),
+  }));
+
+  socket.emit("chat:update", {
+    conversation_id: conversationId,
+    message_id: messageId,
+    body: cleanBody,
+    edited_at: editedAt,
+  });
 };
 
-export const deleteMessage = (conversationId: string, messageId: string) => {
-  // em làm tiếp nếu cần
+export const deleteMessage = (
+  conversationId: string,
+  messageId: string,
+  createdAt: number
+) => {
+  const state = useChatStore.getState();
+  const socket = getSocket();
+
+  if (!socket?.connected) {
+    state.setError("Socket chưa kết nối");
+    return;
+  }
+
+  useChatStore.setState((prev) => ({
+    messagesByConversation: {
+      ...prev.messagesByConversation,
+      [conversationId]: (prev.messagesByConversation[conversationId] || []).map((msg) =>
+        msg.messageId === messageId
+          ? {
+            ...msg,
+            body: "",
+            isDeleted: true,
+            deletedAt: Date.now(),
+            attachments: [],
+            pending: false,
+            failed: false,
+          }
+          : msg
+      ),
+    },
+    listConversation: patchConversationPreviewWhenDeleted(
+      prev.listConversation,
+      conversationId,
+      messageId
+    ),
+  }));
+
+  socket.emit("chat:delete", {
+    message_id: messageId,
+    conversation_id: conversationId,
+    created_at: Number(createdAt),
+  });
 };
 
 export const cleanupChat = () => {
@@ -432,24 +720,70 @@ export const cleanupChat = () => {
   socket?.off("connect_error");
   socket?.off("chat:new");
   socket?.off("chat:message");
+  socket?.off("chat:message:deleted");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();
 
   state.resetChatState();
 };
+const detectPreviewTypeFromMessage = (message: UiMessage) => {
+  const cleanBody = (message.body ?? "").replace(/\u200B/g, "").trim();
+  const lowerContent = cleanBody.toLowerCase();
+
+  if (lowerContent.match(/\.(mp4|mov|avi|mkv|webm)$/)) return "video";
+  if (lowerContent.match(/\.(jpg|jpeg|png|gif|webp)$/)) return "image";
+  if (lowerContent.match(/\.(pdf|doc|docx|xls|xlsx|txt|zip)$/)) return "file";
+  if (lowerContent.match(/\.(mp3|wav|ogg|m4a)$/)) return "voice";
+
+  if (message.attachments?.some((att) => att.type === "image")) return "image";
+  if (message.attachments?.some((att) => att.type === "video")) return "video";
+  if (message.attachments?.some((att) => att.type === "audio")) return "voice";
+  if (message.attachments?.some((att) => att.type === "document")) return "file";
+
+  if (cleanBody) return "text";
+  return "deleted";
+};
+
 export const moveConversationToTopWithLastMessage = (
   conversations: ConversationDto[],
   conversationId: string,
   message: UiMessage
 ): ConversationDto[] => {
+  const cleanBody = (message.body ?? "").replace(/\u200B/g, "").trim();
+  const previewType = detectPreviewTypeFromMessage(message);
+
+  let previewContent = cleanBody;
+
+  switch (previewType) {
+    case "image":
+      previewContent = "Đã gửi 1 ảnh";
+      break;
+    case "video":
+      previewContent = "Đã gửi 1 video";
+      break;
+    case "file":
+      previewContent = "Đã gửi 1 tệp đính kèm";
+      break;
+    case "voice":
+      previewContent = "__VOICE__";
+      break;
+    case "deleted":
+      previewContent = "";
+      break;
+    default:
+      previewContent = cleanBody;
+      break;
+  }
+
   const tempData: ConversationLastMessageDto = {
     id: message.messageId,
-    content: message.body ?? "",
+    content: previewContent,
     createdAt: message.createdAt,
     senderId: message.senderId,
     senderName: "",
-  }
+  };
+
   const updatedList = conversations.map((cvs) =>
     cvs.id === conversationId
       ? {
@@ -464,4 +798,4 @@ export const moveConversationToTopWithLastMessage = (
   const rest = updatedList.filter((cvs) => cvs.id !== conversationId);
 
   return current ? [current, ...rest] : updatedList;
-}
+};

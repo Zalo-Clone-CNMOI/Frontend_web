@@ -219,8 +219,6 @@ const Me = () => {
         fetchAuthData()
     }, [])
 
-    
-    console.log("user data", authData)
     const accessToken = getSessionToken() ?? ""
 
     const currentUserId =

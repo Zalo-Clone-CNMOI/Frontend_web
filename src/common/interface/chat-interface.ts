@@ -4,21 +4,21 @@ export type ReactionType = "like" | "love" | "haha" | "sad" | "angry";
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
 export interface ConversationLastMessageDto {
-    id: string;
-    content: string;
-    createdAt: string | number | null;
-    senderId: string;
-    senderName: string;
+  id: string;
+  content: string;
+  createdAt: string | number | null;
+  senderId: string;
+  senderName: string;
 }
 export interface ConversationDto {
   id: string;
   name: string;
   avatarUrl?: string | null;
-  type:  string;
+  type: string;
   memberCount?: number;
   unreadCount: number;
   isMuted?: boolean;
-  lastMessage?: ConversationLastMessageDto | null ;
+  lastMessage?: ConversationLastMessageDto | null;
   lastMessageAt?: string | number | null;
   createdAt?: string | null;
 }
@@ -46,23 +46,29 @@ export interface AttachmentDto {
   url?: string;
   thumbnailUrl?: string;
 }
+export interface IMessageReplyPreview {
+  messageId: string;
+  senderId: string;
+  body: string;
+  attachments?: any[];
+  isDeleted?: boolean;
+}
 export interface UiMessage {
   messageId: string;
   conversationId: string;
   senderId: string;
   body: string;
   createdAt: number;
-  attachments: AttachmentDto[];
-  replyToMessageId?: string | null;
-  editedAt?: number;
-  deletedAt?: number;
-  isDeleted: boolean;
+  attachments: any[];
 
+  replyTo?: IMessageReplyPreview | null;
+  replyToMessageId?: string | null;
+
+  editedAt?: number | null;
+  deletedAt?: number | null;
+  isDeleted?: boolean;
   pending?: boolean;
   failed?: boolean;
-
-  clientMessageId?: string;
-  errorMessage?: string;
 }
 
 export interface MessagePageDto {

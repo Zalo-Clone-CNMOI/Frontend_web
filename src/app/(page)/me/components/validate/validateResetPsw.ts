@@ -8,7 +8,7 @@ export const initialValues: ChangePasswordFormValues = {
   confirmNewPassword: "",
 };
 
-export const validationSchema = Yup.object({
+export const validationResetPswSchema = Yup.object({
   newPassword: Yup.string()
     .trim()
     .required("Vui lòng nhập mật khẩu mới.")

@@ -26,9 +26,7 @@ export const chatService = {
     if (params.cursor) {
       searchParams.set("cursor", params.cursor);
     }
-
-    const url = `${API.API_MESSAGES(conversationId)}?${searchParams.toString()}`;
-    return http.get<IApiResponse<MessagePageDto>>(url);
+    return http.get<IApiResponse<MessagePageDto>>(`${API.API_MESSAGES(conversationId)}?${searchParams.toString()}`);
   },
 
   fetchMessageDetail(
