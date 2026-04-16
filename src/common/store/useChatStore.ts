@@ -5,7 +5,7 @@ import type {
   UiMessage,
 } from "@/src/common/interface/chat-interface";
 // import { patchConversationLastMessage, updateConversationLastMessage } from "../helpers/chat.helpers";
-import { moveConversationToTopWithLastMessage } from "../action/chat.action";
+import { deleteMessage, moveConversationToTopWithLastMessage } from "../action/chat.action";
 import { chatService } from "../service/chat-service";
 
 type PaginationState = {
@@ -80,7 +80,7 @@ export interface ChatSetters {
     conversationId: string,
     items: string[]
   ) => void;
-
+  deleteMessage: (conversationId: string, messageId: string, createdAt: number) => void
   fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
   resetChatState: () => void;
 }
@@ -182,16 +182,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         },
         listConversation: latestMessage
           ? moveToTop
-            // ? updateConversationLastMessage(
-            //     state.listConversation,
-            //     conversationId,
-            //     latestMessage
-            //   )
-            // : patchConversationLastMessage(
-            //     state.listConversation,
-            //     conversationId,
-            //     latestMessage
-            //   )
           : state.listConversation,
       };
     }),
@@ -266,6 +256,6 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       });
     }
   },
-
+  deleteMessage,
   resetChatState: () => set(initialChatState),
 }));

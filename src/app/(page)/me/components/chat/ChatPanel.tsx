@@ -9,8 +9,6 @@ import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import {
-  deleteMessage,
-  initChat,
   loadMoreMessages,
   openConversation,
   sendMessage,
@@ -67,16 +65,18 @@ export default function ChatPanel({
   const scrollHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const prevConversationIdRef = useRef<string | null>(null);
-  const prevFirstMessageIdRef = useRef<string | null>(null);
-  const prevLastMessageIdRef = useRef<string | null>(null);
-
+  const prevFirstMessageIdRef = useRef<UiMessage["messageId"] | null>(null);
+  const prevLastMessageIdRef = useRef<UiMessage["messageId"] | null>(null);
+  const pendingMediaScrollMessageIdRef = useRef<UiMessage["messageId"] | null>(null);
   const isLoadingMoreRef = useRef(false);
   const prevScrollHeightRef = useRef(0);
 
   const scrollIntentRef = useRef<"none" | "open" | "load-more">("none");
 
   const [showScrollbar, setShowScrollbar] = useState(false);
-  const [replyMessageId,setReplyMessageId] = useState<string | null>(null)
+  const [editMessage, setEditMessage] = useState<UiMessage | null>(null);
+  const [replyMessage, setReplyMessage] = useState<UiMessage | null>(null);
+
   const {
     socketConnected,
     messagesByConversation,
@@ -95,6 +95,14 @@ export default function ChatPanel({
 
   const firstMessageId = messages[0]?.messageId ?? null;
   const lastMessageId = messages[messages.length - 1]?.messageId ?? null;
+
+  const isNearBottom = () => {
+    const wrap = listRef.current;
+    if (!wrap) return false;
+
+    const threshold = 120;
+    return wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= threshold;
+  };
 
   const scrollToBottomStable = () => {
     const wrap = listRef.current;
@@ -126,12 +134,30 @@ export default function ChatPanel({
     });
   };
 
-  const isNearBottom = () => {
+  const handleMediaLoad = (messageId: UiMessage["messageId"]) => {
     const wrap = listRef.current;
-    if (!wrap) return false;
+    if (!wrap) return;
 
-    const threshold = 120;
-    return wrap.scrollHeight - wrap.scrollTop - wrap.clientHeight <= threshold;
+    const lastMessage = messages[messages.length - 1];
+    if (!lastMessage) return;
+
+    const isLastMessage = lastMessage.messageId === messageId;
+    if (!isLastMessage) return;
+
+    const shouldScroll =
+      lastMessage.senderId === currentUserId ||
+      isNearBottom() ||
+      pendingMediaScrollMessageIdRef.current === messageId;
+
+    if (!shouldScroll) return;
+
+    requestAnimationFrame(() => {
+      scrollToBottomStable();
+
+      if (pendingMediaScrollMessageIdRef.current === messageId) {
+        pendingMediaScrollMessageIdRef.current = null;
+      }
+    });
   };
 
   const tryLoadMore = async () => {
@@ -139,6 +165,7 @@ export default function ChatPanel({
     if (!wrap || !conversationId || loading || loadingMore || !pagination?.hasMore) {
       return;
     }
+
     prevScrollHeightRef.current = wrap.scrollHeight;
     isLoadingMoreRef.current = true;
     scrollIntentRef.current = "load-more";
@@ -147,27 +174,39 @@ export default function ChatPanel({
 
   const handleScroll = () => {
     if (isAutoScrollingRef.current) return;
+
     const wrap = listRef.current;
     if (!wrap) return;
 
     setShowScrollbar(true);
-    if (scrollHideTimeoutRef.current) clearTimeout(scrollHideTimeoutRef.current);
+
+    if (scrollHideTimeoutRef.current) {
+      clearTimeout(scrollHideTimeoutRef.current);
+    }
+
     scrollHideTimeoutRef.current = setTimeout(() => setShowScrollbar(false), 800);
 
     if (scrollIntentRef.current === "none" && wrap.scrollTop <= 80) {
       void tryLoadMore();
     }
   };
-  const handleReplyMessage = (msgId: UiMessage) => {
-    setReplyMessageId(msgId.messageId);
+
+  const handleReplyMessage = (msg: UiMessage) => {
+    setEditMessage(null);
+    setReplyMessage(msg);
   };
-  useEffect(() => {
-    if (!accessToken || !currentUserId) return;
-    initChat(accessToken, currentUserId);
-  }, [accessToken, currentUserId]);
+
+  const handleCancelReply = () => {
+    setReplyMessage(null);
+  };
+
+  const handleCancelEdit = () => {
+    setEditMessage(null);
+  };
 
   useEffect(() => {
     if (!conversationId) return;
+
     prevConversationIdRef.current = conversationId;
     scrollIntentRef.current = "open";
     isLoadingMoreRef.current = false;
@@ -183,9 +222,8 @@ export default function ChatPanel({
     if (!wrap) return;
 
     const intent = scrollIntentRef.current;
-    // Case 1: Vào conversation / đổi conversation
+
     if (intent === "open" && !loading && !loadingMore && messages.length > 0) {
-      console.log("[layoutEffect:open -> scroll bottom]");
       scrollToBottomStable();
       scrollIntentRef.current = "none";
       prevFirstMessageIdRef.current = firstMessageId;
@@ -193,34 +231,38 @@ export default function ChatPanel({
       return;
     }
 
-    // Case 2: Load more xong -> giữ vị trí đọc
     if (intent === "load-more" && !loadingMore) {
-      console.log("[layoutEffect:load-more -> keep current position]", {
-        scrollTopCurrent: wrap.scrollTop,
-        scrollHeightCurrent: wrap.scrollHeight,
-      });
-
       isLoadingMoreRef.current = false;
       scrollIntentRef.current = "none";
-
       prevFirstMessageIdRef.current = firstMessageId;
       prevLastMessageIdRef.current = lastMessageId;
       return;
     }
-    // Case 3: Tin nhắn mới append (intent = "none", lastMessageId thay đổi)
+
     if (intent === "none" && !isLoadingMoreRef.current) {
       const prevLastMessageId = prevLastMessageIdRef.current;
       const isAppendedNewMessage =
-        !!prevLastMessageId &&
-        !!lastMessageId &&
+        prevLastMessageId !== null &&
+        lastMessageId !== null &&
         prevLastMessageId !== lastMessageId;
 
       if (isAppendedNewMessage && !loading && !loadingMore) {
         const lastMessage = messages[messages.length - 1];
         const isOwnMessage = lastMessage?.senderId === currentUserId;
 
+        const hasMedia =
+          lastMessage?.attachments?.some(
+            (att) => att.type === "image" || att.type === "video"
+          ) ?? false;
+
         if (isOwnMessage || isNearBottom()) {
           requestAnimationFrame(() => scrollToBottomStable());
+
+          if (hasMedia && lastMessage?.messageId !== null && lastMessage?.messageId !== undefined) {
+            pendingMediaScrollMessageIdRef.current = lastMessage.messageId;
+          } else {
+            pendingMediaScrollMessageIdRef.current = null;
+          }
         }
       }
 
@@ -228,6 +270,7 @@ export default function ChatPanel({
       prevLastMessageIdRef.current = lastMessageId;
     }
   }, [conversationId, messages, firstMessageId, lastMessageId, loading, loadingMore, currentUserId]);
+
   useEffect(() => {
     return () => {
       if (scrollHideTimeoutRef.current) {
@@ -254,18 +297,22 @@ export default function ChatPanel({
           onReplyMessage={handleReplyMessage}
           currentUserId={currentUserId}
           conversationId={conversationId}
-          pagination={pagination}
-          onLoadMore={loadMoreMessages}
-          onDeleteMessage={deleteMessage}
           onScroll={handleScroll}
           showScrollbar={showScrollbar}
+          onMediaLoad={handleMediaLoad}
         />
       </MessageListWrap>
 
       <InputWrap>
         <ChatInput
           disabled={false}
-          onSend={(text) => sendMessage(conversationId, text)}
+          replyMessage={replyMessage}
+          editMessage={editMessage}
+          onCancelReply={handleCancelReply}
+          onCancelEdit={handleCancelEdit}
+          onSend={(text, attachments = []) =>
+            sendMessage(conversationId, text, attachments, replyMessage)
+          }
         />
       </InputWrap>
     </Root>

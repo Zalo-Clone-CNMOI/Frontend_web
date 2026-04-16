@@ -56,6 +56,8 @@ export default function RegisterPage() {
         initialValues,
         validationSchema: validationSchema,
         onSubmit: async (values) => {
+            console.log("REGISTER onSubmit called", values);
+
             setOtpMsg(null);
             setErrorAuth(null);
 
@@ -66,22 +68,32 @@ export default function RegisterPage() {
 
             setLoadingAuth(true);
             try {
-                const result = await authService.authRegister(values);
-                const payload = result?.payload;
+                const payload = {
+                    firebaseIdToken: values.firebaseIdToken,
+                    password: values.password,
+                    fullName: values.fullName.trim(),
+                    dateOfBirth: values.dateOfBirth,
+                    gender: values.gender,
+                    ...(values.email?.trim() ? { email: values.email.trim() } : {}),
+                };
 
-                if (result?.ok) {
-                    setAuthData(payload);
+                console.log("REGISTER payload", payload);
+
+                const result = await authService.authRegister(payload);
+
+                if (result?.ok && result?.payload?.data) {
                     router.push("/me");
-                } else {
-                    setErrorAuth(Trans("COMMON.ERROR") || "lỗi API");
+                    setAuthData(result?.payload)
+                    return;
                 }
-            } catch (error) {
-                console.log("Register error: ", error);
-                setErrorAuth(Trans("COMMON.ERROR"));
+            } catch (error: any) {
+                console.log("register error status:", error?.response?.status);
+                console.log("register error data:", error?.response?.data);
+                setErrorAuth(error?.response?.data?.message || "Đăng ký thất bại");
             } finally {
                 setLoadingAuth(false);
             }
-        },
+        }
     });
 
     const handlePhoneChange = (

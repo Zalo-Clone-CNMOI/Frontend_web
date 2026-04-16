@@ -26,7 +26,7 @@ import { clearAuthStorage, redirectToLogin } from "@/src/common/utilities/utils"
 import ProfileModals from "./ProfileModals";
 import ChangePasswordModal from "./ChangePswModal";
 import { IUser } from "@/src/common/interface/auth-interface";
-import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
+// import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
 
 const Sidebar = styled(Box)({
   minWidth: 56,
@@ -206,7 +206,7 @@ const AppSidebar = ({
     [onOpenProfile]
   );
   const avatarUrl = useAuthStore((s) => s.authData?.data?.user?.avatarUrl);
-  const avatarSrc = avatarUrl ? resolveMediaUrl(avatarUrl) : "/avatar.jpg";
+  const avatarSrc = avatarUrl
   const currentItems =
     activePopover === "avatar"
       ? avatarItems

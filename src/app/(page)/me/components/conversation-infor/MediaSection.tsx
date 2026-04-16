@@ -76,7 +76,7 @@ export default function MediaSection({ items }: MediaSectionProps) {
             {items.slice(0, 8).map((item) => (
               <MediaItem key={item.key || item?.url}>
                 {item.url ? (
-                  <MediaImage src={item?.url} alt={item.name || "media"} />
+                  <MediaImage src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${item.key}`} alt={item.name || "media"} />
                 ) : (
                   <MediaFallback>
                     <InsertPhotoOutlinedIcon />

@@ -19,9 +19,9 @@ import VisibilityOffOutlinedIcon from "@mui/icons-material/VisibilityOffOutlined
 import CloseIcon from "@mui/icons-material/Close";
 import {
   initialValues,
-  validationSchema,
+  validationResetPswSchema,
   type ChangePasswordFormValues,
-} from "./validate/validate";
+} from "./validate/validateResetPsw";
 import { auth } from "@/src/common/firebase/firebase";
 import React from "react";
 
@@ -85,7 +85,7 @@ export default function ChangePasswordModal({
       <DialogContent>
         <Formik<ChangePasswordFormValues>
           initialValues={initialValues}
-          validationSchema={validationSchema}
+          validationSchema={validationResetPswSchema}
           validateOnBlur
           validateOnChange={false}
           onSubmit={async (values, helpers) => {

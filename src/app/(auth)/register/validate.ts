@@ -17,7 +17,7 @@ export const validationSchemaRegisForm = (Trans: (key: string) => string) =>
         //     .trim()
         //     .email(Trans("REGIS.EMAIL_INVALID"))
         //     .required(Trans("REGIS.EMAIL_REQUIRED")),
-        
+
         password: yup
             .string()
             .min(6, Trans("REGIS.PASSWORD_MIN"))
@@ -33,7 +33,11 @@ export const schemaRegisAfterOtp = (Trans: (key: string) => string) =>
 
         dateOfBirth: yup
             .string()
-            .required(Trans("REGIS.DOB_REQUIRED")),
+            .required(Trans("REGIS.DOB_REQUIRED"))
+            .test("not-in-future", "Ngày sinh không hợp lệ", (value) => {
+                if (!value) return false;
+                return new Date(value) <= new Date();
+            }),
 
         gender: yup
             .mixed<Gender>()
