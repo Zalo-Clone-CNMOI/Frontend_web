@@ -82,6 +82,7 @@ export interface ChatSetters {
   ) => void;
   deleteMessage: (conversationId: string, messageId: string, createdAt: number) => void
   fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
+  upsertConversationToTop: (conversation: ConversationDto) => void;
   resetChatState: () => void;
 }
 
@@ -121,6 +122,18 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     set({
       listConversation: items,
       conversationFetched: true,
+    }),
+
+  upsertConversationToTop: (conversation) =>
+    set((state) => {
+      const filtered = state.listConversation.filter(
+        (item) => item.id !== conversation.id
+      );
+
+      return {
+        listConversation: [conversation, ...filtered],
+        conversationFetched: true,
+      };
     }),
 
   setConversationMeta: (meta) => set({ conversationMeta: meta }),
@@ -170,7 +183,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     messages: UiMessage[],
     moveToTop: boolean = false
   ) =>
-    set((state : any) => {
+    set((state) => {
       const prevMessages = state.messagesByConversation[conversationId] || [];
       const mergedMessages = [...prevMessages, ...messages];
       const latestMessage = mergedMessages[mergedMessages.length - 1];
@@ -180,9 +193,14 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ...state.messagesByConversation,
           [conversationId]: mergedMessages,
         },
-        listConversation: latestMessage
-          ? moveToTop
-          : state.listConversation,
+        listConversation:
+          moveToTop && latestMessage
+            ? moveConversationToTopWithLastMessage(
+              state.listConversation,
+              conversationId,
+              latestMessage
+            )
+            : state.listConversation,
       };
     }),
 
@@ -241,8 +259,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const res = await chatService.fetchListConversations(params);
 
       set({
-        listConversation: res?.payload?.data ?? [],
-        conversationMeta: res?.payload?.meta ?? null,
+        listConversation: res?.payload?.data ?? res?.payload?.data ?? [],
+        conversationMeta: res?.payload?.meta ?? res?.payload?.meta ?? null,
         conversationFetched: true,
       });
     } catch (error: any) {
@@ -256,6 +274,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       });
     }
   },
+
   deleteMessage,
   resetChatState: () => set(initialChatState),
 }));

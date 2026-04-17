@@ -219,7 +219,6 @@ const AppSidebar = ({
     <Grid data-testid="app-sidebar" sx={{ minWidth: 56, height: "100vh" }}>
       <Sidebar>
         <Box mt="32px">
-          {/* <AvatarStyled src={authData?.data?.user?.avatarUrl ? resolveMediaUrl(authData.data.user.avatarUrl) : "/avatar.jpg"} onClick={handleOpenPopover("avatar")} /> */}
           <AvatarStyled
             src={avatarSrc || undefined}
             onClick={(e) => {

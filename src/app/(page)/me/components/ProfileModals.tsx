@@ -360,7 +360,7 @@ export default function ProfileModals({
         </Stack>
 
 
-        <Divider sx={{ m: "16px 0" }} />
+        {/* <Divider sx={{ m: "16px 0" }} /> */}
       </AppModal>
 
       <AppModal

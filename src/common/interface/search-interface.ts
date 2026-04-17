@@ -5,7 +5,8 @@ export interface IUserSearchItem {
   fullName: string;
   avatarUrl: string | null;
   phone: string;
-  friendshipStatus: "none" | "pending" | "friend" | string;
+  friendshipStatus?: "none" | "pending_sent" | "pending_received" | "friend";
+  requestId?: string;
 }
 
 export interface IUserSearchResponse {
@@ -19,20 +20,20 @@ export interface IUserSearchResponse {
 }
 
 export type SearchResult =
-    | {
-        kind: "conversation";
-        id: string;
-        name: string;
-        avatarUrl?: string | null;
-        memberCount?: number;
-        conversation: ConversationDto;
-    }
-    | {
-        kind: "user";
-        id: string;
-        fullName: string;
-        avatarUrl?: string | null;
-        phone: string;
-        friendshipStatus: string;
-        user: IUserSearchItem;
-    };
+  | {
+    kind: "conversation";
+    id: string;
+    name: string;
+    avatarUrl?: string | null;
+    memberCount?: number;
+    conversation: ConversationDto;
+  }
+  | {
+    kind: "user";
+    id: string;
+    fullName: string;
+    avatarUrl?: string | null;
+    phone: string;
+    friendshipStatus: string;
+    user: IUserSearchItem;
+  };

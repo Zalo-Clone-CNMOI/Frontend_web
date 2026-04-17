@@ -68,7 +68,7 @@ export default function ChangePasswordModal({
 
   return (
     <React.Fragment>
-    <Dialog open={open} onClose={handleClose} fullWidth maxWidth="xs">
+    <Dialog data-testid="change-password-modal" open={open} onClose={handleClose} fullWidth maxWidth="xs">
       <DialogTitle
         sx={{
           display: "flex",

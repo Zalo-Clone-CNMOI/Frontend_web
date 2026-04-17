@@ -35,8 +35,11 @@ const StyledDialogContent = styled(DialogContent)({
 
 const ActionsWrap = styled(Box)({
   display: "flex",
+  justifyContent: "flex-end",
   gap: 8,
-border:"1px solid black"
+  marginTop: 16,
+  paddingTop: 16,
+  borderTop: "1px solid #EAECF0",
 });
 
 interface AppModalProps {
