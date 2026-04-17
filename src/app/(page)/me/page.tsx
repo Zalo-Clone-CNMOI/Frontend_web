@@ -26,6 +26,8 @@ import { getcurrentUserId, getRefreshToken, getSessionToken } from "@/src/common
 import InfConvColumn from "./components/conversation-infor/page";
 import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
+import ContactFunctionList, { ContactView } from "./components/friend/ContactFunctionList";
+import ContactContentPanel from "./components/friend/ContactContentPanel";
 /* ===================== styled ===================== */
 
 const Root = styled(Grid)(() => ({
@@ -180,17 +182,23 @@ export type FilterCategoryKey =
 /* ===================== component ===================== */
 
 const Me = () => {
+    // type ContactView = "friends" | "groups" | "friendRequests" | "sentRequests";
     const [selectedIcon, setSelectedIcon] = useState<SidebarKey>("chat");
+    const [contactView, setContactView] = useState<ContactView>("friends");
     const [chatTab, setChatTab] = useState<string>("allChats");
     const [isSelectedCategory, setSelectedCategory] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
     const authData = useAuthStore((s) => s.authData);
     // console.log("SenderId", authData?.data?.user?.id)
-    
+    const setActiveConversationId = useChatStore((s)=> s.setActiveConversationId)
     const activeConversationId = useChatStore((s) => s.activeConversationId);
 
     const handleSelectedIcon = (iconName: SidebarKey) => {
         setSelectedIcon(iconName);
+        if (iconName === "contact") {
+            setContactView("friends")
+            setActiveConversationId(null)
+        }
     };
 
     const handleChangeChatTab = (_event: React.SyntheticEvent, newTab: string) => {
@@ -231,102 +239,115 @@ const Me = () => {
             <AppSidebar selectedIcon={selectedIcon} onSelect={handleSelectedIcon} />
 
             <ConversationColumn>
-                <SearchBar />
+                {selectedIcon === "chat" ? (
+                    <>
+                        <SearchBar />
 
-                <TabContext value={chatTab}>
-                    <ChatTabsWrapper data-testid="chat-tabs">
-                        <TabListStyled onChange={handleChangeChatTab} aria-label="chat tabs">
-                            <TabStyled label="Tất cả" value="allChats" />
-                            <TabStyled label="Chưa đọc" value="unRead" />
-                        </TabListStyled>
+                        <TabContext value={chatTab}>
+                            <ChatTabsWrapper data-testid="chat-tabs">
+                                <TabListStyled onChange={handleChangeChatTab} aria-label="chat tabs">
+                                    <TabStyled label="Tất cả" value="allChats" />
+                                    <TabStyled label="Chưa đọc" value="unRead" />
+                                </TabListStyled>
 
-                        <TabsRight>
-                            <ClickAwayListener onClickAway={() => setSelectedCategory(false)}>
-                                <DropdownWrapper>
-                                    <CategoryFilterButton
-                                        className={selectedCategories.length > 0 ? "active" : ""}
-                                        sx={
-                                            isSelectedCategory
-                                                ? { backgroundColor: "#E5F1FF", color: "#005AE0" }
-                                                : null
-                                        }
-                                        endIcon={
-                                            selectedCategories.length > 0 ? (
-                                                <CancelIconStyled
-                                                    onClick={(e) => {
-                                                        e.stopPropagation();
-                                                        setSelectedCategories([]);
-                                                    }}
+                                <TabsRight>
+                                    <ClickAwayListener onClickAway={() => setSelectedCategory(false)}>
+                                        <DropdownWrapper>
+                                            <CategoryFilterButton
+                                                className={selectedCategories.length > 0 ? "active" : ""}
+                                                sx={
+                                                    isSelectedCategory
+                                                        ? { backgroundColor: "#E5F1FF", color: "#005AE0" }
+                                                        : null
+                                                }
+                                                endIcon={
+                                                    selectedCategories.length > 0 ? (
+                                                        <CancelIconStyled
+                                                            onClick={(e) => {
+                                                                e.stopPropagation();
+                                                                setSelectedCategories([]);
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
+                                                    )
+                                                }
+                                                onClick={() => setSelectedCategory((prev) => !prev)}
+                                            >
+                                                {getCategoryLabel()}
+                                            </CategoryFilterButton>
+
+                                            {isSelectedCategory && (
+                                                <FilterCategoryDropdown
+                                                    selected={selectedCategories}
+                                                    onChange={setSelectedCategories}
                                                 />
-                                            ) : (
-                                                <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
-                                            )
-                                        }
-                                        onClick={() => setSelectedCategory((prev) => !prev)}
-                                    >
-                                        {getCategoryLabel()}
-                                    </CategoryFilterButton>
+                                            )}
+                                        </DropdownWrapper>
+                                    </ClickAwayListener>
 
-                                    {isSelectedCategory && (
-                                        <FilterCategoryDropdown
-                                            selected={selectedCategories}
-                                            onChange={setSelectedCategories}
-                                        />
-                                    )}
-                                </DropdownWrapper>
-                            </ClickAwayListener>
+                                    <StyledMoreIcon />
+                                </TabsRight>
+                            </ChatTabsWrapper>
 
-                            <StyledMoreIcon />
-                        </TabsRight>
-                    </ChatTabsWrapper>
+                            <TabPanelStyled value="allChats">
+                                <ConversationList />
+                            </TabPanelStyled>
 
-                    <TabPanelStyled value="allChats">
-                        <ConversationList />
-                    </TabPanelStyled>
-
-                    <TabPanelStyled value="unRead">Unread</TabPanelStyled>
-                </TabContext>
+                            <TabPanelStyled value="unRead">Unread</TabPanelStyled>
+                        </TabContext>
+                    </>
+                ) : selectedIcon === "contact" ? (
+                    <>
+                        <SearchBar />
+                        <Box sx={{ flex: 1, overflowY: "auto", pt: 1 }}>
+                            <ContactFunctionList value={contactView} onChange={setContactView} />
+                        </Box>
+                    </>
+                ) : null}
             </ConversationColumn>
 
             <ChatColumn size="grow">
-                <Panel >
-                    {!activeConversationId ? (
-                        <WelcomeWrap>
-                            <WelcomeSite
-                                slides={[
-                                    {
-                                        imageSrc:
-                                            "https://chat.zalo.me/assets/inapp-welcome-screen-06-darkmode.336078e876ae12bf42474586745397f0.png",
-                                        title: "Giao diện Dark Mode",
-                                        description:
-                                            "Thư giãn và bảo vệ mắt với chế độ giao diện tối trên Zalo PC",
-                                    },
-                                    {
-                                        imageSrc:
-                                            "https://chat.zalo.me/assets/zbiz_onboard_vi_3x.62514921c8505730d07aff3fa8c4e9c3.png",
-                                        title: "Kinh doanh hiệu quả với Buisiness Pro",
-                                        description:
-                                            "Trải nghiệm giao diện sáng trên Zalo PC, mang đến sự tươi mới và dễ nhìn cho mọi cuộc trò chuyện của bạn.",
-                                    },
-                                ]}
-                            />
-                        </WelcomeWrap>
-                    ) : (
-                        <Box sx={{ display: "flex", height: "100%" }}>
-                            <Box sx={{ flex: 1, minWidth: 0 }}>
-                                <ChatPanel
-                                    accessToken={accessToken}
-                                    currentUserId={currentUserId}
-                                    conversationId={activeConversationId}
-                                    title="Tin nhắn"
+                <Panel>
+                    {selectedIcon === "chat" ? (
+                        !activeConversationId ? (
+                            <WelcomeWrap>
+                                <WelcomeSite
+                                    slides={[
+                                        {
+                                            imageSrc:
+                                                "https://chat.zalo.me/assets/inapp-welcome-screen-06-darkmode.336078e876ae12bf42474586745397f0.png",
+                                            title: "Giao diện Dark Mode",
+                                            description:
+                                                "Thư giãn và bảo vệ mắt với chế độ giao diện tối trên Zalo PC",
+                                        },
+                                        {
+                                            imageSrc:
+                                                "https://chat.zalo.me/assets/zbiz_onboard_vi_3x.62514921c8505730d07aff3fa8c4e9c3.png",
+                                            title: "Kinh doanh hiệu quả với Buisiness Pro",
+                                            description:
+                                                "Trải nghiệm giao diện sáng trên Zalo PC, mang đến sự tươi mới và dễ nhìn cho mọi cuộc trò chuyện của bạn.",
+                                        },
+                                    ]}
                                 />
+                            </WelcomeWrap>
+                        ) : (
+                            <Box sx={{ display: "flex", height: "100%" }}>
+                                <Box sx={{ flex: 1, minWidth: 0 }}>
+                                    <ChatPanel
+                                        accessToken={accessToken}
+                                        currentUserId={currentUserId}
+                                        conversationId={activeConversationId}
+                                        title="Tin nhắn"
+                                    />
+                                </Box>
+
+                                <InfConvColumn conversationId={activeConversationId} />
                             </Box>
-
-                            <InfConvColumn conversationId={activeConversationId} />
-                        </Box>
-
-
-                    )}
+                        )
+                    ) : selectedIcon === "contact" ? (
+                        <ContactContentPanel view={contactView} />
+                    ) : null}
                 </Panel>
             </ChatColumn>
         </Root>

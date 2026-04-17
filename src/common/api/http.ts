@@ -26,6 +26,7 @@ export interface IHttpresponse<T = any> {
 }
 
 /** Chuẩn hoá baseUrl + path để tránh double slash */
+
 const joinUrl = (baseUrl: string, path: string) => {
   const b = baseUrl.replace(/\/+$/, "");
   const p = path.startsWith("/") ? path : `/${path}`;

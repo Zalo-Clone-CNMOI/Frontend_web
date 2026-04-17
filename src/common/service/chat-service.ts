@@ -2,6 +2,7 @@ import http from "../api/http";
 import { API } from "../api/path";
 import { IApiResponse } from "../interface/auth-interface";
 import type {
+  ConversationDto,
   ConversationListResponse,
   MessagePageDto,
   UiMessage,
@@ -14,6 +15,14 @@ export const chatService = {
 
     return http.get<ConversationListResponse>(
       `${API.API_CONVERSATIONS_LIST}?page=${page}&limit=${limit}`
+    );
+  },
+  createConversation(participantId: string) {
+    return http.post<IApiResponse<ConversationDto>>(
+      API.API_CONVERSATIONS_DIRECT,
+      {
+        participantId,
+      }
     );
   },
 
