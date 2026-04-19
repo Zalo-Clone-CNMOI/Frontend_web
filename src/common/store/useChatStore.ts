@@ -39,6 +39,8 @@ export interface ChatState {
   mediaByConversation: AttachmentMap;
   filesByConversation: AttachmentMap;
   linksByConversation: LinkMap;
+
+  typingUsersByConversation: Record<string, any[]>;
 }
 
 export interface ChatSetters {
@@ -84,6 +86,7 @@ export interface ChatSetters {
   fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
   upsertConversationToTop: (conversation: ConversationDto) => void;
   resetChatState: () => void;
+  updateTypingUsers: (conversationId: string, users: any[]) => void;
 }
 
 export type ChatStore = ChatState & ChatSetters;
@@ -107,6 +110,7 @@ export const initialChatState: ChatState = {
   mediaByConversation: {},
   filesByConversation: {},
   linksByConversation: {},
+  typingUsersByConversation: {},
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -277,4 +281,11 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   deleteMessage,
   resetChatState: () => set(initialChatState),
+  updateTypingUsers: (conversationId: string, users: any[]) =>
+    set((state) => ({
+      typingUsersByConversation: {
+        ...state.typingUsersByConversation,
+        [conversationId]: users,
+      },
+    })),
 }));

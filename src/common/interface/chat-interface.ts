@@ -103,6 +103,8 @@ export interface IChat {
   filesByConversation: Record<string, AttachmentDto[]>;
   linksByConversation: Record<string, string[]>;
 
+  typingUsersByConversation: Record<string, any[]>;
+
   rebuildConversationDerivedData: (conversationId: string) => void;
   appendMessageDerivedData: (message: UiMessage) => void;
   clearConversationDerivedData: (conversationId: string) => void;
@@ -121,4 +123,5 @@ export interface IChat {
   editMessage: (conversationId: string, messageId: string, newBody: string) => void;
   deleteMessage: (conversationId: string, messageId: string) => void;
   cleanupChat: () => void;
+  updateTypingUsers: (conversationId: string, users: any[]) => void;
 }

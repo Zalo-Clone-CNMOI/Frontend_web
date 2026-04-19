@@ -169,6 +169,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("chat:message");
   socket.off("chat:message:deleted");
   socket.off("chat:message:updated");
+  socket.off("chat:typing:update");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -334,6 +335,13 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message", handleIncomingMessage);
   socket.on("chat:message:deleted", handleDeletedMessage);
   socket.on("chat:message:updated", handleUpdatedMessage);
+  socket.on("chat:typing:update", (payload: any) => {
+    const conversationId = payload?.conversation_id ?? payload?.conversationId;
+    const users = payload?.users || [];
+    if (conversationId) {
+      useChatStore.getState().updateTypingUsers(conversationId, users);
+    }
+  });
 
   socket.onAny((event, ...args) => {
     console.log("[socket event]", event);
@@ -721,12 +729,14 @@ export const cleanupChat = () => {
   socket?.off("chat:new");
   socket?.off("chat:message");
   socket?.off("chat:message:deleted");
+  socket?.off("chat:typing:update");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();
 
   state.resetChatState();
 };
+
 const detectPreviewTypeFromMessage = (message: UiMessage) => {
   const cleanBody = (message.body ?? "").replace(/\u200B/g, "").trim();
   const lowerContent = cleanBody.toLowerCase();
