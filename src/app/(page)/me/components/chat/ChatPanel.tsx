@@ -7,6 +7,7 @@ import { styled } from "@mui/material/styles";
 import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
+import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import {
   loadMoreMessages,
@@ -14,6 +15,7 @@ import {
   sendMessage,
 } from "@/src/common/action/chat.action";
 import { UiMessage } from "@/src/common/interface/chat-interface";
+import { formatTypingIndicator } from "@/src/common/service/typingIndicatorService";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -82,6 +84,7 @@ export default function ChatPanel({
     messagesByConversation,
     paginationByConversation,
     error,
+    typingUsersByConversation,
   } = useChatStore();
 
   const messages = useMemo(
@@ -95,6 +98,12 @@ export default function ChatPanel({
 
   const firstMessageId = messages[0]?.messageId ?? null;
   const lastMessageId = messages[messages.length - 1]?.messageId ?? null;
+
+  const typingUsers = typingUsersByConversation[conversationId] || [];
+  const typingState = useMemo(
+    () => formatTypingIndicator(typingUsers, currentUserId),
+    [typingUsers, currentUserId]
+  );
 
   const isNearBottom = () => {
     const wrap = listRef.current;
@@ -301,6 +310,7 @@ export default function ChatPanel({
           showScrollbar={showScrollbar}
           onMediaLoad={handleMediaLoad}
         />
+        {typingState.visible && <TypingIndicator text={typingState.text} />}
       </MessageListWrap>
 
       <InputWrap>
