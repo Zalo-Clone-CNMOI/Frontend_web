@@ -197,7 +197,7 @@ export default function MessageItem({
             {!message.isDeleted && otherAttachments.length > 0 && (
               <AttachmentList>
                 {otherAttachments.map((file) => (
-                  <AttachmentItem key={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}>{file.name}</AttachmentItem>
+                  <AttachmentItem key={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}></AttachmentItem>
                 ))}
               </AttachmentList>
             )}

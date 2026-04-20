@@ -9,6 +9,8 @@ import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { usePresenceStore } from "@/src/common/store/usePresenceStore";
+import { usePresenceHeartbeat } from "@/src/common/hooks/usePresenceHeartbeat";
 import {
   loadMoreMessages,
   openConversation,
@@ -86,6 +88,13 @@ export default function ChatPanel({
     error,
     typingUsersByConversation,
   } = useChatStore();
+
+  const updatePresence = usePresenceStore((s) => s.updatePresence)
+  usePresenceHeartbeat({
+    onPresenceUpdate: (payload) => {
+      updatePresence(payload.user_id, payload)
+    }
+  })
 
   const messages = useMemo(
     () => messagesByConversation[conversationId] || [],
