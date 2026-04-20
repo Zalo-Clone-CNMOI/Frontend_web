@@ -20,6 +20,7 @@ interface MessageItemProps {
   ) => void;
   onScrollToMessage: (targetMessageId?: UiMessage["messageId"] | null) => void;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
+  onForwardMessage: (message: UiMessage) => void;
 }
 
 const MessageRow = styled(Box, {
@@ -112,10 +113,12 @@ export default function MessageItem({
   onDeleteMessage,
   onScrollToMessage,
   onMediaLoad,
+  onForwardMessage,
 }: MessageItemProps) {
   const mine = message.senderId === currentUserId;
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
+  const canForward = !message.isDeleted;
 
   const { imageAttachments, videoAttachments, otherAttachments } =
     splitMessageAttachments(message.attachments);
@@ -149,7 +152,9 @@ export default function MessageItem({
           mine={mine}
           canReply={canReply}
           canDelete={canDelete}
+          canForward={canForward}
           onReply={() => onReplyMessage(message)}
+          onForward={() => onForwardMessage(message)}
           onDelete={() =>
             onDeleteMessage(
               message.conversationId,
@@ -220,7 +225,9 @@ export default function MessageItem({
           mine={mine}
           canReply={canReply}
           canDelete={canDelete}
+          canForward={canForward}
           onReply={() => onReplyMessage(message)}
+          onForward={() => onForwardMessage(message)}
           onDelete={() =>
             onDeleteMessage(
               message.conversationId,

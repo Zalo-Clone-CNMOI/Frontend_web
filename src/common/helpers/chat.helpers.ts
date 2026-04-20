@@ -1,4 +1,5 @@
 import type { ConversationDto, UiMessage } from "@/src/common/interface/chat-interface";
+import { cleanMessageBody } from "./cleanBodyMedia";
 
 const LINK_REGEX = /(https?:\/\/[^\s]+)/g;
 
@@ -132,12 +133,13 @@ export const normalizeMessage = (raw: any): UiMessage & {
       null,
     conversationId: String(conversationId),
     senderId: String(senderId),
-    body:
+    body: cleanMessageBody(
       raw?.body ??
       raw?.content ??
       raw?.message ??
       raw?.text ??
-      "",
+      ""
+    ),
     createdAt: Number(
       raw?.createdAt ??
       raw?.created_at ??

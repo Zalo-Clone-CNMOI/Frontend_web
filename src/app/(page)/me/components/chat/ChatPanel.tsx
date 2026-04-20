@@ -7,10 +7,12 @@ import { styled } from "@mui/material/styles";
 import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
+import ForwardModal from "./ForwardModal";
 import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
 import { usePresenceHeartbeat } from "@/src/common/hooks/usePresenceHeartbeat";
+import { chatService } from "@/src/common/service/chat-service";
 import {
   loadMoreMessages,
   openConversation,
@@ -80,6 +82,8 @@ export default function ChatPanel({
   const [showScrollbar, setShowScrollbar] = useState(false);
   const [editMessage, setEditMessage] = useState<UiMessage | null>(null);
   const [replyMessage, setReplyMessage] = useState<UiMessage | null>(null);
+  const [isForwardModalVisible, setIsForwardModalVisible] = useState(false);
+  const [selectedMessageForForward, setSelectedMessageForForward] = useState<UiMessage | null>(null);
 
   const {
     socketConnected,
@@ -222,6 +226,58 @@ export default function ChatPanel({
     setEditMessage(null);
   };
 
+  const handleForwardMessage = (msg: UiMessage) => {
+    setSelectedMessageForForward(msg);
+    setIsForwardModalVisible(true);
+  };
+
+  const handleForward = async (message: UiMessage, targetConversationIds: string[], optionalMessage?: string) => {
+    if (!message || !targetConversationIds || targetConversationIds.length === 0) {
+      return;
+    }
+    try {
+      const forwardId = crypto.randomUUID();
+      const sourceMessageId = message.messageId;
+      const targets = targetConversationIds.map((conversationId) => ({
+        message_id: crypto.randomUUID(),
+        conversation_id: conversationId,
+      }));
+
+      const payload = {
+        forward_id: forwardId,
+        source_message_id: sourceMessageId,
+        targets: targets,
+      };
+
+      const response = await chatService.forwardMessage(payload);
+      
+      // Send optional message to accepted conversations if provided
+      if (optionalMessage && optionalMessage.trim()) {
+        const acceptedConversationIds = response?.payload?.data?.results
+          ?.filter((r: any) => r.status === 'accepted')
+          .map((r: any) => r.conversation_id) || targetConversationIds;
+        
+        // Wait a bit to ensure forwarded message arrives first
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
+        for (const conversationId of acceptedConversationIds) {
+          try {
+            await sendMessage(conversationId, optionalMessage.trim());
+          } catch (error) {
+            console.error('Failed to send optional message to:', conversationId, error);
+          }
+        }
+      }
+
+      const acceptedCount = response?.payload?.data?.results
+        ?.filter((r: any) => r.status === 'accepted').length || targetConversationIds.length;
+      alert(`Đã chuyển tiếp tin nhắn đến ${acceptedCount}/${targetConversationIds.length} cuộc trò chuyện`);
+    } catch (error) {
+      console.error("Forward failed:", error);
+      alert("Chuyển tiếp tin nhắn thất bại");
+    }
+  };
+
   useEffect(() => {
     if (!conversationId) return;
 
@@ -318,6 +374,7 @@ export default function ChatPanel({
           onScroll={handleScroll}
           showScrollbar={showScrollbar}
           onMediaLoad={handleMediaLoad}
+          onForwardMessage={handleForwardMessage}
         />
         {typingState.visible && <TypingIndicator text={typingState.text} />}
       </MessageListWrap>
@@ -334,6 +391,13 @@ export default function ChatPanel({
           }
         />
       </InputWrap>
+
+      <ForwardModal
+        visible={isForwardModalVisible}
+        message={selectedMessageForForward}
+        onClose={() => setIsForwardModalVisible(false)}
+        onForward={handleForward}
+      />
     </Root>
   );
 }

@@ -53,4 +53,18 @@ export const chatService = {
       API.API_MESSAGE_REACTIONS(messageId)
     );
   },
+
+  forwardMessage(payload: {
+    forward_id: string;
+    source_message_id: string;
+    targets: Array<{
+      message_id: string;
+      conversation_id: string;
+    }>;
+  }) {
+    return http.post<IApiResponse<any>>(
+      API.API_MESSAGES_FORWARD,
+      payload
+    );
+  },
 };
