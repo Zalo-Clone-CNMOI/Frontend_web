@@ -55,10 +55,14 @@ export const createTypingIndicatorService = ({
     const now = Date.now();
     const lastSentAt = lastEmittedAt.get(payload.conversation_id) || 0;
     if (now - lastSentAt < throttleMs) {
+      console.log('[WebTyping] Throttled, not emitting');
       return false;
     }
 
     lastEmittedAt.set(payload.conversation_id, now);
+    console.log('[WebTyping] Emitting chat:typing', payload);
+    console.log('[WebTyping] Socket connected:', socket.connected);
+    console.log('[WebTyping] Socket ID:', socket.id);
     socket.emit("chat:typing", payload);
     return true;
   };
@@ -66,9 +70,15 @@ export const createTypingIndicatorService = ({
   const subscribe = (
     handler: (payload: ChatTypingUpdatePayload) => void,
   ) => {
-    socket.on("chat:typing:update", handler);
+    const handleTypingUpdate = (payload: ChatTypingUpdatePayload) => {
+      console.log('[WebTyping] Received chat:typing:update', payload);
+      console.log('[WebTyping] Socket connected:', socket.connected);
+      handler(payload);
+    };
+    
+    socket.on("chat:typing:update", handleTypingUpdate);
     return () => {
-      socket.off("chat:typing:update", handler);
+      socket.off("chat:typing:update", handleTypingUpdate);
     };
   };
 

@@ -71,4 +71,6 @@ export const API = {
 
     API_MESSAGE_REACTIONS: (messageId: string) =>
       `/api/messages/${messageId}/reactions`,
+
+    API_MESSAGES_FORWARD: "/api/messages/forward",
 } as const;

@@ -336,6 +336,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message:deleted", handleDeletedMessage);
   socket.on("chat:message:updated", handleUpdatedMessage);
   socket.on("chat:typing:update", (payload: any) => {
+    console.log('[WebSocket] Received chat:typing:update', payload);
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
     const users = payload?.users || [];
     if (conversationId) {
