@@ -11,8 +11,11 @@ import { EmojiClickData } from "emoji-picker-react";
 import { ChatAttachmentPayload } from "@/src/common/interface/media-interface";
 import { getCurrentUserId } from "@/src/common/utilities/utils";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { uploadManyChatMedia } from "@/src/common/service/chat-media-service";
 import { UiMessage } from "@/src/common/interface/chat-interface";
+import { useTypingIndicator } from "@/src/common/hooks/useTypingIndicator";
+import { getSocket } from "@/src/common/socket/socket";
 
 import ComposerToolbar from "./ComposerToolbar";
 import { buildChatAttachmentPayload, sanitizeInputText } from "@/src/common/helpers/chatInput.helpers";
@@ -140,6 +143,15 @@ export default function ChatInput({
 
   const currentUserId = getCurrentUserId();
   const conversationId = useChatStore((s) => s.activeConversationId);
+  const socket = getSocket();
+  const currentUser = useAuthStore((s) => s.authData?.data?.user);
+
+  const { emitTyping } = useTypingIndicator({
+    socket,
+    conversationId: conversationId || '',
+    myUserId: currentUserId || '',
+    enabled: !!conversationId && !!socket,
+  });
 
   const toolbarDisabled = disabled || !!editMessage;
 
@@ -228,6 +240,14 @@ export default function ChatInput({
     }
   };
 
+  const handleInputChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
+    setValue(e.target.value);
+    if (e.target.value.trim() && conversationId) {
+      const username = currentUser?.fullName || 'Bạn';
+      emitTyping(username);
+    }
+  };
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const input = textInputRef.current;
     const emoji = emojiData.emoji;
@@ -290,7 +310,7 @@ export default function ChatInput({
             maxRows={1}
             placeholder="Nhập tin nhắn..."
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={handleInputChange}
             onKeyDown={handleKeyDown}
             disabled={disabled || uploading}
             inputRef={textInputRef}
