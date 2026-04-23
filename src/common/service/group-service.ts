@@ -28,5 +28,15 @@ export const groupService = {
             API.API_CONVERSATIONS_UPDATE_ROLE(conversationId, memberId),
             { role }
         );
+    },
+    leaveGroup(conversationId: string){
+        return http.post<IApiResponse<void>>(
+            API.API_CONVERSATIONS_LEAVE(conversationId)
+        );
+    },
+    disbandGroup(conversationId: string){
+        return http.post<IApiResponse<void>>(
+            API.API_CONVERSATIONS_GROUP_DISBAND(conversationId)
+        );
     }
 };

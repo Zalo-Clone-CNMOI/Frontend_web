@@ -290,7 +290,7 @@ const Me = () => {
                                 </TabsRight>
                             </ChatTabsWrapper>
 
-                            <TabPanelStyled value="allChats">
+                            <TabPanelStyled sx={{padding:"8px 0px 8px 8px"}}  value="allChats">
                                 <ConversationList />
                             </TabPanelStyled>
 

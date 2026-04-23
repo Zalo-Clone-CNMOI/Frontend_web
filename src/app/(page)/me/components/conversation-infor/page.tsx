@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Typography } from "@mui/material";
+import { Box, Button, Grid, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { useChatStore } from "@/src/common/store/useChatStore";
@@ -73,8 +73,6 @@ export default function InfConvColumn({
 
     await groupService.removeMemberFromGroup(conversationId, selectedMember.userId);
     await fetchConversationDetail(conversationId, true);
-    // console.log("groupService", groupService);
-    // console.log("removeMemberFromGroup", groupService.removeMemberFromGroup);
     setOpenConfirmRemove(false);
     setSelectedMember(null);
   };
@@ -137,7 +135,7 @@ export default function InfConvColumn({
             <HeaderTitle>{isGroup ? "Thông tin nhóm" : "Thông tin hội thoại"}</HeaderTitle>
           </Header>
 
-          <ProfileCard isGroup={isGroup} />
+          <ProfileCard />
           {isGroup ? null : <OverviewCard />}
 
           {isGroup && (
@@ -155,7 +153,6 @@ export default function InfConvColumn({
         </>
       ) : (
         <GroupMemberListView
-          members={members}
           onBack={handleBackToOverview}
           onOpenAddMember={handleOpenAddMemberDialog}
           onRemoveMember={handleOpenRemoveMember}
@@ -163,8 +160,6 @@ export default function InfConvColumn({
             await groupService.updateMemberRole(conversationId, member.userId, role);
             await fetchConversationDetail(conversationId, true);
           }}
-          myRole={myRole}
-          currentUserId={currentUserId ?? ""}
         />
       )}
 
@@ -181,6 +176,7 @@ export default function InfConvColumn({
         open={openConfirmRemove}
         onClose={() => setOpenConfirmRemove(false)}
         title="Xóa thành viên"
+        headerDivider
         actions={
           <>
             <Button onClick={() => setOpenConfirmRemove(false)}>Hủy</Button>
@@ -191,8 +187,14 @@ export default function InfConvColumn({
         }
       >
         <Typography>
-          Bạn có chắc muốn xóa {selectedMember?.nickname || selectedMember?.fullName} khỏi nhóm không?
+          Bạn có chắc muốn xóa{" "}
+          <Box component="span" fontWeight={600}>
+            {selectedMember?.nickname || selectedMember?.fullName}
+          </Box>{" "}
+          khỏi nhóm không?
         </Typography>
+
+
       </AppModal>
     </Root>
   );

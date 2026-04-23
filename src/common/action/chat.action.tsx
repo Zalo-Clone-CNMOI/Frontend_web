@@ -172,6 +172,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("chat:typing:update");
   socket.off("conversation:member:removed");
   socket.off("conversation:member:added");
+  socket.off("conversation:created");
+  socket.off("conversation:disbanded");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -338,6 +340,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message:deleted", handleDeletedMessage);
   socket.on("chat:message:updated", handleUpdatedMessage);
   socket.on("conversation:member:added", handleConversationMemberAdded);
+  socket.on("conversation:created", handleConversationCreated);
+  socket.on("conversation:disbanded", handleConversationDisbanded);
   socket.on("conversation:member:removed", handleConversationMemberRemoved);
   socket.on("chat:typing:update", (payload: any) => {
     console.log('[WebSocket] Received chat:typing:update', payload);
@@ -720,6 +724,33 @@ export const deleteMessage = (
     created_at: Number(createdAt),
   });
 };
+const handleConversationDisbanded = (payload: any) => {
+  console.log("[conversation:disbanded]", payload);
+
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  if (!conversationId) return;
+
+  const current = useChatStore.getState();
+  current.removeConversationLocally(conversationId);
+};
+const handleConversationCreated = async (payload: any) => {
+  console.log("[conversation:created]", payload);
+
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  const type = payload?.type;
+  const current = useChatStore.getState();
+  const currentUserId = current.currentUserId;
+
+  if (!conversationId || !currentUserId) return;
+
+  await fetchListConversation({ page: 1, limit: 10 });
+
+  await current.fetchConversationDetail(conversationId, true);
+};
 const handleConversationMemberAdded = async (payload: any) => {
   console.log("[conversation:member:added]", payload);
 
@@ -788,6 +819,8 @@ export const cleanupChat = () => {
   socket?.off("chat:typing:update");
   socket?.off("conversation:member:added");
   socket?.off("conversation:member:removed");
+  socket?.off("conversation:created");
+  socket?.off("conversation:disbanded");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();

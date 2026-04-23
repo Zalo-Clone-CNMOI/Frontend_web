@@ -7,11 +7,11 @@ import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRound
 import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
 import AppAvatar from "@/src/shared/component/Avatar";
-import { ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import MenuPopover, { PopoverMenuItem } from "@/src/shared/component/MenuPopover";
+import { useChatStore } from "@/src/common/store/useChatStore";
+import { ConversationMemberDto } from "@/src/common/interface/chat-interface";
 
 interface GroupMemberListViewProps {
-  members: ConversationMemberDto[];
   onBack: () => void;
   onOpenAddMember: () => void;
   onRemoveMember: (member: ConversationMemberDto) => void;
@@ -19,15 +19,22 @@ interface GroupMemberListViewProps {
     member: ConversationMemberDto,
     role: "admin" | "member"
   ) => void | Promise<void>;
-  myRole?: "owner" | "admin" | "member";
-  currentUserId: string;
 }
 
 const Wrap = styled(Box)({
   background: "#fff",
   minHeight: "100%",
 });
-
+const AddMemberButton = styled(Button)(({ theme }) => ({
+  backgroundColor: "#e5e7eb",
+  color: "#081b3a",
+  textTransform: "none",
+  fontWeight: 600,
+  width: "100%",
+  "&:hover": {
+    backgroundColor: "#c6cad2",
+  },
+}));
 const Header = styled(Box)({
   height: 70,
   display: "flex",
@@ -149,16 +156,23 @@ const canUpdateMemberRole = (
 };
 
 export default function GroupMemberListView({
-  members,
   onBack,
   onOpenAddMember,
   onRemoveMember,
   onUpdateMemberRole,
-  myRole,
-  currentUserId,
 }: GroupMemberListViewProps) {
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedMember, setSelectedMember] = useState<ConversationMemberDto | null>(null);
+
+  const conversationId = useChatStore((s) => s.activeConversationId);
+  const currentUserId = useChatStore((s) => s.currentUserId);
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById[conversationId ?? ""] ?? null
+  );
+
+  const members = conversationDetail?.members ?? [];
+  const myMember = members.find((m) => m.userId === currentUserId);
+  const myRole = myMember?.role;
 
   const handleOpenMemberMenu = (
     event: React.MouseEvent<HTMLElement>,
@@ -172,6 +186,7 @@ export default function GroupMemberListView({
     setMenuAnchorEl(null);
     setSelectedMember(null);
   };
+
   const handleUpdateMemberRole = async (
     member: ConversationMemberDto,
     role: "admin" | "member"
@@ -179,15 +194,14 @@ export default function GroupMemberListView({
     await onUpdateMemberRole(member, role);
 
     setSelectedMember((prev) =>
-      prev && prev.id === member.id
-        ? { ...prev, role }
-        : prev
+      prev && prev.id === member.id ? { ...prev, role } : prev
     );
 
     handleCloseMemberMenu();
   };
+
   const memberMenuItems = useMemo<PopoverMenuItem[]>(() => {
-    if (!selectedMember) return [];
+    if (!selectedMember || !currentUserId) return [];
 
     const isSelf = selectedMember.userId === currentUserId;
     const removable = canRemoveMember(myRole, selectedMember.role, isSelf);
@@ -224,7 +238,7 @@ export default function GroupMemberListView({
     }
 
     return items;
-  }, [selectedMember, currentUserId, myRole, onRemoveMember, handleUpdateMemberRole]);
+  }, [selectedMember, currentUserId, myRole, onRemoveMember]);
 
   return (
     <Wrap>
@@ -236,14 +250,12 @@ export default function GroupMemberListView({
       </Header>
 
       <AddBtnWrap>
-        <Button
-          fullWidth
-          variant="outlined"
+        <AddMemberButton
           startIcon={<PersonAddAlt1OutlinedIcon />}
           onClick={onOpenAddMember}
         >
           Thêm thành viên
-        </Button>
+        </AddMemberButton>
       </AddBtnWrap>
 
       <SectionTitle>
@@ -257,7 +269,8 @@ export default function GroupMemberListView({
 
       {members.map((member) => {
         const avatarSrc = member.avatarUrl
-          ? `${(process.env.NEXT_PUBLIC_S3_BASE_URL || "").replace(/\/+$/, "")}/${member.avatarUrl.replace(/^\/+/, "")}`
+          ? `${(process.env.NEXT_PUBLIC_S3_BASE_URL || "")
+            .replace(/\/+$/, "")}/${member.avatarUrl.replace(/^\/+/, "")}`
           : "";
 
         const isSelf = member.userId === currentUserId;

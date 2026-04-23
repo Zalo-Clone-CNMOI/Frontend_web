@@ -30,15 +30,14 @@ const StyledDialogTitle = styled(DialogTitle)({
 });
 
 const StyledDialogContent = styled(DialogContent)({
-  paddingTop: "8px !important",
+  // paddingTop: "8px !important",
 });
 
 const ActionsWrap = styled(Box)({
   display: "flex",
   justifyContent: "flex-end",
   gap: 8,
-  marginTop: 16,
-  paddingTop: 16,
+  padding: "16px 24px",
   borderTop: "1px solid #EAECF0",
 });
 
@@ -53,6 +52,7 @@ interface AppModalProps {
   hideCloseButton?: boolean;
   slotProps?: DialogProps["slotProps"];
   headerDivider?: boolean;
+  bottomDivider?: boolean;
 }
 
 export default function AppModal({
@@ -66,6 +66,7 @@ export default function AppModal({
   hideCloseButton = false,
   slotProps,
   headerDivider = false,
+  bottomDivider = false,
 }: AppModalProps) {
   return (
     <StyledDialog
@@ -92,8 +93,10 @@ export default function AppModal({
 
       <StyledDialogContent>
         {children}
-        {actions ? <ActionsWrap>{actions}</ActionsWrap> : null}
+
+
       </StyledDialogContent>
+      {actions ? <ActionsWrap>{actions}</ActionsWrap> : null}
     </StyledDialog>
   );
 }
