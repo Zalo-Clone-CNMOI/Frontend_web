@@ -99,6 +99,7 @@ export default function ProfileCard({ isGroup }: ProfileCardProps) {
   const listConversation = useChatStore((s) => s.listConversation);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const fetchConversationDetail = useChatStore((s) => s.fetchConversationDetail);
+  const currentUserId = useChatStore((s) => s.currentUserId);
 
   const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState(false);
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
@@ -107,12 +108,22 @@ export default function ProfileCard({ isGroup }: ProfileCardProps) {
     (s) => s.conversationDetailById?.[activeConversationId || ""] ?? null
   );
 
-  const currentConversation = conversationDetail ?? listConversation.find(
-    (cvs) => cvs.id === activeConversationId
-  );
+  const currentConversation =
+    conversationDetail ?? listConversation.find((cvs) => cvs.id === activeConversationId);
 
   const members = conversationDetail?.members ?? currentConversation?.members ?? [];
 
+  const otherMember = !isGroup
+    ? members.find((m) => m.userId !== currentUserId)
+    : null;
+
+  const displayName = isGroup
+    ? currentConversation?.name ?? ""
+    : otherMember?.nickname || otherMember?.fullName || currentConversation?.name || "";
+
+  const displayAvatar = isGroup
+    ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${currentConversation?.avatarUrl || ""}`
+    : `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${otherMember?.avatarUrl || currentConversation?.avatarUrl || ""}`;
   const handleGroupAction = () => {
     if (isGroup) {
       setOpenAddMemberDialog(true);
@@ -127,15 +138,15 @@ export default function ProfileCard({ isGroup }: ProfileCardProps) {
       <Card>
         <TopInfo>
           <AppAvatar
-            src={currentConversation?.avatarUrl ?? ""}
-            name={currentConversation?.name ?? ""}
+            src={displayAvatar}
+            name={displayName}
             size={56}
             fontSize={22}
           />
 
           <NameRow>
-            <ConversationName title={currentConversation?.name ?? ""}>
-              {currentConversation?.name ?? ""}
+            <ConversationName title={displayName}>
+              {displayName}
             </ConversationName>
 
             <EditCircleButton>

@@ -23,4 +23,10 @@ export const groupService = {
             API.API_CONVERSATIONS_REMOVE_MEMBER(conversationId, memberId)
         );
     },
+    updateMemberRole(conversationId: string, memberId: string, role:"admin" | "member"){
+        return http.patch<IApiResponse<void>>(
+            API.API_CONVERSATIONS_UPDATE_ROLE(conversationId, memberId),
+            { role }
+        );
+    }
 };

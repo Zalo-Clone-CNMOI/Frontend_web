@@ -73,8 +73,8 @@ export default function InfConvColumn({
 
     await groupService.removeMemberFromGroup(conversationId, selectedMember.userId);
     await fetchConversationDetail(conversationId, true);
-// console.log("groupService", groupService);
-// console.log("removeMemberFromGroup", groupService.removeMemberFromGroup);
+    // console.log("groupService", groupService);
+    // console.log("removeMemberFromGroup", groupService.removeMemberFromGroup);
     setOpenConfirmRemove(false);
     setSelectedMember(null);
   };
@@ -107,7 +107,16 @@ export default function InfConvColumn({
 
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? [];
+  const myMember = members.find((member) => member.userId === currentUserId);
+  const myRole = myMember?.role;
 
+  const handleBackToOverview = () => {
+    setView("overview");
+  };
+
+  const handleOpenAddMemberDialog = () => {
+    setOpenAddMemberDialog(true);
+  };
   if (!conversationId) return null;
 
   if (!mounted) {
@@ -147,11 +156,15 @@ export default function InfConvColumn({
       ) : (
         <GroupMemberListView
           members={members}
-          myRole={conversationDetail?.mySettings?.role}
-          currentUserId={currentUserId || ""}
-          onBack={() => setView("overview")}
-          onOpenAddMember={() => setOpenAddMemberDialog(true)}
+          onBack={handleBackToOverview}
+          onOpenAddMember={handleOpenAddMemberDialog}
           onRemoveMember={handleOpenRemoveMember}
+          onUpdateMemberRole={async (member, role) => {
+            await groupService.updateMemberRole(conversationId, member.userId, role);
+            await fetchConversationDetail(conversationId, true);
+          }}
+          myRole={myRole}
+          currentUserId={currentUserId ?? ""}
         />
       )}
 
