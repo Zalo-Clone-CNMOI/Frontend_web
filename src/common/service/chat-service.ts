@@ -118,4 +118,26 @@ export const chatService = {
       }
     );
   },
+
+  searchMessages(
+    conversationId: string,
+    params: {
+      q?: string;
+      senderId?: string;
+      from?: number;
+      to?: number;
+      fileType?: 'images' | 'video' | 'files';
+    }
+  ) {
+    const searchParams = new URLSearchParams();
+    if (params.q) searchParams.set('q', params.q);
+    if (params.senderId) searchParams.set('senderId', params.senderId);
+    if (params.from) searchParams.set('from', String(params.from));
+    if (params.to) searchParams.set('to', String(params.to));
+    if (params.fileType) searchParams.set('fileType', params.fileType);
+
+    return http.get<IApiResponse<{ items: UiMessage[]; total: number }>>(
+      `${API.API_MESSAGES_SEARCH(conversationId)}?${searchParams.toString()}`
+    );
+  },
 };

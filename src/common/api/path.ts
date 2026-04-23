@@ -82,4 +82,7 @@ export const API = {
 
     API_MESSAGES_PINNED: (conversationId: string) =>
       `/api/messages/${conversationId}/pins`,
+
+    API_MESSAGES_SEARCH: (conversationId: string) =>
+      `/api/messages/${conversationId}/search`,
 } as const;

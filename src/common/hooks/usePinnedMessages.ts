@@ -9,6 +9,7 @@ export const usePinnedMessages = (conversationId: string) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const currentUserId = useChatStore((s) => s.currentUserId);
+  const addPinnedMessage = useChatStore((s) => s.addPinnedMessage);
 
   const fetchPinnedMessages = async () => {
     if (!conversationId || !currentUserId) return;
@@ -26,6 +27,23 @@ export const usePinnedMessages = (conversationId: string) => {
       
       const normalized = messageObjects.map(normalizeMessage);
       setPinnedMessages(normalized);
+
+      // Sync pinned message IDs to Zustand store for persistence across components
+      // Clear existing pinned set for this conversation
+      const pinnedSet = new Set<string>();
+      normalized.forEach((msg) => {
+        if (msg.messageId) {
+          pinnedSet.add(msg.messageId);
+        }
+      });
+
+      // Update store with the fetched pinned set
+      useChatStore.setState((state) => ({
+        pinnedMessagesByConversation: {
+          ...state.pinnedMessagesByConversation,
+          [conversationId]: pinnedSet,
+        },
+      }));
     } catch (err: any) {
       setError(err?.message || "Không lấy được tin nhắn đã ghim");
       setPinnedMessages([]);
