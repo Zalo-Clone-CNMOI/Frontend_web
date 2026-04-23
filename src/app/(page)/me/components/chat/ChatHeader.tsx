@@ -3,14 +3,16 @@
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
 import { getSocket } from "@/src/common/socket/socket";
-import { Box, Typography } from "@mui/material";
+import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import SearchIcon from "@mui/icons-material/Search";
 
 interface ChatHeaderProps {
   title?: string;
   socketConnected: boolean;
   error?: string | null;
-  conversationId: string | null
+  conversationId: string | null;
+  onToggleSearch?: () => void;
 }
 
 const HeaderRoot = styled(Box)({
@@ -65,7 +67,8 @@ const StatusDot = styled("span")<{ online?: boolean }>(({ online }) => ({
 
 export default function ChatHeader({
   socketConnected,
-  conversationId
+  conversationId,
+  onToggleSearch,
 }: ChatHeaderProps) {
   const listConversation = useChatStore((s) => s.listConversation)
   const presenceMap = usePresenceStore((s) => s.presenceMap)
@@ -116,6 +119,11 @@ export default function ChatHeader({
             )}
           </HeaderSubtitle>
         </HeaderLeft>
+        {onToggleSearch && (
+          <IconButton onClick={onToggleSearch} sx={{ mr: 2, color: "#6B7280" }}>
+            <SearchIcon />
+          </IconButton>
+        )}
       </HeaderTop>
 
       {/* {error && (

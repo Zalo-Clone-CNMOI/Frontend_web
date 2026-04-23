@@ -30,6 +30,7 @@ interface ChatPanelProps {
   currentUserId: string;
   conversationId: string;
   title?: string;
+  onToggleSearch?: () => void;
 }
 
 const Root = styled(Box)({
@@ -61,6 +62,7 @@ const MessageListWrap = styled(Box)({
 const InputWrap = styled(Box)({
   minHeight: 50,
   flexShrink: 0,
+  backgroundColor: "red",
 });
 
 export default function ChatPanel({
@@ -68,6 +70,7 @@ export default function ChatPanel({
   currentUserId,
   conversationId,
   title,
+  onToggleSearch,
 }: ChatPanelProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -172,7 +175,6 @@ export default function ChatPanel({
 
   const handlePinnedMenuClick = (message: UiMessage) => {
     // TODO: Show menu with options (Bỏ ghim, Xem chi tiết)
-    console.log("Menu clicked for message:", message.messageId);
     alert("Menu clicked for message: " + message.messageId);
   };
 
@@ -419,6 +421,7 @@ export default function ChatPanel({
           title={title}
           socketConnected={socketConnected}
           error={error}
+          onToggleSearch={onToggleSearch}
         />
       </HeaderWrap>
 
