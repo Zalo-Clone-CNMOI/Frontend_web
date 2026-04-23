@@ -1,10 +1,10 @@
 "use client";
 
+import { useState } from "react";
 import {
-    Avatar,
-    Box,
-    IconButton,
-    Typography,
+  Box,
+  IconButton,
+  Typography,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
@@ -14,129 +14,177 @@ import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import AppAvatar from "@/src/shared/component/Avatar";
+import AddMemberGroupDialog from "./AddMemberGroupDialog";
+import { groupService } from "@/src/common/service/group-service";
+import CreateGroupModal from "../chat/CreateGroupModal";
+
+interface ProfileCardProps {
+  isGroup?: boolean;
+}
 
 const Card = styled(Box)({
-    background: "#fff",
-    marginBottom: 8,
+  background: "#fff",
+  marginBottom: 8,
 });
 
 const TopInfo = styled(Box)({
-    padding: "28px 20px 20px",
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
+  padding: "28px 20px 20px",
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
 });
 
 const NameRow = styled(Box)({
-    display: "flex",
-    alignItems: "center",
-    gap: 8,
-    marginTop: 14,
-    marginBottom: 18,
+  display: "flex",
+  alignItems: "center",
+  gap: 8,
+  marginTop: 14,
+  marginBottom: 18,
 });
 
 const ConversationName = styled(Typography)({
-    fontSize: 18,
-    fontWeight: 700,
-    color: "#0F132A",
-    maxWidth: 220,
-    overflow: "hidden",
-    textOverflow: "ellipsis",
-    whiteSpace: "nowrap",
+  fontSize: 18,
+  fontWeight: 700,
+  color: "#0F132A",
+  maxWidth: 220,
+  overflow: "hidden",
+  textOverflow: "ellipsis",
+  whiteSpace: "nowrap",
 });
 
 const EditCircleButton = styled(IconButton)({
-    width: 24,
-    height: 24,
-    background: "#E5E7EB",
-    color: "#212121",
-
-    "&:hover": {
-        background: "#dbdbdb",
-    },
+  width: 24,
+  height: 24,
+  background: "#E5E7EB",
+  color: "#212121",
+  "&:hover": {
+    background: "#dbdbdb",
+  },
 });
 
 const ActionsRow = styled(Box)({
-    width: "100%",
-    display: "flex",
-    justifyContent: "space-around",
-    gap: 8,
-    marginTop: 4,
+  width: "100%",
+  display: "flex",
+  justifyContent: "space-around",
+  gap: 8,
+  marginTop: 4,
 });
 
 const ActionItem = styled(Box)({
-    width: 90,
-    display: "flex",
-    flexDirection: "column",
-    alignItems: "center",
-    textAlign: "center",
-    gap: 8,
+  width: 90,
+  display: "flex",
+  flexDirection: "column",
+  alignItems: "center",
+  textAlign: "center",
+  gap: 8,
 });
 
 const ActionIcon = styled(IconButton)({
-    width: 32,
-    height: 32,
-    background: "#E5E7EB",
-    color: "#212121",
-
-    "&:hover": {
-        background: "#dbdbdb",
-    },
+  width: 32,
+  height: 32,
+  background: "#E5E7EB",
+  color: "#212121",
+  "&:hover": {
+    background: "#dbdbdb",
+  },
 });
 
 const ActionText = styled(Typography)({
-    fontSize: 13,
-    color: "#0F172A",
-    lineHeight: 1.35,
+  fontSize: 13,
+  color: "#0F172A",
+  lineHeight: 1.35,
 });
 
-export default function ProfileCard() {
-    const listConversation = useChatStore((s) => s.listConversation)
-    const activeConversationId = useChatStore((s) => s.activeConversationId)
-    const currentConversation = listConversation.find((cvs) => cvs.id === activeConversationId)
-    return (
-        <Card>
-            <TopInfo>
-                <AppAvatar
-                    src={currentConversation?.avatarUrl ?? ""}
-                    name={currentConversation?.name ?? ""}
-                    size={56}
-                    fontSize={22}
-                />
+export default function ProfileCard({ isGroup }: ProfileCardProps) {
+  const listConversation = useChatStore((s) => s.listConversation);
+  const activeConversationId = useChatStore((s) => s.activeConversationId);
+  const fetchConversationDetail = useChatStore((s) => s.fetchConversationDetail);
 
-                <NameRow>
-                    <ConversationName title={currentConversation?.name ?? ""}>
-                        {currentConversation?.name ?? ""}
-                    </ConversationName>
+  const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState(false);
+  const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
 
-                    <EditCircleButton>
-                        <EditOutlinedIcon sx={{ fontSize: "16px" }} />
-                    </EditCircleButton>
-                </NameRow>
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById?.[activeConversationId || ""] ?? null
+  );
 
-                <ActionsRow>
-                    <ActionItem>
-                        <ActionIcon>
-                            <NotificationsNoneRoundedIcon sx={{ fontSize: 20 }} />
-                        </ActionIcon>
-                        <ActionText>Tắt thông báo</ActionText>
-                    </ActionItem>
+  const currentConversation = conversationDetail ?? listConversation.find(
+    (cvs) => cvs.id === activeConversationId
+  );
 
-                    <ActionItem>
-                        <ActionIcon>
-                            <PushPinOutlinedIcon sx={{ fontSize: 20 }} />
-                        </ActionIcon>
-                        <ActionText>Ghim hội thoại</ActionText>
-                    </ActionItem>
+  const members = conversationDetail?.members ?? currentConversation?.members ?? [];
 
-                    <ActionItem>
-                        <ActionIcon>
-                            <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
-                        </ActionIcon>
-                        <ActionText>Tạo nhóm trò chuyện</ActionText>
-                    </ActionItem>
-                </ActionsRow>
-            </TopInfo>
-        </Card>
-    );
+  const handleGroupAction = () => {
+    if (isGroup) {
+      setOpenAddMemberDialog(true);
+      return;
+    }
+
+    setOpenCreateGroupDialog(true);
+  };
+
+  return (
+    <>
+      <Card>
+        <TopInfo>
+          <AppAvatar
+            src={currentConversation?.avatarUrl ?? ""}
+            name={currentConversation?.name ?? ""}
+            size={56}
+            fontSize={22}
+          />
+
+          <NameRow>
+            <ConversationName title={currentConversation?.name ?? ""}>
+              {currentConversation?.name ?? ""}
+            </ConversationName>
+
+            <EditCircleButton>
+              <EditOutlinedIcon sx={{ fontSize: "16px" }} />
+            </EditCircleButton>
+          </NameRow>
+
+          <ActionsRow>
+            <ActionItem>
+              <ActionIcon>
+                <NotificationsNoneRoundedIcon sx={{ fontSize: 20 }} />
+              </ActionIcon>
+              <ActionText>Tắt thông báo</ActionText>
+            </ActionItem>
+
+            <ActionItem>
+              <ActionIcon>
+                <PushPinOutlinedIcon sx={{ fontSize: 20 }} />
+              </ActionIcon>
+              <ActionText>Ghim hội thoại</ActionText>
+            </ActionItem>
+
+            <ActionItem>
+              <ActionIcon onClick={handleGroupAction}>
+                <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
+              </ActionIcon>
+              <ActionText>
+                {isGroup ? "Thêm thành viên" : "Tạo nhóm trò chuyện"}
+              </ActionText>
+            </ActionItem>
+          </ActionsRow>
+        </TopInfo>
+      </Card>
+
+      <CreateGroupModal
+        open={openCreateGroupDialog}
+        onClose={() => setOpenCreateGroupDialog(false)}
+      />
+
+      <AddMemberGroupDialog
+        open={openAddMemberDialog}
+        onClose={() => setOpenAddMemberDialog(false)}
+        existingMemberIds={members.map((m) => m.userId)}
+        onSubmit={async (userIds) => {
+          if (!activeConversationId) return;
+          await groupService.addMembersToGroup(activeConversationId, userIds);
+          await fetchConversationDetail(activeConversationId, true);
+        }}
+      />
+    </>
+  );
 }

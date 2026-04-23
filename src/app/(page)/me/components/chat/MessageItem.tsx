@@ -7,6 +7,9 @@ import MessageActions from "./MessageActions";
 import MessageMediaGroup from "./MessageMediaGroup";
 import MessageReplyPreview from "./MessageReplyPreview";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
+import { useChatStore } from "@/src/common/store/useChatStore";
+import { chatService } from "@/src/common/service/chat-service";
+import AppAvatar from "@/src/shared/component/Avatar";
 
 
 interface MessageItemProps {
@@ -80,7 +83,12 @@ const MetaRow = styled(Box)({
   justifyContent: "space-between",
   gap: 12,
 });
-
+const LeftMessageWrap = styled(Box)({
+  display: "flex",
+  alignItems: "flex-end",
+  gap: 8,
+  maxWidth: "100%",
+});
 const MetaLeft = styled(Box)({
   display: "flex",
   alignItems: "center",
@@ -116,6 +124,7 @@ export default function MessageItem({
   onForwardMessage,
 }: MessageItemProps) {
   const mine = message.senderId === currentUserId;
+  const senderId = message.senderId;
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
   const canForward = !message.isDeleted;
@@ -140,85 +149,191 @@ export default function MessageItem({
     otherAttachments.length === 0;
 
   const timeText = formatMessageTime(message.createdAt);
+  const conversationDetail = useChatStore((s) =>
+    message.conversationId
+      ? s.conversationDetailById[message.conversationId]
+      : null
+  );
 
+  const member =
+    conversationDetail?.members?.find((m) => m.userId === message.senderId) ?? null;
+
+  const isGroup = conversationDetail?.type === "group";
+
+  const avatarSrc = member?.avatarUrl
+    ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
+    : "";
   return (
     <MessageRow
       data-testid="message-row"
       data-message-id={String(message.messageId)}
       mine={mine}
     >
-      {!mine && (
-        <MessageActions
-          mine={mine}
-          canReply={canReply}
-          canDelete={canDelete}
-          canForward={canForward}
-          onReply={() => onReplyMessage(message)}
-          onForward={() => onForwardMessage(message)}
-          onDelete={() =>
-            onDeleteMessage(
-              message.conversationId,
-              message.messageId,
-              message.createdAt
-            )
-          }
-        />
-      )}
+      {!mine ? (
+        <LeftMessageWrap>
+          <AppAvatar
+            name={member?.fullName ?? ""}
+            src={avatarSrc}
+            alt={member?.nickname || member?.fullName || "User"}
+          />
 
-      <MessageContent mine={mine}>
-        {!message.isDeleted && (
-          <>
-            <MessageMediaGroup
-              attachments={imageAttachments}
-              type="image"
-              mine={mine}
-              messageId={message.messageId}
-              onMediaLoad={onMediaLoad}
-            />
+          <MessageActions
+            mine={mine}
+            canReply={canReply}
+            canDelete={canDelete}
+            canForward={canForward}
+            onReply={() => onReplyMessage(message)}
+            onForward={() => onForwardMessage(message)}
+            onDelete={() =>
+              onDeleteMessage(
+                message.conversationId,
+                message.messageId,
+                message.createdAt
+              )
+            }
+          />
 
-            <MessageMediaGroup
-              attachments={videoAttachments}
-              type="video"
-              mine={mine}
-              messageId={message.messageId}
-              onMediaLoad={onMediaLoad}
-            />
-          </>
-        )}
+          <MessageContent mine={mine}>
+            {!message.isDeleted && (
+              <>
+                <MessageMediaGroup
+                  attachments={imageAttachments}
+                  type="image"
+                  mine={mine}
+                  messageId={message.messageId}
+                  onMediaLoad={onMediaLoad}
+                />
 
-        {showBubble && (
-          <Bubble mine={mine}>
-            <MessageReplyPreview
-              replyTo={message.replyTo}
-              onClick={() => onScrollToMessage(message.replyTo?.messageId)}
-            />
-
-            {message.isDeleted ? (
-              <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
-            ) : hasText ? (
-              <MessageText>{textContent}</MessageText>
-            ) : null}
-
-            {!message.isDeleted && otherAttachments.length > 0 && (
-              <AttachmentList>
-                {otherAttachments.map((file) => (
-                  <AttachmentItem key={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}></AttachmentItem>
-                ))}
-              </AttachmentList>
+                <MessageMediaGroup
+                  attachments={videoAttachments}
+                  type="video"
+                  mine={mine}
+                  messageId={message.messageId}
+                  onMediaLoad={onMediaLoad}
+                />
+              </>
             )}
 
-            <MetaRow>
-              <MetaLeft>
-                <MetaText>{timeText}</MetaText>
-                {message.failed && <MetaText>Gửi thất bại</MetaText>}
-                {message.editedAt && <MetaText>Đã sửa</MetaText>}
-              </MetaLeft>
-            </MetaRow>
-          </Bubble>
-        )}
+            {showBubble && (
+              <Bubble mine={mine}>
+                <MessageReplyPreview
+                  senderId={senderId}
+                  replyTo={message.replyTo}
+                  onClick={() => onScrollToMessage(message.replyTo?.messageId)}
+                  mine={mine}
+                />
 
-        {hasOnlyMedia && <MetaText>{timeText}</MetaText>}
-      </MessageContent>
+                {message.isDeleted ? (
+                  <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
+                ) : hasText ? (
+                  <MessageText>{textContent}</MessageText>
+                ) : null}
+
+                {!message.isDeleted && otherAttachments.length > 0 && (
+                  <AttachmentList>
+                    {otherAttachments.map((file) => (
+                      <AttachmentItem
+                        key={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}
+                      >
+                        {file.name}
+                      </AttachmentItem>
+                    ))}
+                  </AttachmentList>
+                )}
+
+                <MetaRow>
+                  <MetaLeft>
+                    <MetaText>{timeText}</MetaText>
+                    {message.failed && <MetaText>Gửi thất bại</MetaText>}
+                    {message.editedAt && <MetaText>Đã sửa</MetaText>}
+                  </MetaLeft>
+                </MetaRow>
+              </Bubble>
+            )}
+
+            {hasOnlyMedia && <MetaText>{timeText}</MetaText>}
+          </MessageContent>
+        </LeftMessageWrap>
+      ) : (
+        <>
+          <MessageContent mine={mine}>
+            {!message.isDeleted && (
+              <>
+                <MessageMediaGroup
+                  attachments={imageAttachments}
+                  type="image"
+                  mine={mine}
+                  messageId={message.messageId}
+                  onMediaLoad={onMediaLoad}
+                />
+
+                <MessageMediaGroup
+                  attachments={videoAttachments}
+                  type="video"
+                  mine={mine}
+                  messageId={message.messageId}
+                  onMediaLoad={onMediaLoad}
+                />
+              </>
+            )}
+
+            {showBubble && (
+              <Bubble mine={mine}>
+                <MessageReplyPreview
+                  senderId={senderId}
+                  replyTo={message.replyTo}
+                  onClick={() => onScrollToMessage(message.replyTo?.messageId)}
+                  mine={mine}
+                />
+
+                {message.isDeleted ? (
+                  <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
+                ) : hasText ? (
+                  <MessageText>{textContent}</MessageText>
+                ) : null}
+
+                {!message.isDeleted && otherAttachments.length > 0 && (
+                  <AttachmentList>
+                    {otherAttachments.map((file) => (
+                      <AttachmentItem
+                        key={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}
+                      >
+                        {file.name}
+                      </AttachmentItem>
+                    ))}
+                  </AttachmentList>
+                )}
+
+                <MetaRow>
+                  <MetaLeft>
+                    <MetaText>{timeText}</MetaText>
+                    {message.failed && <MetaText>Gửi thất bại</MetaText>}
+                    {message.editedAt && <MetaText>Đã sửa</MetaText>}
+                  </MetaLeft>
+                </MetaRow>
+              </Bubble>
+            )}
+
+            {hasOnlyMedia && <MetaText>{timeText}</MetaText>}
+          </MessageContent>
+
+          <MessageActions
+            mine={mine}
+            canReply={canReply}
+            canDelete={canDelete}
+            canForward={canForward}
+            onReply={() => onReplyMessage(message)}
+            onForward={() => onForwardMessage(message)}
+            onDelete={() =>
+              onDeleteMessage(
+                message.conversationId,
+                message.messageId,
+                message.createdAt
+              )
+            }
+          />
+        </>
+      )}
 
       {mine && (
         <MessageActions

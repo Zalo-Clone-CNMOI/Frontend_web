@@ -170,6 +170,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("chat:message:deleted");
   socket.off("chat:message:updated");
   socket.off("chat:typing:update");
+  socket.off("conversation:member:removed");
+  socket.off("conversation:member:added");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -335,6 +337,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message", handleIncomingMessage);
   socket.on("chat:message:deleted", handleDeletedMessage);
   socket.on("chat:message:updated", handleUpdatedMessage);
+  socket.on("conversation:member:added", handleConversationMemberAdded);
+  socket.on("conversation:member:removed", handleConversationMemberRemoved);
   socket.on("chat:typing:update", (payload: any) => {
     console.log('[WebSocket] Received chat:typing:update', payload);
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
@@ -716,7 +720,58 @@ export const deleteMessage = (
     created_at: Number(createdAt),
   });
 };
+const handleConversationMemberAdded = async (payload: any) => {
+  console.log("[conversation:member:added]", payload);
 
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  const members = Array.isArray(payload?.members) ? payload.members : [];
+  const current = useChatStore.getState();
+  const currentUserId = current.currentUserId;
+
+  if (!conversationId || !currentUserId) return;
+
+  const isCurrentUserAdded = members.some(
+    (member: any) => member?.user_id === currentUserId || member?.userId === currentUserId
+  );
+
+  if (!isCurrentUserAdded) return;
+
+  await fetchListConversation({ page: 1, limit: 10 });
+  await current.fetchConversationDetail(conversationId, true);
+};
+const handleConversationMemberRemoved = (payload: any) => {
+  console.log("[conversation:member:removed]", payload);
+
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  const current = useChatStore.getState();
+  const currentUserId = current.currentUserId;
+
+  if (!conversationId || !currentUserId) return;
+
+  const removedUserId =
+    payload?.removed_user_id ??
+    payload?.removedUserId ??
+    payload?.user_id ??
+    payload?.userId;
+
+  const members = Array.isArray(payload?.members) ? payload.members : [];
+
+  const isCurrentUserRemoved =
+    removedUserId === currentUserId ||
+    (members.length > 0 &&
+      !members.some(
+        (member: any) =>
+          member?.user_id === currentUserId || member?.userId === currentUserId
+      ));
+
+  if (!isCurrentUserRemoved) return;
+
+  current.removeConversationLocally(conversationId);
+};
 export const cleanupChat = () => {
   const state = useChatStore.getState();
   const socket = getSocket();
@@ -731,6 +786,8 @@ export const cleanupChat = () => {
   socket?.off("chat:message");
   socket?.off("chat:message:deleted");
   socket?.off("chat:typing:update");
+  socket?.off("conversation:member:added");
+  socket?.off("conversation:member:removed");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();

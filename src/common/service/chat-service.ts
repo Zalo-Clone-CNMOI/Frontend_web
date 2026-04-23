@@ -67,4 +67,9 @@ export const chatService = {
       payload
     );
   },
+  fetchConversationById (conversationId: string){
+    return http.get<IApiResponse<ConversationDto>>(
+      API.API_CONVERSATIONS_DETAIL(conversationId)
+    );
+  }
 };

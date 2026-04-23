@@ -8,6 +8,7 @@ interface AppAvatarProps extends Omit<AvatarProps, "src"> {
   name: string | null;
   size?: number;
   fontSize?: number;
+  showNameFallback?: boolean;
 }
 
 export default function AppAvatar({
@@ -18,16 +19,14 @@ export default function AppAvatar({
   sx,
   children,
   fontSize = 16,
+  showNameFallback = true,
   ...rest
 }: AppAvatarProps) {
-  const finalSrc =
-    src ||
-    "https://static.vecteezy.com/system/resources/previews/026/434/409/non_2x/default-avatar-profile-icon-social-media-user-photo-vector.jpg";
-
   const fallback = children || getInitialsName(name ?? "") || "A";
+
   return (
     <MuiAvatar
-      src={finalSrc}
+      src={src || undefined}
       alt={alt ?? name ?? ""}
       sx={{
         width: size,
@@ -38,7 +37,7 @@ export default function AppAvatar({
       }}
       {...rest}
     >
-      {fallback}
+      {showNameFallback ? fallback : null}
     </MuiAvatar>
   );
 }

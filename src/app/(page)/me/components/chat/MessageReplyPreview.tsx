@@ -4,20 +4,26 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { IMessageReplyPreview, UiMessage } from "@/src/common/interface/chat-interface";
 import { getReplyPreview } from "@/src/common/helpers/displayPreviewReply";
+import { useChatStore } from "@/src/common/store/useChatStore";
 
 interface MessageReplyPreviewProps {
   replyTo?: IMessageReplyPreview | null;
   onClick?: () => void;
+  mine?: boolean;
+  senderId?: string;
 }
 
-const ReplyBox = styled(Box)({
-  background: "#EBECF0",
-  borderRadius: 8,
+const ReplyBox = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "mine",
+})<{ mine?: boolean }>(({ mine }) => ({
+  backgroundColor: mine ? "#C7E0FF" : "#EBECF0",
+  borderRadius: "0 3px 3px 0",
   padding: "8px 10px",
   marginBottom: 6,
   maxWidth: "100%",
   cursor: "pointer",
-});
+  borderLeft: "3px solid #0068ff",
+}));
 
 const ReplyText = styled(Typography)({
   fontSize: 12,
@@ -49,14 +55,23 @@ const ReplyMediaVideo = styled("video")({
 export default function MessageReplyPreview({
   replyTo,
   onClick,
+  mine,
+  senderId,
 }: MessageReplyPreviewProps) {
   if (!replyTo) return null;
 
   const { text, imageAttachment, videoAttachment } = getReplyPreview(replyTo);
-
+  const conversationId = useChatStore((s) => s.activeConversationId);
+  const messageByCoversation = useChatStore((s) =>
+    conversationId ? (s.messagesByConversation[conversationId] ?? []) : []
+  );
+  const messages = messageByCoversation.find((m)=> m.messageId === replyTo.messageId);
   return (
-    <ReplyBox onClick={onClick}>
-      <ReplyText>{text}</ReplyText>
+    <ReplyBox mine={mine} onClick={onClick}>
+      <Box sx={{ alignItems: "stretch", gap: "8px" }}>
+        {/* <Typography>{senderName}</Typography> */}
+        <ReplyText>{text}</ReplyText>
+      </Box>
 
       {imageAttachment && (
         <ReplyMediaImage

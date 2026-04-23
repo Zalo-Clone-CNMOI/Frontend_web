@@ -85,7 +85,7 @@ function ConversationListItem({
     >
       <ItemRow>
         <AppAvatar
-          src={item.avatarUrl ?? ""}
+          src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${item.avatarUrl}`}
           name={item.name ?? null}
           size={44}
         />

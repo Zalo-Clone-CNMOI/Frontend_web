@@ -83,14 +83,14 @@ export default function LoginPage() {
                     return;
                 }
 
-                setErrorAuth(payload?.message ?? "Đăng nhập thất bại");
+                setErrorAuth(payload?.message ?? Trans("LOGIN.FAILED"));
             } catch (error: any) {
                 console.error("Login error:", error);
                 setErrorAuth(
                     error?.message ||
                     error?.payload?.message ||
                     error?.response?.data?.message ||
-                    "Lỗi hệ thống"
+                    Trans("COMMON.SYSTEM_ERROR")
                 );
             } finally {
                 setLoadingAuth(false);
@@ -112,7 +112,7 @@ export default function LoginPage() {
                 <LogoWrap>
                     <Image
                         src="https://stc-zlogin.zdn.vn/images/zlogo.png"
-                        alt="Zalo Logo"
+                        alt={Trans("LOGIN.LOGO_ALT")}
                         width={100}
                         height={40}
                         priority
@@ -120,7 +120,7 @@ export default function LoginPage() {
                 </LogoWrap>
 
                 <Subtitle>
-                    {"Đăng nhập tài khoản Zalo\nđể kết nối với ứng dụng Zalo Web"}
+                    {Trans("LOGIN.SUBTITLE")}
                 </Subtitle>
 
                 <Card>
