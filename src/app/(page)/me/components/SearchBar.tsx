@@ -19,18 +19,14 @@ import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import GroupAddOutlinedIcon from "@mui/icons-material/GroupAddOutlined";
 import { useState, useMemo, useEffect } from "react";
 import { useChatStore } from "@/src/common/store/useChatStore";
-import { ConversationDto } from "@/src/common/interface/chat-interface";
-import {
-    userService,
-} from "@/src/common/service/user-service";
-// import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
+
 import { searchService } from "@/src/common/service/search-service";
 import { IUserSearchItem, SearchResult } from "@/src/common/interface/search-interface";
 import { useDebounce } from "@/src/common/utilities/hook/debounce";
 import AddFriendDialog from "./friend/ModalAddFriend";
 import { friendService } from "@/src/common/service/friend-service";
-import { getCurrentUserId } from "@/src/common/utilities/utils";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
+import CreateGroupModal from "./chat/CreateGroupModal";
 
 const BoxSearchBar = styled(Box)({
     height: 32,
@@ -118,6 +114,7 @@ const SearchBar = () => {
     const fetchPendingRequests = useFriendStore((s) => s.fetchPendingRequests);
     const fetchSentRequests = useFriendStore((s) => s.fetchSentRequests);
     const getRelationStatus = useFriendStore((s) => s.getRelationStatus);
+    const [openCreateGroupModal, setOpenCreateGroupModal] = useState(false);
     const handleFocusSearchBar = () => {
         setFocusOnSearch(true);
     };
@@ -156,8 +153,8 @@ const SearchBar = () => {
             .map((conv) => ({
                 kind: "conversation" as const,
                 id: conv.id,
-                name: conv.name,
-                avatarUrl: (conv as any).avatarUrl ?? null,
+                name: conv.name ?? "",
+                avatarUrl: conv.avatarUrl ?? null,
                 memberCount: conv.memberCount,
                 conversation: conv,
             }));
@@ -348,7 +345,7 @@ const SearchBar = () => {
 
                                 sx={{ fontSize: 22, color: "#353535" }} />
                         </ActionBtn>
-                        <ActionBtn>
+                        <ActionBtn onClick={() => setOpenCreateGroupModal(true)}>
                             <GroupAddOutlinedIcon sx={{ fontSize: 22, color: "#353535" }} />
                         </ActionBtn>
                     </>
@@ -369,6 +366,10 @@ const SearchBar = () => {
                     await friendService.cancelRequest(requestId);
                     await fetchSentRequests();
                 }}
+            />
+            <CreateGroupModal
+                open={openCreateGroupModal}
+                onClose={() => setOpenCreateGroupModal(false)}
             />
         </Box>
 

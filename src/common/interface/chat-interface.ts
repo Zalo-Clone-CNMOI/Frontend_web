@@ -10,17 +10,35 @@ export interface ConversationLastMessageDto {
   senderId: string;
   senderName: string;
 }
+export interface ConversationMemberDto {
+  id: string;
+  userId: string;
+  fullName: string;
+  avatarUrl: string | null;
+  role: "owner" | "admin" | "member";
+  nickname: string | null;
+  joinedAt: string;
+}
+
 export interface ConversationDto {
   id: string;
-  name: string;
-  avatarUrl?: string | null;
-  type: string;
-  memberCount?: number;
-  unreadCount: number;
-  isMuted?: boolean;
+  type: "direct" | "group";
+  name: string | null;
+  avatarUrl: string | null;
+  createdById: string;
   lastMessage?: ConversationLastMessageDto | null;
-  lastMessageAt?: string | number | null;
-  createdAt?: string | null;
+  members?: ConversationMemberDto[];
+  memberCount: number;
+  unreadCount?: number;
+  mySettings?: {
+    role: "owner" | "admin" | "member";
+    nickname: string | null;
+    isMuted: boolean;
+    isPinned: boolean;
+    pinnedAt: string | null;
+    lastReadAt: string | null;
+  };
+  createdAt: string;
 }
 export interface ConversationListMeta {
   total: number;
@@ -60,7 +78,8 @@ export interface UiMessage {
   body: string;
   createdAt: number;
   attachments: any[];
-
+  type?: "text" | "system";
+  systemAction?: "member_added";
   replyTo?: IMessageReplyPreview | null;
   replyToMessageId?: string | null;
 

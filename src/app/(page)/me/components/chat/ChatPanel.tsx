@@ -69,7 +69,7 @@ export default function ChatPanel({
 
   const isAutoScrollingRef = useRef(false);
   const scrollHideTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
+  const fetchConversationDetail = useChatStore((s) => s.fetchConversationDetail);
   const prevConversationIdRef = useRef<string | null>(null);
   const prevFirstMessageIdRef = useRef<UiMessage["messageId"] | null>(null);
   const prevLastMessageIdRef = useRef<UiMessage["messageId"] | null>(null);
@@ -250,16 +250,16 @@ export default function ChatPanel({
       };
 
       const response = await chatService.forwardMessage(payload);
-      
+
       // Send optional message to accepted conversations if provided
       if (optionalMessage && optionalMessage.trim()) {
         const acceptedConversationIds = response?.payload?.data?.results
           ?.filter((r: any) => r.status === 'accepted')
           .map((r: any) => r.conversation_id) || targetConversationIds;
-        
+
         // Wait a bit to ensure forwarded message arrives first
         await new Promise(resolve => setTimeout(resolve, 500));
-        
+
         for (const conversationId of acceptedConversationIds) {
           try {
             await sendMessage(conversationId, optionalMessage.trim());
@@ -287,9 +287,9 @@ export default function ChatPanel({
     prevScrollHeightRef.current = 0;
     prevFirstMessageIdRef.current = null;
     prevLastMessageIdRef.current = null;
-
+    fetchConversationDetail(conversationId);
     openConversation(conversationId);
-  }, [conversationId]);
+  }, [conversationId, fetchConversationDetail]);
 
   useLayoutEffect(() => {
     const wrap = listRef.current;

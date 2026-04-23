@@ -4,7 +4,7 @@ export type MediaVisibility = "public" | "private";
 export type AttachmentType = "image" | "video" | "audio" | "document";
 
 const MEDIA_BASE_URL =
-  process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "http://54.179.206.215:5000";
+  process.env.NEXT_PUBLIC_MEDIA_BASE_URL || "http://18.138.217.102:5000";
 
 export const getAttachmentType = (mimeType: string): AttachmentType => {
   if (mimeType.startsWith("image/")) return "image";

@@ -21,6 +21,7 @@ const MediaWrap = styled(Box)({
 const MessageImage = styled("img")({
   minWidth: 180,
   maxWidth: "100%",
+  maxHeight: 400,
   borderRadius: 10,
   objectFit: "cover",
   display: "block",

@@ -18,6 +18,7 @@ type PaginationState = {
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
 type AttachmentMap = Record<string, AttachmentDto[]>;
+type ConversationDetailMap = Record<string, ConversationDto>;
 type LinkMap = Record<string, string[]>;
 
 export interface ChatState {
@@ -34,6 +35,8 @@ export interface ChatState {
   conversationMeta: any;
   conversationLoading: boolean;
   conversationFetched: boolean;
+  conversationDetailById: ConversationDetailMap;
+  conversationDetailLoadingById: Record<string, boolean>;
 
   heartbeatId: ReturnType<typeof setInterval> | null;
   mediaByConversation: AttachmentMap;
@@ -55,6 +58,8 @@ export interface ChatSetters {
   setConversationLoading: (value: boolean) => void;
   setConversationFetched: (value: boolean) => void;
   setHeartbeatId: (value: ReturnType<typeof setInterval> | null) => void;
+  setConversationDetail: (conversationId: string, conversation: ConversationDto) => void;
+  fetchConversationDetail: (conversationId: string, force?: boolean) => Promise<void>;
 
   setMessages: (conversationId: string, messages: UiMessage[]) => void;
   appendMessages: (
@@ -83,6 +88,7 @@ export interface ChatSetters {
     items: string[]
   ) => void;
   deleteMessage: (conversationId: string, messageId: string, createdAt: number) => void
+  removeConversationLocally: (conversationId: string) => void;
   fetchListConversation: (params?: { page?: number; limit?: number }) => Promise<void>;
   upsertConversationToTop: (conversation: ConversationDto) => void;
   resetChatState: () => void;
@@ -106,6 +112,9 @@ export const initialChatState: ChatState = {
   conversationLoading: false,
   conversationFetched: false,
 
+  conversationDetailById: {},
+  conversationDetailLoadingById: {},
+
   heartbeatId: null,
   mediaByConversation: {},
   filesByConversation: {},
@@ -127,6 +136,60 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       listConversation: items,
       conversationFetched: true,
     }),
+  setConversationDetail: (conversationId, conversation) =>
+    set((state) => ({
+      conversationDetailById: {
+        ...state.conversationDetailById,
+        [conversationId]: conversation,
+      },
+      conversationDetailLoadingById: {
+        ...state.conversationDetailLoadingById,
+        [conversationId]: false,
+      },
+    })),
+
+  fetchConversationDetail: async (conversationId: string, force = false) => {
+    if (!conversationId) return;
+
+    const cached = get().conversationDetailById[conversationId];
+    const loading = get().conversationDetailLoadingById[conversationId];
+
+    if (!force && cached) return;
+    if (loading) return;
+
+    try {
+      set((state) => ({
+        conversationDetailLoadingById: {
+          ...state.conversationDetailLoadingById,
+          [conversationId]: true,
+        },
+      }));
+
+      const res = await chatService.fetchConversationById(conversationId);
+      const conversation = res?.payload?.data;
+
+      if (!conversation) return;
+
+      set((state) => ({
+        conversationDetailById: {
+          ...state.conversationDetailById,
+          [conversationId]: conversation,
+        },
+        conversationDetailLoadingById: {
+          ...state.conversationDetailLoadingById,
+          [conversationId]: false,
+        },
+      }));
+    } catch (error: any) {
+      set((state) => ({
+        conversationDetailLoadingById: {
+          ...state.conversationDetailLoadingById,
+          [conversationId]: false,
+        },
+        error: error?.message || "Không thể tải chi tiết cuộc trò chuyện",
+      }));
+    }
+  },
 
   upsertConversationToTop: (conversation) =>
     set((state) => {
@@ -280,6 +343,46 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   },
 
   deleteMessage,
+  removeConversationLocally: (conversationId: string) =>
+    set((state) => {
+      const nextMessages = { ...state.messagesByConversation };
+      delete nextMessages[conversationId];
+
+      const nextPagination = { ...state.paginationByConversation };
+      delete nextPagination[conversationId];
+
+      const nextMedia = { ...state.mediaByConversation };
+      delete nextMedia[conversationId];
+
+      const nextFiles = { ...state.filesByConversation };
+      delete nextFiles[conversationId];
+
+      const nextLinks = { ...state.linksByConversation };
+      delete nextLinks[conversationId];
+
+      const nextConversationDetail = { ...state.conversationDetailById };
+      delete nextConversationDetail[conversationId];
+
+      const nextConversationDetailLoading = { ...state.conversationDetailLoadingById };
+      delete nextConversationDetailLoading[conversationId];
+
+      return {
+        listConversation: state.listConversation.filter(
+          (item) => item.id !== conversationId
+        ),
+        messagesByConversation: nextMessages,
+        paginationByConversation: nextPagination,
+        mediaByConversation: nextMedia,
+        filesByConversation: nextFiles,
+        linksByConversation: nextLinks,
+        conversationDetailById: nextConversationDetail,
+        conversationDetailLoadingById: nextConversationDetailLoading,
+        activeConversationId:
+          state.activeConversationId === conversationId
+            ? null
+            : state.activeConversationId,
+      };
+    }),
   resetChatState: () => set(initialChatState),
   updateTypingUsers: (conversationId: string, users: any[]) =>
     set((state) => ({
