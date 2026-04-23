@@ -174,6 +174,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("conversation:member:added");
   socket.off("conversation:created");
   socket.off("conversation:disbanded");
+  socket.off("chat.system_message");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -237,6 +238,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
 
     appendMessageDerivedData(finalMessage);
   };
+
   const handleDeletedMessage = (raw: any) => {
     const messageId = raw?.message_id ?? raw?.messageId;
     const conversationId = raw?.conversation_id ?? raw?.conversationId;
@@ -268,7 +270,6 @@ export const initChat = (accessToken: string, currentUserId: string) => {
       ),
     }));
   };
-
 
   const handleUpdatedMessage = (raw: any) => {
     const messageId = raw?.message_id ?? raw?.messageId;
@@ -309,6 +310,34 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     }));
   };
 
+  const handleSystemMessage = (raw: any) => {
+    console.log("[chat.system_message]", raw);
+
+    const normalized = normalizeMessage(raw);
+
+    if (!normalized.conversationId || !normalized.messageId) return;
+
+    const systemMessage: UiMessage = {
+      ...normalized,
+      type: 'system',
+      senderId: 'SYSTEM',
+    };
+
+    useChatStore.setState((state) => {
+      const currentMessages =
+        state.messagesByConversation[systemMessage.conversationId] || [];
+
+      const nextMessages = upsertIncomingMessage(currentMessages, systemMessage);
+
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [systemMessage.conversationId]: nextMessages,
+        },
+      };
+    });
+  };
+
   socket.on("connect", () => {
     const current = useChatStore.getState();
     const activeConversationId = current.activeConversationId;
@@ -343,6 +372,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("conversation:created", handleConversationCreated);
   socket.on("conversation:disbanded", handleConversationDisbanded);
   socket.on("conversation:member:removed", handleConversationMemberRemoved);
+  socket.on("chat.system_message", handleSystemMessage);
   socket.on("chat:typing:update", (payload: any) => {
     console.log('[WebSocket] Received chat:typing:update', payload);
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
@@ -803,6 +833,7 @@ const handleConversationMemberRemoved = (payload: any) => {
 
   current.removeConversationLocally(conversationId);
 };
+
 export const cleanupChat = () => {
   const state = useChatStore.getState();
   const socket = getSocket();
@@ -821,6 +852,7 @@ export const cleanupChat = () => {
   socket?.off("conversation:member:removed");
   socket?.off("conversation:created");
   socket?.off("conversation:disbanded");
+  socket?.off("chat.system_message");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();

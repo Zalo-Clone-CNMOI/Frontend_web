@@ -1,6 +1,65 @@
 export type AttachmentType = "image" | "document" | "audio" | "video";
 export type ReactionType = "like" | "love" | "haha" | "sad" | "angry";
 
+export enum SystemEventType {
+  MEMBER_ADDED = 'member_added',
+  MEMBER_REMOVED = 'member_removed',
+  MEMBER_LEFT = 'member_left',
+  ROLE_CHANGED = 'role_changed',
+  OWNER_TRANSFERRED = 'owner_transferred',
+  GROUP_DISBANDED = 'group_disbanded',
+}
+
+export interface MemberAddedMetadata {
+  added_by: string;
+  added_by_name: string;
+  added_members: Array<{
+    user_id: string;
+    full_name: string;
+  }>;
+}
+
+export interface MemberRemovedMetadata {
+  removed_by: string;
+  removed_by_name: string;
+  removed_user_id: string;
+  removed_user_name: string;
+}
+
+export interface MemberLeftMetadata {
+  user_id: string;
+  user_name: string;
+}
+
+export interface RoleChangedMetadata {
+  updated_by: string;
+  updated_by_name: string;
+  target_user_id: string;
+  target_user_name: string;
+  previous_role: string;
+  new_role: string;
+}
+
+export interface OwnerTransferredMetadata {
+  previous_owner_id: string;
+  previous_owner_name: string;
+  new_owner_id: string;
+  new_owner_name: string;
+}
+
+export interface GroupDisbandedMetadata {
+  disbanded_by: string;
+  disbanded_by_name: string;
+}
+
+export type SystemMessageMetadata =
+  | MemberAddedMetadata
+  | MemberRemovedMetadata
+  | MemberLeftMetadata
+  | RoleChangedMetadata
+  | OwnerTransferredMetadata
+  | GroupDisbandedMetadata;
+
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
 export interface ConversationLastMessageDto {
@@ -80,6 +139,8 @@ export interface UiMessage {
   attachments: any[];
   type?: "text" | "system";
   systemAction?: "member_added";
+  system_event_type?: SystemEventType;
+  metadata?: SystemMessageMetadata;
   replyTo?: IMessageReplyPreview | null;
   replyToMessageId?: string | null;
 

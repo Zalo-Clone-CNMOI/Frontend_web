@@ -6,6 +6,7 @@ import { styled } from "@mui/material/styles";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import MessageItem from "./MessageItem";
+import SystemMessageBanner from "./SystemMessageBanner";
 
 interface MessageListProps {
   listRef: RefObject<HTMLDivElement | null>;
@@ -144,18 +145,26 @@ export default function MessageList({
         </EmptyState>
       ) : (
         <MessagesContent>
-          {messages.map((message) => (
-            <MessageItem
-              key={message.messageId}
-              message={message}
-              currentUserId={currentUserId}
-              onReplyMessage={onReplyMessage}
-              onDeleteMessage={deleteMessage}
-              onScrollToMessage={scrollToRepliedMessage}
-              onMediaLoad={onMediaLoad}
-              onForwardMessage={onForwardMessage}
-            />
-          ))}
+          {messages.map((message) => {
+            const isSystemMessage = message.type === 'system' || message.senderId === 'SYSTEM';
+            
+            if (isSystemMessage) {
+              return <SystemMessageBanner key={message.messageId} message={message} />;
+            }
+            
+            return (
+              <MessageItem
+                key={message.messageId}
+                message={message}
+                currentUserId={currentUserId}
+                onReplyMessage={onReplyMessage}
+                onDeleteMessage={deleteMessage}
+                onScrollToMessage={scrollToRepliedMessage}
+                onMediaLoad={onMediaLoad}
+                onForwardMessage={onForwardMessage}
+              />
+            );
+          })}
         </MessagesContent>
       )}
     </MessagesWrap>
