@@ -58,7 +58,8 @@ export const API = {
         `/api/conversations/${conversationId}/read`,
     API_CONVERSATIONS_GROUP_DISBAND: (conversationId: string) =>
         `/api/conversations/${conversationId}/disband`,
-
+    API_CONVERSATIONS_PIN: (conversationId: string) =>
+        `/api/conversations/${conversationId}/pin`,
     /* ================= MESSAGES ================= */
 
 

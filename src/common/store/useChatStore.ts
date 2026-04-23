@@ -7,6 +7,7 @@ import type {
 // import { patchConversationLastMessage, updateConversationLastMessage } from "../helpers/chat.helpers";
 import { deleteMessage, moveConversationToTopWithLastMessage } from "../action/chat.action";
 import { chatService } from "../service/chat-service";
+import { sortConversations } from "../helpers/sortConservation";
 
 type PaginationState = {
   nextCursor: string | null;
@@ -93,6 +94,10 @@ export interface ChatSetters {
   upsertConversationToTop: (conversation: ConversationDto) => void;
   resetChatState: () => void;
   updateTypingUsers: (conversationId: string, users: any[]) => void;
+  updateConversationPinStatus: (
+    conversationId: string,
+    isPinned: boolean
+  ) => void;
 }
 
 export type ChatStore = ChatState & ChatSetters;
@@ -133,7 +138,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
   setListConversation: (items) =>
     set({
-      listConversation: items,
+      listConversation: sortConversations(items),
       conversationFetched: true,
     }),
   setConversationDetail: (conversationId, conversation) =>
@@ -198,7 +203,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       );
 
       return {
-        listConversation: [conversation, ...filtered],
+        listConversation: sortConversations([conversation, ...filtered]),
         conversationFetched: true,
       };
     }),
@@ -326,8 +331,8 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const res = await chatService.fetchListConversations(params);
 
       set({
-        listConversation: res?.payload?.data ?? res?.payload?.data ?? [],
-        conversationMeta: res?.payload?.meta ?? res?.payload?.meta ?? null,
+        listConversation: sortConversations(res?.payload?.data ?? []),
+        conversationMeta: res?.payload?.meta ?? null,
         conversationFetched: true,
       });
     } catch (error: any) {
@@ -384,6 +389,22 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       };
     }),
   resetChatState: () => set(initialChatState),
+  updateConversationPinStatus: (conversationId, isPinned) =>
+    set((state) => {
+      const nextList = state.listConversation.map((item) =>
+        item.id === conversationId
+          ? {
+            ...item,
+            isPinned,
+            pinnedAt: isPinned ? Date.now() : null,
+          }
+          : item
+      );
+
+      return {
+        listConversation: sortConversations(nextList),
+      };
+    }),
   updateTypingUsers: (conversationId: string, users: any[]) =>
     set((state) => ({
       typingUsersByConversation: {

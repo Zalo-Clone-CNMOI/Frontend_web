@@ -156,6 +156,10 @@ export const normalizeMessage = (raw: any): UiMessage & {
     pending: Boolean(raw?.pending ?? false),
     failed: Boolean(raw?.failed ?? false),
     errorMessage: raw?.errorMessage ?? raw?.error_message ?? null,
+    type: raw?.type ?? raw?.message_type ?? raw?.messageType ?? "user",
+    message_type: raw?.message_type ?? raw?.messageType ?? "user",
+    system_event_type: raw?.system_event_type ?? raw?.systemEventType ?? undefined,
+    metadata: raw?.metadata ?? undefined,
   };
 };
 export const sortMessages = (items: UiMessage[]) =>

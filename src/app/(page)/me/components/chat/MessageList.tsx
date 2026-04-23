@@ -6,7 +6,7 @@ import { styled } from "@mui/material/styles";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import MessageItem from "./MessageItem";
-import SystemMessageBanner from "./SystemMessageBanner";
+import SystemMessageBanner from "./message-system/SystemMessageBanner";
 
 interface MessageListProps {
   listRef: RefObject<HTMLDivElement | null>;
@@ -25,7 +25,7 @@ const MessagesWrap = styled(Box, {
 })<{ showScrollbar: boolean }>(({ showScrollbar }) => ({
   flex: 1,
   overflowY: "auto",
-  background: "#F7F8FA",
+  background: "#EBECF0",
   padding: 12,
   display: "flex",
   flexDirection: "column",

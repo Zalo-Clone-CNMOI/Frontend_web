@@ -2,14 +2,28 @@ export type AttachmentType = "image" | "document" | "audio" | "video";
 export type ReactionType = "like" | "love" | "haha" | "sad" | "angry";
 
 export enum SystemEventType {
-  MEMBER_ADDED = 'member_added',
-  MEMBER_REMOVED = 'member_removed',
-  MEMBER_LEFT = 'member_left',
-  ROLE_CHANGED = 'role_changed',
-  OWNER_TRANSFERRED = 'owner_transferred',
-  GROUP_DISBANDED = 'group_disbanded',
+  MEMBER_ADDED = "member_added",
+  MEMBER_REMOVED = "member_removed",
+  MEMBER_LEFT = "member_left",
+  ROLE_CHANGED = "role_changed",
+  OWNER_TRANSFERRED = "owner_transferred",
+  GROUP_DISBANDED = "group_disbanded",
+  MESSAGE_PINNED = "message_pinned",
+  MESSAGE_UNPINNED = "message_unpinned",
+}
+export interface MessagePinnedMetadata {
+  pinned_by: string;
+  pinned_by_name: string;
+  message_id: string;
+  preview_text?: string;
 }
 
+export interface MessageUnpinnedMetadata {
+  unpinned_by: string;
+  unpinned_by_name: string;
+  message_id?: string;
+  preview_text?: string;
+}
 export interface MemberAddedMetadata {
   added_by: string;
   added_by_name: string;
@@ -58,7 +72,9 @@ export type SystemMessageMetadata =
   | MemberLeftMetadata
   | RoleChangedMetadata
   | OwnerTransferredMetadata
-  | GroupDisbandedMetadata;
+  | GroupDisbandedMetadata
+  | MessagePinnedMetadata
+  | MessageUnpinnedMetadata;
 
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
@@ -88,6 +104,8 @@ export interface ConversationDto {
   lastMessage?: ConversationLastMessageDto | null;
   members?: ConversationMemberDto[];
   memberCount: number;
+  isPinned?: boolean;
+  pinnedAt?: number | null;
   unreadCount?: number;
   mySettings?: {
     role: "owner" | "admin" | "member";
@@ -138,7 +156,8 @@ export interface UiMessage {
   createdAt: number;
   attachments: any[];
   type?: "text" | "system";
-  systemAction?: "member_added";
+  message_type?: "user" | "system";
+  systemAction?: SystemEventType;
   system_event_type?: SystemEventType;
   metadata?: SystemMessageMetadata;
   replyTo?: IMessageReplyPreview | null;

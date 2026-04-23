@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import {
   Box,
   Button,
@@ -14,12 +14,19 @@ import {
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
+import CameraAltOutlinedIcon from "@mui/icons-material/CameraAltOutlined";
 import AppModal from "@/src/shared/component/AppModal";
-import AppAvatar from "@/src/shared/component/Avatar";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { groupService } from "@/src/common/service/group-service";
 import { openConversation } from "@/src/common/action/chat.action";
+import IconButton from "@mui/material/IconButton";
+import CloseIcon from "@mui/icons-material/Close";
+import { CheckedIcon, RemoveSelectedButton, StyledCheckbox, StyledCheckIcon, UncheckedIcon } from "../conversation-infor/AddMemberGroupDialog";
+import { useFormik } from "formik";
+import { createGroupValidationSchema, initialValues } from "./validation/validateCreateGroup";
+import { uploadMedia } from "@/src/common/service/media-service";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -30,7 +37,7 @@ const SearchWrap = styled(Box)({
   height: 40,
   display: "flex",
   alignItems: "center",
-  background: "#F3F4F6",
+  // background: "#F3F4F6",
   borderRadius: 8,
   padding: "0 10px",
   marginBottom: 16,
@@ -42,7 +49,7 @@ const SearchInput = styled(InputBase)({
   fontSize: 14,
 });
 
-const SelectedWrap = styled(Box)({
+export const SelectedWrap = styled(Box)({
   display: "flex",
   flexWrap: "wrap",
   gap: 8,
@@ -50,7 +57,7 @@ const SelectedWrap = styled(Box)({
   minHeight: 24,
 });
 
-const SelectedItem = styled(Box)({
+export const SelectedItem = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 6,
@@ -58,7 +65,18 @@ const SelectedItem = styled(Box)({
   borderRadius: 16,
   padding: "4px 10px",
 });
-
+const GroupAvatarUpload = styled(Box)({
+  width: 48,
+  height: 48,
+  borderRadius: "50%",
+  border: "1px solid #D8D9DB",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  cursor: "pointer",
+  flexShrink: 0,
+  position: "relative",
+});
 export default function CreateGroupModal({
   open,
   onClose,
@@ -74,7 +92,51 @@ export default function CreateGroupModal({
   const [keyword, setKeyword] = useState("");
   const [selectedUserIds, setSelectedUserIds] = useState<string[]>([]);
   const [submitting, setSubmitting] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [groupAvatarFile, setGroupAvatarFile] = useState<File | null>(null);
+  const [groupAvatarPreview, setGroupAvatarPreview] = useState("");
+  const formik = useFormik({
+    initialValues,
+    validationSchema: createGroupValidationSchema,
+    onSubmit: async (values) => {
+      if (selectedUserIds.length < 2) return;
 
+      try {
+        setSubmitting(true);
+
+        let avatarUrl: string | null = null;
+
+        if (groupAvatarFile) {
+          const uploadResult = await uploadMedia({
+            file: groupAvatarFile,
+          });
+
+          avatarUrl = uploadResult.key ?? null;
+        }
+
+        const res = await groupService.createGroupConversation(
+          values.groupName.trim(),
+          selectedUserIds,
+          avatarUrl
+        );
+
+        const newConversation = res?.payload?.data;
+        if (!newConversation) throw new Error("Không tạo được nhóm");
+
+        upsertConversationToTop(newConversation);
+        setConversationDetail(newConversation.id, newConversation);
+
+        onClose();
+
+        await openConversation(newConversation.id);
+        await fetchConversationDetail(newConversation.id, true);
+      } catch (error: any) {
+        formik.setFieldError("groupName", error?.message || "Tạo nhóm thất bại");
+      } finally {
+        setSubmitting(false);
+      }
+    },
+  });
   useEffect(() => {
     if (!open) return;
     void fetchFriends();
@@ -82,10 +144,16 @@ export default function CreateGroupModal({
 
   useEffect(() => {
     if (!open) {
-      setGroupName("");
+      if (groupAvatarPreview) {
+        URL.revokeObjectURL(groupAvatarPreview);
+      }
+
+      formik.resetForm();
       setKeyword("");
       setSelectedUserIds([]);
       setSubmitting(false);
+      setGroupAvatarFile(null);
+      setGroupAvatarPreview("");
     }
   }, [open]);
 
@@ -110,7 +178,29 @@ export default function CreateGroupModal({
         : [...prev, userId]
     );
   };
+  const handleChooseGroupAvatar = () => {
+    fileInputRef.current?.click();
+  };
 
+  const handleGroupAvatarChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const file = event.target.files?.[0];
+
+    if (!file) return;
+
+    if (!file.type.startsWith("image/")) {
+      event.target.value = "";
+      return;
+    }
+
+    if (groupAvatarPreview) {
+      URL.revokeObjectURL(groupAvatarPreview);
+    }
+
+    setGroupAvatarFile(file);
+    setGroupAvatarPreview(URL.createObjectURL(file));
+
+    event.target.value = "";
+  };
   const handleCreateGroup = async () => {
     if (selectedUserIds.length < 2) {
       alert("Vui lòng chọn ít nhất 2 thành viên để tạo nhóm");
@@ -143,7 +233,7 @@ export default function CreateGroupModal({
       setSubmitting(false);
     }
   };
-
+  console.log("selectedFriends:", selectedFriends);
   return (
     <AppModal
       open={open}
@@ -159,7 +249,7 @@ export default function CreateGroupModal({
           </Button>
           <Button
             variant="contained"
-            onClick={handleCreateGroup}
+            onClick={() => formik.handleSubmit()}
             disabled={submitting || selectedUserIds.length < 2}
           >
             {submitting ? "Đang tạo..." : "Tạo nhóm"}
@@ -167,18 +257,63 @@ export default function CreateGroupModal({
         </>
       }
     >
-      <Typography sx={{ mb: 1, fontSize: 13, color: "#6B7280" }}>
-        Tên nhóm
-      </Typography>
+      <SearchWrap
+        sx={{
+          mb: formik.touched.groupName && formik.errors.groupName ? 0.5 : 2,
+          gap: 1.5,
+          px: 0,
+          height: 48,
+        }}
+      >
+        <GroupAvatarUpload onClick={handleChooseGroupAvatar}>
+          {groupAvatarPreview ? (
+            <AppAvatar
+              size={48}
+              fontSize={18}
+              name={formik.values.groupName}
+              src={groupAvatarPreview}
+            />
+          ) : (
+            <CameraAltOutlinedIcon
+              sx={{
+                fontSize: 22,
+                color: "#6B7280",
+              }}
+            />
+          )}
+        </GroupAvatarUpload>
 
-      <SearchWrap sx={{ mb: 2 }}>
         <InputBase
-          placeholder="Nhập tên nhóm"
-          value={groupName}
-          onChange={(e) => setGroupName(e.target.value)}
-          sx={{ flex: 1, fontSize: 14 }}
+          name="groupName"
+          placeholder="Nhập tên nhóm..."
+          value={formik.values.groupName}
+          onChange={formik.handleChange}
+          onBlur={formik.handleBlur}
+          sx={{
+            flex: 1,
+            fontSize: 13,
+            backgroundColor: "#fff",
+            borderBottom: "1px solid #D1D5DB",
+            "&:focus-within": {
+              borderBottom: "1px solid #2563EB",
+            },
+          }}
+        />
+
+        <input
+          ref={fileInputRef}
+          type="file"
+          accept="image/*"
+          hidden
+          onChange={handleGroupAvatarChange}
         />
       </SearchWrap>
+
+      {formik.touched.groupName && formik.errors.groupName && (
+        <Typography sx={{ fontSize: 12, color: "#D93025", mb: 2 }}>
+          {formik.errors.groupName}
+        </Typography>
+      )}
 
       <Typography sx={{ mb: 1, fontSize: 13, color: "#6B7280" }}>
         Thành viên đã chọn ({selectedUserIds.length})
@@ -191,16 +326,35 @@ export default function CreateGroupModal({
               size={24}
               fontSize={12}
               name={item.fullName || "U"}
-              src={item.avatarUrl || ""}
+              src={buildS3Url(item.avatarUrl) || ""}
             />
-            <Typography sx={{ fontSize: 12 }}>
+
+            <Typography
+              sx={{
+                fontSize: 12,
+                maxWidth: 120,
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
+              }}
+            >
               {item.fullName || "Người dùng"}
             </Typography>
+
+            <RemoveSelectedButton
+              size="small"
+              onClick={(e) => {
+                e.stopPropagation();
+                toggleUser(item.id);
+              }}
+            >
+              <CloseIcon />
+            </RemoveSelectedButton>
           </SelectedItem>
         ))}
       </SelectedWrap>
 
-      <SearchWrap>
+      <SearchWrap sx={{border:"1px solid #E5E7EB",borderRadius: 8, ":focus-within":{borderColor: "#2563EB"}}}>
         <SearchIcon sx={{ fontSize: 20, color: "#6B7280" }} />
         <SearchInput
           placeholder="Tìm bạn bè"
@@ -214,15 +368,33 @@ export default function CreateGroupModal({
           const checked = selectedUserIds.includes(item.id);
 
           return (
-            <ListItemButton key={item.id} onClick={() => toggleUser(item.id)}>
-              <ListItemIcon sx={{ minWidth: 36 }}>
-                <Checkbox edge="start" checked={checked} tabIndex={-1} />
+            <ListItemButton
+              key={item.id}
+              onClick={() => toggleUser(item.id)}
+              sx={{
+                display: "flex",
+                gap: "8px",
+                borderRadius: 1,
+              }}
+            >
+              <ListItemIcon sx={{ minWidth: "28px" }}>
+                <StyledCheckbox
+                  edge="start"
+                  checked={checked}
+                  tabIndex={-1}
+                  icon={<UncheckedIcon />}
+                  checkedIcon={
+                    <CheckedIcon>
+                      <StyledCheckIcon />
+                    </CheckedIcon>
+                  }
+                />
               </ListItemIcon>
 
               <AppAvatar
                 size={36}
                 name={item.fullName || "U"}
-                src={item.avatarUrl || ""}
+                src={buildS3Url(item.avatarUrl) || ""}
                 sx={{ mr: 1.5 }}
               />
 
