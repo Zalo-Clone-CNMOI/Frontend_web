@@ -10,7 +10,6 @@ import ChatInput from "./ChatInput";
 import ForwardModal from "./ForwardModal";
 import PinnedBar from "./PinnedBar";
 import PinnedList from "./PinnedList";
-import SearchSidebar from "./SearchSidebar";
 import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
@@ -91,7 +90,6 @@ export default function ChatPanel({
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<UiMessage | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
-  const [isSearchSidebarOpen, setIsSearchSidebarOpen] = useState(false);
 
   const {
     socketConnected,
@@ -174,16 +172,8 @@ export default function ChatPanel({
 
   const handlePinnedMenuClick = (message: UiMessage) => {
     // TODO: Show menu with options (Bỏ ghim, Xem chi tiết)
-  };
-
-  const handleSearchMessageClick = (message: UiMessage) => {
-    setHighlightedMessageId(message.messageId);
-    setTimeout(() => setHighlightedMessageId(null), 2000);
-
-    const messageElement = document.getElementById(`message-${message.messageId}`);
-    if (messageElement) {
-      messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
-    }
+    console.log("Menu clicked for message:", message.messageId);
+    alert("Menu clicked for message: " + message.messageId);
   };
 
   const isNearBottom = () => {
@@ -422,82 +412,71 @@ export default function ChatPanel({
   }, []);
 
   return (
-    <Box sx={{ display: "flex", width: "100%", height: "100%" }}>
-      <Root>
-        <HeaderWrap>
-          <ChatHeader
-            conversationId={conversationId}
-            title={title}
-            socketConnected={socketConnected}
-            error={error}
-            onSearchToggle={() => setIsSearchSidebarOpen(!isSearchSidebarOpen)}
-          />
-        </HeaderWrap>
-
-        <MessageListWrap>
-          {realtimePinnedMessages.length > 0 && (
-            <>
-              {isPinnedExpanded ? (
-                <PinnedList
-                  pinnedMessages={realtimePinnedMessages}
-                  onPressMessage={handlePressPinnedMessage}
-                  onUnpinMessage={handleUnpinMessage}
-                  onCollapse={() => setIsPinnedExpanded(false)}
-                  onMenuClick={handlePinnedMenuClick}
-                />
-              ) : (
-                <PinnedBar
-                  message={realtimePinnedMessages[0]}
-                  totalCount={realtimePinnedMessages.length}
-                  onExpand={() => setIsPinnedExpanded(true)}
-                  onMenuClick={handlePinnedMenuClick}
-                />
-              )}
-            </>
-          )}
-          <MessageList
-            listRef={listRef}
-            messages={messages}
-            onReplyMessage={handleReplyMessage}
-            currentUserId={currentUserId}
-            conversationId={conversationId}
-            onScroll={handleScroll}
-            showScrollbar={showScrollbar}
-            onMediaLoad={handleMediaLoad}
-            onForwardMessage={handleForwardMessage}
-            highlightedMessageId={highlightedMessageId}
-          />
-          {typingState.visible && <TypingIndicator text={typingState.text} />}
-        </MessageListWrap>
-
-        <InputWrap>
-          <ChatInput
-            disabled={false}
-            replyMessage={replyMessage}
-            editMessage={editMessage}
-            onCancelReply={handleCancelReply}
-            onCancelEdit={handleCancelEdit}
-            onSend={(text, attachments = []) =>
-              sendMessage(conversationId, text, attachments, replyMessage)
-            }
-          />
-        </InputWrap>
-
-        <ForwardModal
-          visible={isForwardModalVisible}
-          message={selectedMessageForForward}
-          onClose={() => setIsForwardModalVisible(false)}
-          onForward={handleForward}
+    <Root>
+      <HeaderWrap>
+        <ChatHeader
+          conversationId={conversationId}
+          title={title}
+          socketConnected={socketConnected}
+          error={error}
         />
-      </Root>
+      </HeaderWrap>
 
-      <SearchSidebar
-        open={isSearchSidebarOpen}
-        onClose={() => setIsSearchSidebarOpen(false)}
-        conversationId={conversationId}
-        accessToken={accessToken}
-        onMessageClick={handleSearchMessageClick}
+      <MessageListWrap>
+        {realtimePinnedMessages.length > 0 && (
+          <>
+            {isPinnedExpanded ? (
+              <PinnedList
+                pinnedMessages={realtimePinnedMessages}
+                onPressMessage={handlePressPinnedMessage}
+                onUnpinMessage={handleUnpinMessage}
+                onCollapse={() => setIsPinnedExpanded(false)}
+                onMenuClick={handlePinnedMenuClick}
+              />
+            ) : (
+              <PinnedBar
+                message={realtimePinnedMessages[0]}
+                totalCount={realtimePinnedMessages.length}
+                onExpand={() => setIsPinnedExpanded(true)}
+                onMenuClick={handlePinnedMenuClick}
+              />
+            )}
+          </>
+        )}
+        <MessageList
+          listRef={listRef}
+          messages={messages}
+          onReplyMessage={handleReplyMessage}
+          currentUserId={currentUserId}
+          conversationId={conversationId}
+          onScroll={handleScroll}
+          showScrollbar={showScrollbar}
+          onMediaLoad={handleMediaLoad}
+          onForwardMessage={handleForwardMessage}
+          highlightedMessageId={highlightedMessageId}
+        />
+        {typingState.visible && <TypingIndicator text={typingState.text} />}
+      </MessageListWrap>
+
+      <InputWrap>
+        <ChatInput
+          disabled={false}
+          replyMessage={replyMessage}
+          editMessage={editMessage}
+          onCancelReply={handleCancelReply}
+          onCancelEdit={handleCancelEdit}
+          onSend={(text, attachments = []) =>
+            sendMessage(conversationId, text, attachments, replyMessage)
+          }
+        />
+      </InputWrap>
+
+      <ForwardModal
+        visible={isForwardModalVisible}
+        message={selectedMessageForForward}
+        onClose={() => setIsForwardModalVisible(false)}
+        onForward={handleForward}
       />
-    </Box>
+    </Root>
   );
 }
