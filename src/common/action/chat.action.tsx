@@ -169,6 +169,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("chat:message");
   socket.off("chat:message:deleted");
   socket.off("chat:message:updated");
+  socket.off("chat:message:pinned");
+  socket.off("chat:message:unpinned");
   socket.off("chat:typing:update");
   socket.off("conversation:member:removed");
   socket.off("conversation:member:added");
@@ -176,11 +178,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
-    console.log("[receiver raw socket]", raw);
-
     const normalized = normalizeMessage(raw);
-
-    console.log("[receiver normalized]", normalized);
 
     if (!normalized.conversationId || !normalized.messageId) return;
 
@@ -244,6 +242,13 @@ export const initChat = (accessToken: string, currentUserId: string) => {
 
     if (!messageId || !conversationId) return;
 
+    const state = useChatStore.getState();
+    
+    // Auto unpin when message is deleted/revoked
+    if (state.isMessagePinned(conversationId, messageId)) {
+      state.removePinnedMessage(conversationId, messageId);
+    }
+
     useChatStore.setState((state) => ({
       messagesByConversation: {
         ...state.messagesByConversation,
@@ -257,6 +262,8 @@ export const initChat = (accessToken: string, currentUserId: string) => {
               attachments: [],
               pending: false,
               failed: false,
+              isPinned: false,
+              pinnedAt: undefined,
             }
             : msg
         ),
@@ -309,8 +316,6 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   };
 
   const handleSystemMessage = (raw: any) => {
-    console.log("[chat.system_message]", raw);
-
     const normalized = normalizeMessage(raw);
 
     if (!normalized.conversationId || !normalized.messageId) return;
@@ -333,6 +338,44 @@ export const initChat = (accessToken: string, currentUserId: string) => {
           [systemMessage.conversationId]: nextMessages,
         },
       };
+    });
+  };
+
+  const handlePinnedMessage = (raw: any) => {
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const messageId = raw?.message_id ?? raw?.messageId;
+    const pinnedAt = raw?.pinned_at ?? raw?.pinnedAt ?? Date.now();
+
+    if (!conversationId || !messageId) return;
+
+    const state = useChatStore.getState();
+    
+    // Add to pinned set
+    state.addPinnedMessage(conversationId, messageId);
+    
+    // Update message if it exists in local state
+    const messages = state.messagesByConversation[conversationId] || [];
+    const messageExists = messages.some((msg) => msg.messageId === messageId);
+    
+    if (messageExists) {
+      state.updateMessage(conversationId, messageId, {
+        isPinned: true,
+        pinnedAt,
+      });
+    }
+  };
+
+  const handleUnpinnedMessage = (raw: any) => {
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const messageId = raw?.message_id ?? raw?.messageId;
+
+    if (!conversationId || !messageId) return;
+
+    const state = useChatStore.getState();
+    state.removePinnedMessage(conversationId, messageId);
+    state.updateMessage(conversationId, messageId, {
+      isPinned: false,
+      pinnedAt: undefined,
     });
   };
 
@@ -366,11 +409,12 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message", handleIncomingMessage);
   socket.on("chat:message:deleted", handleDeletedMessage);
   socket.on("chat:message:updated", handleUpdatedMessage);
+  socket.on("chat:message:pinned", handlePinnedMessage);
+  socket.on("chat:message:unpinned", handleUnpinnedMessage);
   socket.on("conversation:member:added", handleConversationMemberAdded);
   socket.on("conversation:member:removed", handleConversationMemberRemoved);
   socket.on("chat.system_message", handleSystemMessage);
   socket.on("chat:typing:update", (payload: any) => {
-    console.log('[WebSocket] Received chat:typing:update', payload);
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
     const users = payload?.users || [];
     if (conversationId) {
@@ -379,8 +423,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   });
 
   socket.onAny((event, ...args) => {
-    console.log("[socket event]", event);
-    console.log("[socket args]", args);
+    // Socket event received
   });
 
   const heartbeatId = setInterval(() => {
@@ -454,10 +497,6 @@ export const loadMoreMessages = async (conversationId: string) => {
     pagination.loadingMore ||
     !pagination.nextCursor
   ) {
-    console.log("[action:loadMore:skip]", {
-      conversationId,
-      pagination,
-    });
     return;
   }
 
@@ -466,11 +505,6 @@ export const loadMoreMessages = async (conversationId: string) => {
   });
 
   try {
-    console.log("[action:loadMore:fetch]", {
-      conversationId,
-      cursor: pagination.nextCursor,
-    });
-
     const res = await chatService.fetchMessages(conversationId, {
       cursor: pagination.nextCursor,
       limit: 50,
@@ -489,27 +523,10 @@ export const loadMoreMessages = async (conversationId: string) => {
     const currentMessages =
       latestState.messagesByConversation[conversationId] || [];
 
-    console.log("[action:loadMore:result]", {
-      fetchedCount: oldMessages.length,
-      currentCount: currentMessages.length,
-      fetchedFirstId: oldMessages[0]?.messageId,
-      fetchedLastId: oldMessages[oldMessages.length - 1]?.messageId,
-      currentFirstId: currentMessages[0]?.messageId,
-      currentLastId: currentMessages[currentMessages.length - 1]?.messageId,
-      nextCursor: payload?.nextCursor,
-      hasMore: payload?.hasMore,
-    });
-
     const mergedMessages = dedupeByMessageId([
       ...oldMessages,
       ...currentMessages,
     ]);
-
-    console.log("[action:loadMore:merged]", {
-      mergedCount: mergedMessages.length,
-      mergedFirstId: mergedMessages[0]?.messageId,
-      mergedLastId: mergedMessages[mergedMessages.length - 1]?.messageId,
-    });
 
     useChatStore.setState((state) => ({
       messagesByConversation: {
@@ -530,7 +547,6 @@ export const loadMoreMessages = async (conversationId: string) => {
 
     rebuildConversationDerivedData(conversationId);
   } catch (err: any) {
-    console.error("[action:loadMore:error]", err);
     useChatStore.getState().setPagination(conversationId, {
       loadingMore: false,
     });
@@ -570,7 +586,6 @@ export const sendMessage = async (
     (!displayBody && socketAttachments.length === 0) ||
     !socket?.connected
   ) {
-    console.warn("[sendMessage] socket chưa sẵn sàng");
     return;
   }
 
@@ -613,10 +628,8 @@ export const sendMessage = async (
   if (replyMessage?.messageId) {
     payload.reply_to_message_id = replyMessage.messageId;
   }
-  console.log("[partner send] payload", payload);
 
   socket.emit("chat:send", payload, (ack: any) => {
-    console.log("[chat:send ack]", ack);
 
     const current = useChatStore.getState();
     const messages = current.messagesByConversation[conversationId] || [];
@@ -750,9 +763,8 @@ export const deleteMessage = (
     created_at: Number(createdAt),
   });
 };
-const handleConversationMemberAdded = async (payload: any) => {
-  console.log("[conversation:member:added]", payload);
 
+const handleConversationMemberAdded = async (payload: any) => {
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
 
@@ -771,9 +783,8 @@ const handleConversationMemberAdded = async (payload: any) => {
   await fetchListConversation({ page: 1, limit: 10 });
   await current.fetchConversationDetail(conversationId, true);
 };
-const handleConversationMemberRemoved = (payload: any) => {
-  console.log("[conversation:member:removed]", payload);
 
+const handleConversationMemberRemoved = (payload: any) => {
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
 

@@ -149,6 +149,9 @@ export interface UiMessage {
   isDeleted?: boolean;
   pending?: boolean;
   failed?: boolean;
+
+  isPinned?: boolean;
+  pinnedAt?: number | null;
 }
 
 export interface MessagePageDto {

@@ -54,8 +54,6 @@ export async function uploadMedia({
 
     const key = presignData?.key;
     const uploadUrl = presignData?.uploadUrl;
-    console.log("presign key:", key);
-    console.log("uploadUrl:", uploadUrl);
     const visibility: MediaVisibility =
       presignData?.visibility === "private" ? "private" : "public";
 
@@ -95,11 +93,8 @@ export async function uploadMedia({
 
     const confirmJson = await confirmRes.json();
     const confirmData = confirmJson?.data ?? confirmJson;
-    console.log("confirmData.key:", confirmData?.key || key);
-    console.log("final key:", confirmData?.key ?? key);
 
     const finalKey = confirmData?.key ?? key;
-    console.log("uploadMedia return key:", finalKey);
     return {
       key: confirmData?.key ?? key,
       url: null, // hoặc bỏ hẳn field này nếu interface cho phép

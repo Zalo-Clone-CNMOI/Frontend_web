@@ -9,8 +9,9 @@ import MessageReplyPreview from "./MessageReplyPreview";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { chatService } from "@/src/common/service/chat-service";
+import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 import AppAvatar from "@/src/shared/component/Avatar";
-
+import PushPinIcon from "@mui/icons-material/PushPin";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -24,20 +25,36 @@ interface MessageItemProps {
   onScrollToMessage: (targetMessageId?: UiMessage["messageId"] | null) => void;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
+  isHighlighted?: boolean;
 }
 
 const MessageRow = styled(Box, {
-  shouldForwardProp: (prop) => prop !== "mine",
-})<{ mine?: boolean }>(({ mine }) => ({
+  shouldForwardProp: (prop) => prop !== "mine" && prop !== "isHighlighted",
+})<{ mine?: boolean; isHighlighted?: boolean }>(({ mine, isHighlighted }) => ({
   display: "flex",
   justifyContent: mine ? "flex-end" : "flex-start",
   alignItems: "center",
   gap: 8,
   position: "relative",
+  transition: "background-color 0.3s ease",
+  borderRadius: 8,
+  padding: "4px 8px",
+  ...(isHighlighted && {
+    backgroundColor: "rgba(0, 168, 132, 0.2)",
+    animation: "highlight-pulse 1.5s ease-in-out",
+  }),
   "&:hover .message-actions": {
     opacity: 1,
     visibility: "visible",
     transform: "translateY(0)",
+  },
+  "@keyframes highlight-pulse": {
+    "0%": {
+      backgroundColor: "rgba(0, 168, 132, 0.4)",
+    },
+    "100%": {
+      backgroundColor: "rgba(0, 168, 132, 0.2)",
+    },
   },
 }));
 
@@ -122,12 +139,17 @@ export default function MessageItem({
   onScrollToMessage,
   onMediaLoad,
   onForwardMessage,
+  isHighlighted = false,
 }: MessageItemProps) {
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
   const canForward = !message.isDeleted;
+  const canPin = !message.isDeleted;
+
+  const { togglePin } = useMessagePin();
+  const isPinned = useChatStore((s) => s.isMessagePinned(message.conversationId, message.messageId));
 
   const { imageAttachments, videoAttachments, otherAttachments } =
     splitMessageAttachments(message.attachments);
@@ -163,11 +185,14 @@ export default function MessageItem({
   const avatarSrc = member?.avatarUrl
     ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
     : "";
+
   return (
     <MessageRow
+      id={`message-${message.messageId}`}
       data-testid="message-row"
       data-message-id={String(message.messageId)}
       mine={mine}
+      isHighlighted={isHighlighted}
     >
       {!mine ? (
         <LeftMessageWrap>
@@ -175,22 +200,6 @@ export default function MessageItem({
             name={member?.fullName ?? ""}
             src={avatarSrc}
             alt={member?.nickname || member?.fullName || "User"}
-          />
-
-          <MessageActions
-            mine={mine}
-            canReply={canReply}
-            canDelete={canDelete}
-            canForward={canForward}
-            onReply={() => onReplyMessage(message)}
-            onForward={() => onForwardMessage(message)}
-            onDelete={() =>
-              onDeleteMessage(
-                message.conversationId,
-                message.messageId,
-                message.createdAt
-              )
-            }
           />
 
           <MessageContent mine={mine}>
@@ -253,6 +262,25 @@ export default function MessageItem({
 
             {hasOnlyMedia && <MetaText>{timeText}</MetaText>}
           </MessageContent>
+
+          <MessageActions
+            mine={mine}
+            canReply={canReply}
+            canDelete={canDelete}
+            canForward={canForward}
+            canPin={canPin}
+            onReply={() => onReplyMessage(message)}
+            onForward={() => onForwardMessage(message)}
+            onDelete={() =>
+              onDeleteMessage(
+                message.conversationId,
+                message.messageId,
+                message.createdAt
+              )
+            }
+            isPinned={isPinned}
+            onTogglePin={() => togglePin(message.conversationId, message.createdAt, message.messageId)}
+          />
         </LeftMessageWrap>
       ) : (
         <>
@@ -322,6 +350,7 @@ export default function MessageItem({
             canReply={canReply}
             canDelete={canDelete}
             canForward={canForward}
+            canPin={canPin}
             onReply={() => onReplyMessage(message)}
             onForward={() => onForwardMessage(message)}
             onDelete={() =>
@@ -331,26 +360,10 @@ export default function MessageItem({
                 message.createdAt
               )
             }
+            isPinned={isPinned}
+            onTogglePin={() => togglePin(message.conversationId, message.createdAt, message.messageId)}
           />
         </>
-      )}
-
-      {mine && (
-        <MessageActions
-          mine={mine}
-          canReply={canReply}
-          canDelete={canDelete}
-          canForward={canForward}
-          onReply={() => onReplyMessage(message)}
-          onForward={() => onForwardMessage(message)}
-          onDelete={() =>
-            onDeleteMessage(
-              message.conversationId,
-              message.messageId,
-              message.createdAt
-            )
-          }
-        />
       )}
     </MessageRow>
   );

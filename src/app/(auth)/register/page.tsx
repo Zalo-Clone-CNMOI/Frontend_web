@@ -56,8 +56,6 @@ export default function RegisterPage() {
         initialValues,
         validationSchema: validationSchema,
         onSubmit: async (values) => {
-            console.log("REGISTER onSubmit called", values);
-
             setOtpMsg(null);
             setErrorAuth(null);
 
@@ -77,8 +75,6 @@ export default function RegisterPage() {
                     ...(values.email?.trim() ? { email: values.email.trim() } : {}),
                 };
 
-                console.log("REGISTER payload", payload);
-
                 const result = await authService.authRegister(payload);
 
                 if (result?.ok && result?.payload?.data) {
@@ -87,8 +83,6 @@ export default function RegisterPage() {
                     return;
                 }
             } catch (error: any) {
-                console.log("register error status:", error?.response?.status);
-                console.log("register error data:", error?.response?.data);
                 setErrorAuth(error?.response?.data?.message || "Đăng ký thất bại");
             } finally {
                 setLoadingAuth(false);
@@ -107,9 +101,7 @@ export default function RegisterPage() {
         setOtpMsg("Đang gửi OTP...");
 
         try {
-            // console.log("Sending OTP to:", phoneE164);
             const c = await sendOtp(phoneE164);
-            console.log("OTP sent successfully");
 
             setConfirmation(c);
             setOtpSent(true);

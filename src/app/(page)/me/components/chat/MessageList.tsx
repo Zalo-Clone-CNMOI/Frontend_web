@@ -18,6 +18,7 @@ interface MessageListProps {
   showScrollbar: boolean;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
+  highlightedMessageId?: string | null;
 }
 
 const MessagesWrap = styled(Box, {
@@ -92,6 +93,7 @@ export default function MessageList({
   showScrollbar,
   onMediaLoad,
   onForwardMessage,
+  highlightedMessageId,
 }: MessageListProps) {
   const paginationByConversation = useChatStore((s) => s.paginationByConversation);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
@@ -162,6 +164,7 @@ export default function MessageList({
                 onScrollToMessage={scrollToRepliedMessage}
                 onMediaLoad={onMediaLoad}
                 onForwardMessage={onForwardMessage}
+                isHighlighted={message.messageId === highlightedMessageId}
               />
             );
           })}

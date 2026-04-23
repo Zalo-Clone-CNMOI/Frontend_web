@@ -73,4 +73,13 @@ export const API = {
       `/api/messages/${messageId}/reactions`,
 
     API_MESSAGES_FORWARD: "/api/messages/forward",
+
+    API_MESSAGE_PIN: (
+      conversationId: string,
+      createdAt: number,
+      messageId: string
+    ) => `/api/messages/${conversationId}/${createdAt}/${messageId}/pin`,
+
+    API_MESSAGES_PINNED: (conversationId: string) =>
+      `/api/messages/${conversationId}/pins`,
 } as const;

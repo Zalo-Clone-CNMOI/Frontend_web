@@ -26,13 +26,11 @@ export const setupRecaptcha = async (
     size: "normal",
     callback: async (response: any) => {
       // Được gọi khi user tick captcha thành công
-      console.log("reCAPTCHA verified successfully");
       if (onSuccess) {
         await onSuccess();
       }
     },
     "expired-callback": () => {
-      console.log("reCAPTCHA expired");
       if (onExpired) {
         onExpired();
       }
@@ -44,7 +42,6 @@ export const setupRecaptcha = async (
     try {
       window.__recaptchaWidgetId = await window.__recaptchaVerifier.render();
       window.__recaptchaRendered = true;
-      console.log("reCAPTCHA rendered with widgetId:", window.__recaptchaWidgetId);
     } catch (error) {
       console.error("Error rendering reCAPTCHA:", error);
       throw error;
@@ -61,7 +58,6 @@ export const resetRecaptchaCheckbox = () => {
     const grecaptcha = (window as any).grecaptcha;
     if (grecaptcha && grecaptcha.reset && typeof window.__recaptchaWidgetId !== "undefined") {
       grecaptcha.reset(window.__recaptchaWidgetId);
-      console.log("reCAPTCHA checkbox reset");
     }
   } catch (error) {
     console.error("Error resetting reCAPTCHA:", error);
@@ -75,7 +71,6 @@ export const sendOtp = async (phoneE164: string): Promise<ConfirmationResult> =>
     throw new Error("Recaptcha verifier not initialized. Call setupRecaptcha first.");
   }
 
-  console.log("Sending OTP to:", phoneE164);
   return await signInWithPhoneNumber(auth, phoneE164, verifier);
 };
 
@@ -93,7 +88,6 @@ export const clearRecaptcha = () => {
   if (window.__recaptchaVerifier) {
     try {
       window.__recaptchaVerifier.clear();
-      console.log("reCAPTCHA cleared");
     } catch (error) {
       console.error("Error clearing reCAPTCHA:", error);
     }

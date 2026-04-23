@@ -49,9 +49,7 @@ export const chatService = {
   },
 
   fetchMessageReactions(messageId: string) {
-    return http.get<IApiResponse<any[]>>(
-      API.API_MESSAGE_REACTIONS(messageId)
-    );
+    return http.get<IApiResponse<any[]>>(API.API_MESSAGE_REACTIONS(messageId));
   },
 
   forwardMessage(payload: {
@@ -71,5 +69,53 @@ export const chatService = {
     return http.get<IApiResponse<ConversationDto>>(
       API.API_CONVERSATIONS_DETAIL(conversationId)
     );
-  }
+  },
+
+  pinMessage(
+    conversationId: string,
+    createdAt: number,
+    messageId: string,
+    userId: string
+  ) {
+    return http.post<IApiResponse<{ message: string }>>(
+      API.API_MESSAGE_PIN(conversationId, createdAt, messageId),
+      undefined,
+      {
+        headers: {
+          "x-user-id": userId,
+        },
+      }
+    );
+  },
+
+  unpinMessage(
+    conversationId: string,
+    createdAt: number,
+    messageId: string,
+    userId: string
+  ) {
+    return http.delete<IApiResponse<{ message: string }>>(
+      API.API_MESSAGE_PIN(conversationId, createdAt, messageId),
+      {
+        headers: {
+          "x-user-id": userId,
+        },
+      }
+    );
+  },
+
+  fetchPinnedMessages(
+    conversationId: string,
+    userId: string,
+    limit: number = 20
+  ) {
+    return http.get<IApiResponse<{ items: UiMessage[] }>>(
+      `${API.API_MESSAGES_PINNED(conversationId)}?limit=${limit}`,
+      {
+        headers: {
+          "x-user-id": userId,
+        },
+      }
+    );
+  },
 };
