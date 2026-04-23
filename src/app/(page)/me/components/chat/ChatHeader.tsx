@@ -2,40 +2,48 @@
 
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
-import { getSocket } from "@/src/common/socket/socket";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 
 interface ChatHeaderProps {
   title?: string;
   socketConnected: boolean;
   error?: string | null;
-  conversationId: string | null
+  conversationId: string | null;
 }
 
 const HeaderRoot = styled(Box)({
   width: "100%",
   background: "#FFFFFF",
-  minHeight:70,
-  display:"flex",
-  flexDirection:"column",
-  justifyContent:"center",
-  paddingLeft:"16px",
-  borderBottom: "1px solid #E5E7EB"
+  minHeight: 70,
+  display: "flex",
+  flexDirection: "column",
+  justifyContent: "center",
+  padding: "0 16px",
+  borderBottom: "1px solid #E5E7EB",
 });
 
 const HeaderTop = styled(Box)({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-  height:"100%",
-  width:"100%"
+  width: "100%",
+  gap: 12,
+});
+
+const HeaderInfo = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 12,
+  minWidth: 0,
 });
 
 const HeaderLeft = styled(Box)({
   display: "flex",
   flexDirection: "column",
   gap: 4,
+  minWidth: 0,
 });
 
 const HeaderTitle = styled(Typography)({
@@ -43,6 +51,9 @@ const HeaderTitle = styled(Typography)({
   fontWeight: 600,
   color: "#111827",
   lineHeight: 1.2,
+  whiteSpace: "nowrap",
+  overflow: "hidden",
+  textOverflow: "ellipsis",
 });
 
 const HeaderSubtitle = styled(Typography)({
@@ -65,64 +76,84 @@ const StatusDot = styled("span")<{ online?: boolean }>(({ online }) => ({
 
 export default function ChatHeader({
   socketConnected,
-  conversationId
+  conversationId,
 }: ChatHeaderProps) {
-  const listConversation = useChatStore((s) => s.listConversation)
-  const presenceMap = usePresenceStore((s) => s.presenceMap)
+  const listConversation = useChatStore((s) => s.listConversation);
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById?.[conversationId || ""] ?? null
+  );
+  const currentUserId = useChatStore((s) => s.currentUserId);
+  const presenceMap = usePresenceStore((s) => s.presenceMap);
 
-  const currentConversation = listConversation.find((n) => n.id === conversationId)
-  // Get other user ID from last message sender (since ConversationDto doesn't have otherUserId)
-  const otherUserId = currentConversation?.lastMessage?.senderId
+  const currentConversation =
+    conversationDetail ?? listConversation.find((n) => n.id === conversationId);
 
-  const otherUserPresence = otherUserId ? presenceMap[otherUserId] : null
+  const isGroup = currentConversation?.type === "group";
+  const members = currentConversation?.members ?? [];
+
+  const otherMember = !isGroup
+    ? members.find((m) => m.userId !== currentUserId)
+    : null;
+
+  const displayName = isGroup
+    ? currentConversation?.name ?? ""
+    : otherMember?.nickname || otherMember?.fullName || currentConversation?.name || "";
+
+
+  const otherUserId = !isGroup ? otherMember?.userId : null;
+  const otherUserPresence = otherUserId ? presenceMap[otherUserId] : null;
 
   const getStatusText = () => {
-    if (!otherUserPresence) return socketConnected ? "" : ""
-    
-    if (otherUserPresence.status === 'online') return 'Đang hoạt động'
-    if (!otherUserPresence.last_seen_at) return 'Offline'
+    if (isGroup) {
+      return `${members.length} thành viên`;
+    }
 
-    const now = Date.now()
-    const diff = now - otherUserPresence.last_seen_at
-    const minutes = Math.floor(diff / 60000)
-    const hours = Math.floor(diff / 3600000)
-    const days = Math.floor(diff / 86400000)
+    if (!otherUserPresence) return "";
 
-    if (minutes < 1) return 'Vừa truy cập'
-    if (minutes < 60) return `${minutes} phút trước`
-    if (hours < 24) return `${hours} giờ trước`
-    if (days < 7) return `${days} ngày trước`
-    return new Date(otherUserPresence.last_seen_at).toLocaleDateString('vi-VN')
-  }
+    if (otherUserPresence.status === "online") return "Đang hoạt động";
+    if (!otherUserPresence.last_seen_at) return "Offline";
 
-  const isOnline = otherUserPresence?.status === 'online'
+    const now = Date.now();
+    const diff = now - otherUserPresence.last_seen_at;
+    const minutes = Math.floor(diff / 60000);
+    const hours = Math.floor(diff / 3600000);
+    const days = Math.floor(diff / 86400000);
+
+    if (minutes < 1) return "Vừa truy cập";
+    if (minutes < 60) return `${minutes} phút trước`;
+    if (hours < 24) return `${hours} giờ trước`;
+    if (days < 7) return `${days} ngày trước`;
+    return new Date(otherUserPresence.last_seen_at).toLocaleDateString("vi-VN");
+  };
+
+  const isOnline = !isGroup && otherUserPresence?.status === "online";
 
   return (
     <HeaderRoot>
       <HeaderTop>
-        <HeaderLeft>
-          <HeaderTitle>{currentConversation?.name}</HeaderTitle>
-          <HeaderSubtitle>
-            {otherUserId ? (
-              <>
-                <StatusDot online={isOnline} />
-                {getStatusText()}
-              </>
-            ) : (
-              <>
-                <StatusDot online={socketConnected} />
-                {socketConnected ? "" : ""}
-              </>
-            )}
-          </HeaderSubtitle>
-        </HeaderLeft>
-      </HeaderTop>
+        <HeaderInfo>
+          <AppAvatar
+            src={buildS3Url(currentConversation?.avatarUrl)}
+            name={displayName}
+            size={40}
+            fontSize={16}
+          />
 
-      {/* {error && (
-        <ErrorBar>
-          <ErrorText>{error}</ErrorText>
-        </ErrorBar>
-      )} */}
+          <HeaderLeft>
+            <HeaderTitle>{displayName}</HeaderTitle>
+            <HeaderSubtitle>
+              {!isGroup && otherUserId ? (
+                <>
+                  <StatusDot online={isOnline} />
+                  {getStatusText()}
+                </>
+              ) : (
+                getStatusText()
+              )}
+            </HeaderSubtitle>
+          </HeaderLeft>
+        </HeaderInfo>
+      </HeaderTop>
     </HeaderRoot>
   );
 }

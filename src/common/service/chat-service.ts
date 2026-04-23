@@ -71,5 +71,15 @@ export const chatService = {
     return http.get<IApiResponse<ConversationDto>>(
       API.API_CONVERSATIONS_DETAIL(conversationId)
     );
+  },
+  pinConversation(conversationId: string) {
+    return http.post<IApiResponse<any>>(
+      API.API_CONVERSATIONS_PIN(conversationId)
+    );
+  },
+  unpinConversation(conversationId: string) {
+    return http.delete<IApiResponse<any>>(
+      API.API_CONVERSATIONS_PIN(conversationId)
+    );
   }
 };

@@ -2,7 +2,7 @@
 
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import { IMessageReplyPreview, UiMessage } from "@/src/common/interface/chat-interface";
+import { IMessageReplyPreview } from "@/src/common/interface/chat-interface";
 import { getReplyPreview } from "@/src/common/helpers/displayPreviewReply";
 import { useChatStore } from "@/src/common/store/useChatStore";
 
@@ -56,31 +56,50 @@ export default function MessageReplyPreview({
   replyTo,
   onClick,
   mine,
-  senderId,
 }: MessageReplyPreviewProps) {
+  const conversationId = useChatStore((s) => s.activeConversationId);
+  const messagesByConversation = useChatStore((s) =>
+    conversationId ? s.messagesByConversation[conversationId] ?? [] : []
+  );
+
   if (!replyTo) return null;
 
-  const { text, imageAttachment, videoAttachment } = getReplyPreview(replyTo);
-  const conversationId = useChatStore((s) => s.activeConversationId);
-  const messageByCoversation = useChatStore((s) =>
-    conversationId ? (s.messagesByConversation[conversationId] ?? []) : []
+  const originalMessage = messagesByConversation.find(
+    (m) => m.messageId === replyTo.messageId
   );
-  const messages = messageByCoversation.find((m)=> m.messageId === replyTo.messageId);
+
+  const currentReplyTo: IMessageReplyPreview = originalMessage
+    ? {
+        ...replyTo,
+        body: originalMessage.isDeleted ? "" : originalMessage.body,
+        attachments: originalMessage.isDeleted
+          ? []
+          : originalMessage.attachments ?? [],
+        isDeleted: Boolean(originalMessage.isDeleted),
+      }
+    : replyTo;
+
+  const { text, imageAttachment, videoAttachment } =
+    getReplyPreview(currentReplyTo);
+
+  const isDeleted = Boolean(currentReplyTo.isDeleted);
+
   return (
     <ReplyBox mine={mine} onClick={onClick}>
       <Box sx={{ alignItems: "stretch", gap: "8px" }}>
-        {/* <Typography>{senderName}</Typography> */}
-        <ReplyText>{text}</ReplyText>
+        <ReplyText>
+          {isDeleted ? "Tin nhắn đã được thu hồi" : text}
+        </ReplyText>
       </Box>
 
-      {imageAttachment && (
+      {!isDeleted && imageAttachment && (
         <ReplyMediaImage
           src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${imageAttachment.key}`}
           alt={imageAttachment.name ?? "reply-image"}
         />
       )}
 
-      {videoAttachment && (
+      {!isDeleted && videoAttachment && (
         <ReplyMediaVideo
           src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${videoAttachment.key}`}
           preload="metadata"

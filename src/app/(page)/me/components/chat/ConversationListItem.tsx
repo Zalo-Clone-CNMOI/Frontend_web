@@ -1,11 +1,16 @@
 "use client";
 
-import { memo, useMemo } from "react";
-import { Badge, Box, Typography } from "@mui/material";
+import { memo, useMemo, useState } from "react";
+import { Badge, Box, IconButton, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import AppAvatar from "@/src/shared/component/Avatar";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import type { ConversationDto } from "@/src/common/interface/chat-interface";
 import { getConversationLastMessageText } from "@/src/common/helpers/conversation.helpers";
+import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
+import MoreHorizOutlinedIcon from "@mui/icons-material/MoreHorizOutlined";
+import { chatService } from "@/src/common/service/chat-service";
+import { useChatStore } from "@/src/common/store/useChatStore";
+import MenuPopover from "@/src/shared/component/MenuPopover"; // sửa đúng path của em
 
 interface ConversationListItemProps {
   item: ConversationDto;
@@ -17,7 +22,12 @@ interface ConversationListItemProps {
 const Item = styled(Box, {
   shouldForwardProp: (prop) => prop !== "active",
 })<{ active?: boolean }>(({ active }) => ({
+  position: "relative",
   padding: "12px 16px",
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "space-between",
+  gap: 12,
   cursor: "pointer",
   borderRadius: "6px",
   background: active ? "#E5F1FF" : "#fff",
@@ -46,6 +56,14 @@ const Row = styled(Box)({
   gap: 8,
 });
 
+const NameWrap = styled(Box)({
+  display: "flex",
+  alignItems: "center",
+  gap: 6,
+  minWidth: 0,
+  flex: 1,
+});
+
 const Name = styled(Typography)({
   fontSize: 14,
   fontWeight: 600,
@@ -53,7 +71,6 @@ const Name = styled(Typography)({
   whiteSpace: "nowrap",
   overflow: "hidden",
   textOverflow: "ellipsis",
-  flex: 1,
   minWidth: 0,
 });
 
@@ -72,37 +89,131 @@ function ConversationListItem({
   currentUserId,
   onOpen,
 }: ConversationListItemProps) {
+  const updateConversationPinStatus = useChatStore(
+    (s) => s.updateConversationPinStatus
+  );
+
+  const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
+  const openMenu = Boolean(anchorEl);
+
   const lastMessageText = useMemo(
     () => getConversationLastMessageText(item, currentUserId),
     [item, currentUserId]
   );
 
+  const handleOpenMenuConversationPopover = (
+    event: React.MouseEvent<HTMLElement>
+  ) => {
+    setAnchorEl(event.currentTarget);
+  };
+
+  const handleCloseMenuConversationPopover = () => {
+    setAnchorEl(null);
+  };
+
+  const handleTogglePinConversation = async () => {
+    try {
+      if (item.isPinned) {
+        await chatService.unpinConversation(item.id);
+        updateConversationPinStatus(item.id, false);
+      } else {
+        await chatService.pinConversation(item.id);
+        updateConversationPinStatus(item.id, true);
+      }
+
+      handleCloseMenuConversationPopover();
+    } catch (error) {
+      console.error("Pin/unpin conversation failed", error);
+    }
+  };
+  const isGroup = item.type === "group";
+
+  const otherMember = !isGroup
+    ? item.members?.find((m) => m.userId !== currentUserId)
+    : null;
+
+  const displayName = isGroup
+    ? item.name
+    : otherMember?.nickname || otherMember?.fullName || item.name;
+
+  const displaySrc = isGroup
+    ? buildS3Url(item.avatarUrl)
+    : buildS3Url(otherMember?.avatarUrl || item.avatarUrl);
+
+
   return (
-    <Item
-      data-testid="conversation"
-      active={active}
-      onClick={() => onOpen(item.id)}
-    >
-      <ItemRow>
-        <AppAvatar
-          src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${item.avatarUrl}`}
-          name={item.name ?? null}
-          size={44}
-        />
+    <>
+      <Item
+        data-testid="conversation"
+        active={active}
+        onClick={() => onOpen(item.id)}
+      >
+        <ItemRow>
+          <AppAvatar
+            src={displaySrc}
+            name={displayName ?? null}
+            size={44}
+          />
 
-        <Content>
-          <Row>
-            <Name>{item.name}</Name>
+          <Content>
+            <Row>
+              <NameWrap>
+                <Name>{item.name}</Name>
 
-            {!!item.unreadCount && (
-              <Badge color="primary" badgeContent={item.unreadCount} />
+              </NameWrap>
+
+              {!!item.unreadCount && (
+                <Badge color="primary" badgeContent={item.unreadCount} />
+              )}
+            </Row>
+
+            <LastMessage>{lastMessageText}</LastMessage>
+          </Content>
+        </ItemRow>
+        <Stack justifyContent="space-between" height="100%" >
+          <Box>
+            <IconButton
+              sx={{
+                position: "absolute",
+                top: 8,
+                right: 8,
+                p: 0.5,
+              }}
+              onClick={(e) => {
+                e.stopPropagation();
+                handleOpenMenuConversationPopover(e);
+              }}
+            >
+              <MoreHorizOutlinedIcon sx={{ fontSize: "16px" }} />
+            </IconButton>
+          </Box>
+          <Box>
+            {item.isPinned && (
+              <PushPinOutlinedIcon
+                sx={{ fontSize: 16, color: "#6B7280", rotate: "45deg" }}
+              />
             )}
-          </Row>
+          </Box>
 
-          <LastMessage>{lastMessageText}</LastMessage>
-        </Content>
-      </ItemRow>
-    </Item>
+
+
+        </Stack >
+
+      </Item>
+
+      <MenuPopover
+        anchorEl={anchorEl}
+        open={openMenu}
+        onClose={handleCloseMenuConversationPopover}
+        items={[
+          {
+            key: "pin-toggle",
+            label: item.isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại",
+            onClick: handleTogglePinConversation,
+          },
+        ]}
+      />
+    </>
   );
 }
 
