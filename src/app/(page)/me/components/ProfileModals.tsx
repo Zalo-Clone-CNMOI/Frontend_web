@@ -315,9 +315,10 @@ export default function ProfileModals({
         actions={
           <Button
             fullWidth
-            sx={{border:"none"}}
+            sx={{border:"none", textTransform:"none"}}
             startIcon={<BorderColorOutlinedIcon/>}
             variant="outlined"
+            color="inherit"
             onClick={() => {
               setPendingOpenEdit(true);
               setOpenProfileModal(false);

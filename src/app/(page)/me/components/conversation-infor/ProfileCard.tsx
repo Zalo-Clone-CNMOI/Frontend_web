@@ -18,10 +18,6 @@ import AddMemberGroupDialog from "./AddMemberGroupDialog";
 import { groupService } from "@/src/common/service/group-service";
 import CreateGroupModal from "../chat/CreateGroupModal";
 
-interface ProfileCardProps {
-  isGroup?: boolean;
-}
-
 const Card = styled(Box)({
   background: "#fff",
   marginBottom: 8,
@@ -95,18 +91,16 @@ const ActionText = styled(Typography)({
   lineHeight: 1.35,
 });
 
-export default function ProfileCard({ isGroup }: ProfileCardProps) {
+export default function ProfileCard() {
   const listConversation = useChatStore((s) => s.listConversation);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const fetchConversationDetail = useChatStore((s) => s.fetchConversationDetail);
+  const conversationDetail = useChatStore((s)=> s.conversationDetailById?.[activeConversationId || ""] ?? null);
   const currentUserId = useChatStore((s) => s.currentUserId);
 
   const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState(false);
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
-
-  const conversationDetail = useChatStore(
-    (s) => s.conversationDetailById?.[activeConversationId || ""] ?? null
-  );
+  const isGroup = conversationDetail?.type === "group"
 
   const currentConversation =
     conversationDetail ?? listConversation.find((cvs) => cvs.id === activeConversationId);
