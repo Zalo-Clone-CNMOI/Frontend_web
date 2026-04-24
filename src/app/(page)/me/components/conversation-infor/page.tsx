@@ -18,6 +18,7 @@ import GroupMemberListView from "./GroupMemberListView";
 import { groupService } from "@/src/common/service/group-service";
 import AddMemberGroupDialog from "./AddMemberGroupDialog";
 import AppModal from "@/src/shared/component/AppModal";
+import MediaPreviewModal, { MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
 
 interface InfConvColumnProps {
   conversationId: string;
@@ -61,6 +62,8 @@ export default function InfConvColumn({
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
   const [selectedMember, setSelectedMember] = useState<ConversationMemberDto | null>(null);
   const [openConfirmRemove, setOpenConfirmRemove] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
+  const [previewOpen, setPreviewOpen] = useState(false);
   const currentUserId = useChatStore((s) => s.currentUserId);
 
   const handleOpenRemoveMember = (member: ConversationMemberDto) => {
@@ -115,6 +118,7 @@ export default function InfConvColumn({
   const handleOpenAddMemberDialog = () => {
     setOpenAddMemberDialog(true);
   };
+
   if (!conversationId) return null;
 
   if (!mounted) {
@@ -145,7 +149,13 @@ export default function InfConvColumn({
             />
           )}
 
-          <MediaSection items={mediaItems} />
+          <MediaSection
+            items={mediaItems}
+            onMediaClick={(media) => {
+              setPreviewMedia(media);
+              setPreviewOpen(true);
+            }}
+          />
           <FileSection items={fileItems} />
           <LinkSection items={links} />
           <SecuritySection />
@@ -193,9 +203,22 @@ export default function InfConvColumn({
           </Box>{" "}
           khỏi nhóm không?
         </Typography>
-
-
       </AppModal>
+
+      {/* Media Preview Modal */}
+      <MediaPreviewModal
+        open={previewOpen}
+        media={previewMedia}
+        mediaList={mediaItems.map((item) => ({
+          key: item.key,
+          name: item.name,
+          type: item.type,
+        }))}
+        onClose={() => {
+          setPreviewOpen(false);
+          setPreviewMedia(null);
+        }}
+      />
     </Root>
   );
 }

@@ -5,9 +5,11 @@ import { styled } from "@mui/material/styles";
 import InsertPhotoOutlinedIcon from "@mui/icons-material/InsertPhotoOutlined";
 import SectionBlock from "./SectionBlock";
 import { AttachmentDto } from "@/src/common/interface/chat-interface";
+import { buildS3Url, MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
 
 interface MediaSectionProps {
   items: AttachmentDto[];
+  onMediaClick?: (media: MediaPreviewItem) => void;
 }
 
 const EmptyHint = styled(Typography)({
@@ -32,6 +34,11 @@ const MediaItem = styled(Box)({
   overflow: "hidden",
   background: "#E5E7EB",
   border: "1px solid #E5E7EB",
+  cursor: "pointer",
+  transition: "opacity 0.2s ease",
+  "&:hover": {
+    opacity: 0.85,
+  },
 });
 
 const MediaImage = styled("img")({
@@ -67,16 +74,33 @@ const ViewAllButton = styled(Button)({
   },
 });
 
-export default function MediaSection({ items }: MediaSectionProps) {
+export default function MediaSection({ items, onMediaClick }: MediaSectionProps) {
+  const handleMediaClick = (item: AttachmentDto) => {
+    if (!onMediaClick || !item.key) return;
+
+    const mediaItem: MediaPreviewItem = {
+      key: item.key,
+      name: item.name,
+      type: item.type as "image" | "video" | string,
+    };
+    onMediaClick(mediaItem);
+  };
+
   return (
     <SectionBlock title="Ảnh/Video" defaultOpen>
       {items.length > 0 ? (
         <>
           <MediaGrid>
             {items.slice(0, 8).map((item) => (
-              <MediaItem key={item.key || item?.url}>
-                {item.url ? (
-                  <MediaImage src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${item.key}`} alt={item.name || "media"} />
+              <MediaItem
+                key={item.key || item?.url}
+                onClick={() => handleMediaClick(item)}
+              >
+                {item.key ? (
+                  <MediaImage
+                    src={buildS3Url(item.key)}
+                    alt={item.name || "media"}
+                  />
                 ) : (
                   <MediaFallback>
                     <InsertPhotoOutlinedIcon />

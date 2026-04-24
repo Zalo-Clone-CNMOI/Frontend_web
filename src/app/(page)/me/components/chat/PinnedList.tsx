@@ -5,11 +5,13 @@ import { styled } from "@mui/material/styles";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import ExpandLessIcon from "@mui/icons-material/ExpandLess";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { UiMessage } from "@/src/common/interface/chat-interface";
+import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import PinnedItem from "./PinnedItem";
 
 interface PinnedListProps {
   pinnedMessages: UiMessage[];
+  members?: ConversationMemberDto[];
+  currentUserId?: string;
   onPressMessage: (message: UiMessage) => void;
   onUnpinMessage: (message: UiMessage) => void;
   onCollapse: () => void;
@@ -70,6 +72,8 @@ const ListContent = styled(Box)({
 
 export default function PinnedList({
   pinnedMessages,
+  members,
+  currentUserId,
   onPressMessage,
   onUnpinMessage,
   onCollapse,
@@ -91,6 +95,8 @@ export default function PinnedList({
           <PinnedItem
             key={message.messageId || `pinned-${index}`}
             message={message}
+            members={members}
+            currentUserId={currentUserId}
             onPress={() => onPressMessage(message)}
             onUnpin={() => onUnpinMessage(message)}
             onMenu={(e) => onMenuClick(message, e)}

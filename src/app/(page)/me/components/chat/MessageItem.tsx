@@ -25,7 +25,7 @@ interface MessageItemProps {
   onScrollToMessage: (targetMessageId?: UiMessage["messageId"] | null) => void;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
-  onOpenMedia?: (media: MediaPreviewItem) => void;
+  onOpenMedia?: (media: MediaPreviewItem, allMedia?: MediaPreviewItem[], initialIndex?: number) => void;
   isHighlighted?: boolean;
 }
 
