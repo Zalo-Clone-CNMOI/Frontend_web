@@ -814,7 +814,7 @@ export const deleteMessage = (
     created_at: Number(createdAt),
   });
 };
-const handleConversationDisbanded = (payload: any) => {
+function handleConversationDisbanded(payload: any) {
   console.log("[conversation:disbanded]", payload);
 
   const conversationId =
@@ -825,7 +825,7 @@ const handleConversationDisbanded = (payload: any) => {
   const current = useChatStore.getState();
   current.removeConversationLocally(conversationId);
 };
-const handleConversationCreated = async (payload: any) => {
+async function handleConversationCreated(payload: any) {
   console.log("[conversation:created]", payload);
 
   const conversationId =
@@ -841,10 +841,10 @@ const handleConversationCreated = async (payload: any) => {
 
   await current.fetchConversationDetail(conversationId, true);
 };
-const handleConversationMemberAdded = async (payload: any) => {
+
+async function handleConversationMemberAdded(payload: any) {
   console.log("[conversation:member:added]", payload);
 
-const handleConversationMemberAdded = async (payload: any) => {
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
 
@@ -864,7 +864,7 @@ const handleConversationMemberAdded = async (payload: any) => {
   await current.fetchConversationDetail(conversationId, true);
 };
 
-const handleConversationMemberRemoved = (payload: any) => {
+function handleConversationMemberRemoved(payload: any) {
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
 

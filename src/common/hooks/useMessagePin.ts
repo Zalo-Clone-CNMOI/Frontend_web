@@ -42,10 +42,13 @@ export const useMessagePin = () => {
       });
 
       try {
-        await chatService.pinMessage(conversationId, createdAt, messageId, currentUserId);
+        const response = await chatService.pinMessage(conversationId, createdAt, messageId);
         // Success - socket will emit chat:message:pinned
         // No additional action needed - socket handler will sync
-      } catch (error) {
+      } catch (error: any) {
+        // Show error notification
+        const errorMessage = error?.response?.data?.message || error?.message || 'Không thể ghim tin nhắn';
+        alert(errorMessage);
         // Revert optimistic update on error
         removePinnedMessage(conversationId, messageId);
         updateMessage(conversationId, messageId, {
@@ -85,10 +88,13 @@ export const useMessagePin = () => {
       });
 
       try {
-        await chatService.unpinMessage(conversationId, createdAt, messageId, currentUserId);
+        await chatService.unpinMessage(conversationId, createdAt, messageId);
         // Success - socket will emit chat:message:unpinned
         // No additional action needed - socket handler will sync
-      } catch (error) {
+      } catch (error: any) {
+        // Show error notification
+        const errorMessage = error?.response?.data?.message || error?.message || 'Không thể bỏ ghim tin nhắn';
+        alert(errorMessage);
         // Revert optimistic update
         addPinnedMessage(conversationId, messageId);
         updateMessage(conversationId, messageId, {

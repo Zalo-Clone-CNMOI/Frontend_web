@@ -3,7 +3,7 @@
  * Giống Zalo: chấm xanh (online), xám (offline)
  */
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 
 export type PresenceStatus = 'online' | 'offline';
 
@@ -27,23 +27,28 @@ export function PresenceIndicator({
   };
 
   const { dot, border } = sizeMap[size];
+  const [statusText, setStatusText] = useState('Offline');
 
-  const getStatusText = (): string => {
-    if (status === 'online') return 'Đang hoạt động';
-    if (!lastSeenAt) return 'Offline';
+  useEffect(() => {
+    const getStatusText = (): string => {
+      if (status === 'online') return 'Đang hoạt động';
+      if (!lastSeenAt) return 'Offline';
 
-    const now = Date.now();
-    const diff = now - lastSeenAt;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+      const now = Date.now();
+      const diff = now - lastSeenAt;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return 'Vừa mới truy cập';
-    if (minutes < 60) return `${minutes} phút trước`;
-    if (hours < 24) return `${hours} giờ trước`;
-    if (days < 7) return `${days} ngày trước`;
-    return new Date(lastSeenAt).toLocaleDateString('vi-VN');
-  };
+      if (minutes < 1) return 'Vừa mới truy cập';
+      if (minutes < 60) return `${minutes} phút trước`;
+      if (hours < 24) return `${hours} giờ trước`;
+      if (days < 7) return `${days} ngày trước`;
+      return new Date(lastSeenAt).toLocaleDateString('vi-VN');
+    };
+
+    setStatusText(getStatusText());
+  }, [status, lastSeenAt]);
 
   return (
     <div style={styles.container}>
@@ -57,7 +62,7 @@ export function PresenceIndicator({
           borderWidth: showBorder ? border : 0,
           borderColor: '#fff',
         }}
-        title={getStatusText()}
+        title={statusText}
       />
     </div>
   );
@@ -70,22 +75,28 @@ export function PresenceText({
   status: PresenceStatus;
   lastSeenAt?: number;
 }) {
-  const getStatusText = (): string => {
-    if (status === 'online') return 'Đang hoạt động';
-    if (!lastSeenAt) return 'Offline';
+  const [statusText, setStatusText] = useState('Offline');
 
-    const now = Date.now();
-    const diff = now - lastSeenAt;
-    const minutes = Math.floor(diff / 60000);
-    const hours = Math.floor(diff / 3600000);
-    const days = Math.floor(diff / 86400000);
+  useEffect(() => {
+    const getStatusText = (): string => {
+      if (status === 'online') return 'Đang hoạt động';
+      if (!lastSeenAt) return 'Offline';
 
-    if (minutes < 1) return 'Vừa truy cập';
-    if (minutes < 60) return `${minutes} phút trước`;
-    if (hours < 24) return `${hours} giờ trước`;
-    if (days < 7) return `${days} ngày trước`;
-    return `Truy cập ${new Date(lastSeenAt).toLocaleDateString('vi-VN')}`;
-  };
+      const now = Date.now();
+      const diff = now - lastSeenAt;
+      const minutes = Math.floor(diff / 60000);
+      const hours = Math.floor(diff / 3600000);
+      const days = Math.floor(diff / 86400000);
+
+      if (minutes < 1) return 'Vừa truy cập';
+      if (minutes < 60) return `${minutes} phút trước`;
+      if (hours < 24) return `${hours} giờ trước`;
+      if (days < 7) return `${days} ngày trước`;
+      return `Truy cập ${new Date(lastSeenAt).toLocaleDateString('vi-VN')}`;
+    };
+
+    setStatusText(getStatusText());
+  }, [status, lastSeenAt]);
 
   return (
     <span
@@ -95,7 +106,7 @@ export function PresenceText({
         opacity: status === 'online' ? 1 : 0.8,
       }}
     >
-      {getStatusText()}
+      {statusText}
     </span>
   );
 }

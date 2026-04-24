@@ -160,6 +160,8 @@ export const normalizeMessage = (raw: any): UiMessage & {
     message_type: raw?.message_type ?? raw?.messageType ?? "user",
     system_event_type: raw?.system_event_type ?? raw?.systemEventType ?? undefined,
     metadata: raw?.metadata ?? undefined,
+    isPinned: Boolean(raw?.isPinned ?? raw?.is_pinned ?? false),
+    pinnedAt: raw?.pinnedAt ?? raw?.pinned_at ?? null,
   };
 };
 export const sortMessages = (items: UiMessage[]) =>

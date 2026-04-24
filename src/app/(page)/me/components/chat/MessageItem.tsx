@@ -8,8 +8,10 @@ import MessageMediaGroup from "./MessageMediaGroup";
 import MessageReplyPreview from "./MessageReplyPreview";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
+import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -23,6 +25,7 @@ interface MessageItemProps {
   onScrollToMessage: (targetMessageId?: UiMessage["messageId"] | null) => void;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
+  onOpenMedia?: (media: MediaPreviewItem) => void;
   isHighlighted?: boolean;
 }
 
@@ -137,6 +140,7 @@ export default function MessageItem({
   onScrollToMessage,
   onMediaLoad,
   onForwardMessage,
+  onOpenMedia,
   isHighlighted = false,
 }: MessageItemProps) {
   const mine = message.senderId === currentUserId;
@@ -144,7 +148,17 @@ export default function MessageItem({
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
   const canForward = !message.isDeleted;
-  const canPin = !message.isDeleted;
+
+  // Get conversation detail to check role for pin permission
+  const conversationDetail = useChatStore((s) =>
+    message.conversationId
+      ? s.conversationDetailById[message.conversationId]
+      : null
+  );
+  const isGroup = conversationDetail?.type === 'group';
+  const myRole = conversationDetail?.mySettings?.role;
+  // Only owner/admin can pin in group conversations, anyone can pin in direct
+  const canPin = !message.isDeleted && (!isGroup || myRole === 'owner' || myRole === 'admin');
 
   const { togglePin } = useMessagePin();
   const isPinned = useChatStore((s) => s.isMessagePinned(message.conversationId, message.messageId));
@@ -169,11 +183,6 @@ export default function MessageItem({
     otherAttachments.length === 0;
 
   const timeText = formatMessageTime(message.createdAt);
-  const conversationDetail = useChatStore((s) =>
-    message.conversationId
-      ? s.conversationDetailById[message.conversationId]
-      : null
-  );
 
   const member =
     conversationDetail?.members?.find((m) => m.userId === message.senderId) ?? null;
@@ -196,7 +205,6 @@ export default function MessageItem({
         isDeleted: Boolean(repliedMessage.isDeleted),
       }
       : message.replyTo;
-  const isGroup = conversationDetail?.type === "group";
 
   const avatarSrc = member?.avatarUrl
     ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`

@@ -4,8 +4,7 @@ import type {
   ConversationDto,
   UiMessage,
 } from "@/src/common/interface/chat-interface";
-// import { patchConversationLastMessage, updateConversationLastMessage } from "../helpers/chat.helpers";
-import { deleteMessage, moveConversationToTopWithLastMessage } from "../action/chat.action";
+import { moveConversationToTopWithLastMessage } from "../helpers/conversationHelpers";
 import { chatService } from "../service/chat-service";
 import { sortConversations } from "../helpers/sortConservation";
 
@@ -99,6 +98,10 @@ export interface ChatSetters {
     conversationId: string,
     isPinned: boolean
   ) => void;
+  addPinnedMessage: (conversationId: string, messageId: string) => void;
+  removePinnedMessage: (conversationId: string, messageId: string) => void;
+  isMessagePinned: (conversationId: string, messageId: string) => boolean;
+  updateMessage: (conversationId: string, messageId: string, updates: Partial<UiMessage>) => void;
 }
 
 export type ChatStore = ChatState & ChatSetters;
@@ -349,7 +352,88 @@ export const useChatStore = create<ChatStore>((set, get) => ({
     }
   },
 
-  deleteMessage,
+  deleteMessage: (conversationId: string, messageId: string, createdAt: number) => {
+    const state = get();
+    const messages = state.messagesByConversation[conversationId] || [];
+    
+    const applyDeletedMessage = (
+      messages: UiMessage[],
+      messageId: string,
+      deletedAt: number
+    ): UiMessage[] => {
+      return messages.map((msg): UiMessage => {
+        const isTargetMessage = msg.messageId === messageId;
+        const replyTo = msg.replyTo;
+        const isReplyToTarget = replyTo?.messageId === messageId;
+
+        if (!isTargetMessage && !isReplyToTarget) return msg;
+
+        return {
+          ...msg,
+          ...(isTargetMessage
+            ? {
+                body: "",
+                isDeleted: true,
+                deletedAt,
+                attachments: [],
+                pending: false,
+                failed: false,
+              }
+            : {}),
+          ...(replyTo && isReplyToTarget
+            ? {
+                replyTo: {
+                  ...replyTo,
+                  messageId: replyTo.messageId,
+                  senderId: replyTo.senderId,
+                  body: "",
+                  attachments: [],
+                  isDeleted: true,
+                },
+              }
+            : {}),
+        };
+      });
+    };
+
+    const patchConversationPreviewWhenDeleted = (
+      conversations: ConversationDto[],
+      conversationId: string,
+      messageId: string
+    ): ConversationDto[] => {
+      return conversations.map((cvs) => {
+        if (cvs.id !== conversationId) return cvs;
+
+        const lastMessage = cvs.lastMessage;
+        if (!lastMessage || lastMessage.id !== messageId) return cvs;
+
+        return {
+          ...cvs,
+          lastMessage: {
+            ...lastMessage,
+            content: "Tin nhắn đã được thu hồi",
+          },
+          lastMessageAt: Date.now(),
+        };
+      });
+    };
+
+    set((state) => ({
+      messagesByConversation: {
+        ...state.messagesByConversation,
+        [conversationId]: applyDeletedMessage(
+          state.messagesByConversation[conversationId] || [],
+          messageId,
+          Date.now()
+        ),
+      },
+      listConversation: patchConversationPreviewWhenDeleted(
+        state.listConversation,
+        conversationId,
+        messageId
+      ),
+    }));
+  },
   removeConversationLocally: (conversationId: string) =>
     set((state) => {
       const nextMessages = { ...state.messagesByConversation };

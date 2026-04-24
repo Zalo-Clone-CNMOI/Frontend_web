@@ -79,5 +79,21 @@ export const chatService = {
     return http.delete<IApiResponse<any>>(
       API.API_CONVERSATIONS_PIN(conversationId)
     );
+  },
+  pinMessage(conversationId: string, createdAt: number, messageId: string) {
+    return http.post<IApiResponse<any>>(
+      API.API_MESSAGE_PIN(conversationId, createdAt, messageId),
+      {} // userId extracted from token by backend
+    );
+  },
+  unpinMessage(conversationId: string, createdAt: number, messageId: string) {
+    return http.delete<IApiResponse<any>>(
+      API.API_MESSAGE_PIN(conversationId, createdAt, messageId)
+    );
+  },
+  fetchPinnedMessages(conversationId: string) {
+    return http.get<IApiResponse<any>>(
+      API.API_MESSAGES_PINNED(conversationId)
+    );
   }
 };

@@ -24,6 +24,7 @@ import { UiMessage } from "@/src/common/interface/chat-interface";
 import { formatTypingIndicator } from "@/src/common/service/typingIndicatorService";
 import { usePinnedMessages } from "@/src/common/hooks/usePinnedMessages";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
+import MediaPreviewModal, { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -93,6 +94,7 @@ export default function ChatPanel({
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<UiMessage | null>(null);
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
+  const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
 
   const {
     socketConnected,
@@ -427,7 +429,6 @@ export default function ChatPanel({
           title={title}
           socketConnected={socketConnected}
           error={error}
-          onToggleSearch={onToggleSearch}
         />
       </HeaderWrap>
 

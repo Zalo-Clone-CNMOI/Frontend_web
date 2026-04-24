@@ -12,7 +12,7 @@ export const connectSocket = (accessToken?: string) => {
       reconnection: true,
       reconnectionAttempts: 5,
       reconnectionDelay: 1000,
-      timeout: 10000,
+      timeout: 20000,
       path: "/socket.io",
     });
 
