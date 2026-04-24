@@ -23,7 +23,7 @@
   "LOGIN.PASSWORD_PLACEHOLDER": "Mật khẩu",
   "LOGIN.PHONE_PLACEHOLDER": "Số điện thoại",
   "LOGIN.SUBTITLE": "Đăng nhập tài khoản Zalo\nđể kết nối với ứng dụng Zalo Web",
-  "LOGIN.FAILED": "Đăng nhập thất bại",
+  "LOGIN.FAILED": "Tài khoản hoặc mật khẩu không đúng",
   "LOGIN.LOGO_ALT": "Logo Zalo",
   "COMMON.SYSTEM_ERROR": "Lỗi hệ thống",
 

@@ -20,6 +20,7 @@ import {
 } from "@/src/common/action/chat.action";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { formatTypingIndicator } from "@/src/common/service/typingIndicatorService";
+import MediaPreviewModal, { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -84,7 +85,7 @@ export default function ChatPanel({
   const [replyMessage, setReplyMessage] = useState<UiMessage | null>(null);
   const [isForwardModalVisible, setIsForwardModalVisible] = useState(false);
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<UiMessage | null>(null);
-
+  const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
   const {
     socketConnected,
     messagesByConversation,
@@ -155,7 +156,13 @@ export default function ChatPanel({
       });
     });
   };
+  const handleOpenMediaPreview = (media: MediaPreviewItem) => {
+    setPreviewMedia(media);
+  };
 
+  const handleCloseMediaPreview = () => {
+    setPreviewMedia(null);
+  };
   const handleMediaLoad = (messageId: UiMessage["messageId"]) => {
     const wrap = listRef.current;
     if (!wrap) return;
@@ -375,6 +382,7 @@ export default function ChatPanel({
           showScrollbar={showScrollbar}
           onMediaLoad={handleMediaLoad}
           onForwardMessage={handleForwardMessage}
+          onOpenMedia={handleOpenMediaPreview}
         />
         {typingState.visible && <TypingIndicator text={typingState.text} />}
       </MessageListWrap>
@@ -397,6 +405,11 @@ export default function ChatPanel({
         message={selectedMessageForForward}
         onClose={() => setIsForwardModalVisible(false)}
         onForward={handleForward}
+      />
+      <MediaPreviewModal
+        open={Boolean(previewMedia)}
+        media={previewMedia}
+        onClose={handleCloseMediaPreview}
       />
     </Root>
   );
