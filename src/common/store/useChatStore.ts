@@ -45,6 +45,7 @@ export interface ChatState {
   linksByConversation: LinkMap;
 
   typingUsersByConversation: Record<string, any[]>;
+  pinnedMessagesByConversation: Record<string, Set<string>>;
 }
 
 export interface ChatSetters {
@@ -125,6 +126,7 @@ export const initialChatState: ChatState = {
   filesByConversation: {},
   linksByConversation: {},
   typingUsersByConversation: {},
+  pinnedMessagesByConversation: {},
 };
 
 export const useChatStore = create<ChatStore>((set, get) => ({
@@ -412,4 +414,52 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         [conversationId]: users,
       },
     })),
+
+  addPinnedMessage: (conversationId: string, messageId: string) =>
+    set((state) => {
+      const pinnedSet = state.pinnedMessagesByConversation[conversationId] || new Set();
+      const newPinnedSet = new Set(pinnedSet);
+      newPinnedSet.add(messageId);
+      
+      return {
+        pinnedMessagesByConversation: {
+          ...state.pinnedMessagesByConversation,
+          [conversationId]: newPinnedSet,
+        },
+      };
+    }),
+
+  removePinnedMessage: (conversationId: string, messageId: string) =>
+    set((state) => {
+      const pinnedSet = state.pinnedMessagesByConversation[conversationId] || new Set();
+      const newPinnedSet = new Set(pinnedSet);
+      newPinnedSet.delete(messageId);
+      
+      return {
+        pinnedMessagesByConversation: {
+          ...state.pinnedMessagesByConversation,
+          [conversationId]: newPinnedSet,
+        },
+      };
+    }),
+
+  isMessagePinned: (conversationId: string, messageId: string) => {
+    const pinnedSet = get().pinnedMessagesByConversation[conversationId];
+    return pinnedSet ? pinnedSet.has(messageId) : false;
+  },
+
+  updateMessage: (conversationId: string, messageId: string, updates: Partial<UiMessage>) =>
+    set((state) => {
+      const messages = state.messagesByConversation[conversationId] || [];
+      const updatedMessages = messages.map((msg) =>
+        msg.messageId === messageId ? { ...msg, ...updates } : msg
+      );
+      
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: updatedMessages,
+        },
+      };
+    }),
 }));

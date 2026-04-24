@@ -107,7 +107,6 @@ const RegisButton = styled(Button)(({ theme }) => ({
 const HomeTab = () => {
     const router = useRouter();
     const handleClickChangePage = () => {
-        console.log("click mainsite");
         router.push('/mainsite');
     }
     return <Stack gap={7} data-testid="home-tab">

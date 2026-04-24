@@ -5,15 +5,19 @@ import { styled } from "@mui/material/styles";
 import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ForwardToInboxIcon from "@mui/icons-material/ForwardToInbox";
+import PushPinIcon from "@mui/icons-material/PushPin";
 
 interface MessageActionsProps {
   mine?: boolean;
   canReply: boolean;
   canDelete: boolean;
   canForward: boolean;
+  canPin: boolean;
+  isPinned: boolean;
   onReply: () => void;
   onDelete: () => void;
   onForward: () => void;
+  onTogglePin: () => void;
 }
 
 const ActionsWrap = styled(Box, {
@@ -35,9 +39,12 @@ export default function MessageActions({
   canReply,
   canDelete,
   canForward,
+  canPin,
+  isPinned,
   onReply,
   onDelete,
   onForward,
+  onTogglePin,
 }: MessageActionsProps) {
   return (
     <ActionsWrap className="message-actions" mine={mine}>
@@ -53,6 +60,14 @@ export default function MessageActions({
         <Tooltip title="Chuyển tiếp">
           <IconButton size="small" onClick={onForward}>
             <ForwardToInboxIcon fontSize="small" />
+          </IconButton>
+        </Tooltip>
+      )}
+
+      {canPin && (
+        <Tooltip title={isPinned ? "Bỏ ghim" : "Ghim tin nhắn"}>
+          <IconButton size="small" onClick={onTogglePin}>
+            <PushPinIcon fontSize="small" sx={{ color: isPinned ? "#005AE0" : "inherit" }} />
           </IconButton>
         </Tooltip>
       )}

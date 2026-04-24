@@ -501,7 +501,7 @@ export default function AddFriendDialog({
         onConfirm={handleConfirmSendFriendRequest}
         loading={sendingRequest}
         onViewProfile={(user) => {
-          console.log("view profile", user);
+          // TODO: Implement view profile
         }}
       />
     </React.Fragment>

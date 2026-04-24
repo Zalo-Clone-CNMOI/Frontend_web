@@ -162,7 +162,6 @@ export default function ProfileModals({
           payload.avatarUrl = uploadResult.key ?? null;
         }
 
-        console.log("UPDATE PROFILE PAYLOAD:", payload);
 
         const response = await userService.userUpdateProfile(payload);
         const updatedUser = response?.payload?.data
