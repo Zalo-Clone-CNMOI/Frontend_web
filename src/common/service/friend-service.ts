@@ -22,8 +22,6 @@ export const friendService = {
     },
 
     sendRequest(body: ISendFriendRequestPayload) {
-        console.log("[friendService] API_FRIENDS_SEND_REQUEST =", API.API_FRIENDS_SEND_REQUEST);
-        console.log("[friendService] body =", body);
         return http.post<IApiResponse<any>>(API.API_FRIENDS_SEND_REQUEST, body);
     },
 

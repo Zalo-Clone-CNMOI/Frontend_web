@@ -24,6 +24,7 @@ import ConversationList from "./components/chat/ConversationList";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { getcurrentUserId, getRefreshToken, getSessionToken } from "@/src/common/utilities/utils";
 import InfConvColumn from "./components/conversation-infor/page";
+import SearchSidebar from "./components/chat/SearchSidebar";
 import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
 import ContactFunctionList, { ContactView } from "./components/friend/ContactFunctionList";
@@ -188,6 +189,7 @@ const Me = () => {
     const [chatTab, setChatTab] = useState<string>("allChats");
     const [isSelectedCategory, setSelectedCategory] = useState(false);
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
+    const [showSearchSidebar, setShowSearchSidebar] = useState(false);
     const authData = useAuthStore((s) => s.authData);
     // console.log("SenderId", authData?.data?.user?.id)
     const setActiveConversationId = useChatStore((s)=> s.setActiveConversationId)
@@ -339,10 +341,30 @@ const Me = () => {
                                         currentUserId={currentUserId}
                                         conversationId={activeConversationId}
                                         title="Tin nhắn"
+                                        onToggleSearch={() => setShowSearchSidebar(!showSearchSidebar)}
                                     />
                                 </Box>
 
-                                <InfConvColumn conversationId={activeConversationId} />
+                                {showSearchSidebar ? (
+                                    <SearchSidebar
+                                        conversationId={activeConversationId}
+                                        onClose={() => setShowSearchSidebar(false)}
+                                        onMessageClick={(message) => {
+                                            // Scroll to message in chat
+                                            const messageElement = document.getElementById(`message-${message.messageId}`);
+                                            if (messageElement) {
+                                                messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+                                                // Highlight the message
+                                                messageElement.style.backgroundColor = "#FFF3CD";
+                                                setTimeout(() => {
+                                                    messageElement.style.backgroundColor = "";
+                                                }, 2000);
+                                            }
+                                        }}
+                                    />
+                                ) : (
+                                    <InfConvColumn conversationId={activeConversationId} />
+                                )}
                             </Box>
                         )
                     ) : selectedIcon === "contact" ? (

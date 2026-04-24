@@ -49,9 +49,7 @@ export const chatService = {
   },
 
   fetchMessageReactions(messageId: string) {
-    return http.get<IApiResponse<any[]>>(
-      API.API_MESSAGE_REACTIONS(messageId)
-    );
+    return http.get<IApiResponse<any[]>>(API.API_MESSAGE_REACTIONS(messageId));
   },
 
   forwardMessage(payload: {

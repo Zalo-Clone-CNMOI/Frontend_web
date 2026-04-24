@@ -17,7 +17,7 @@ export const connectSocket = (accessToken?: string) => {
     });
 
     socketInstance.on("connect", () => {
-      console.log("[Socket] Connected:", socketInstance?.id);
+      // Socket connected
     });
 
     socketInstance.on("connect_error", (err) => {
@@ -25,7 +25,7 @@ export const connectSocket = (accessToken?: string) => {
     });
 
     socketInstance.on("disconnect", (reason) => {
-      console.log("[Socket] Disconnected:", reason);
+      // Socket disconnected
     });
   }
 

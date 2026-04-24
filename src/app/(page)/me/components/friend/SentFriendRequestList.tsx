@@ -88,11 +88,13 @@ export default function SentFriendRequestList() {
     try {
       setActionKey(requestId);
       await cancelFriendRequest(requestId);
+    } catch (error) {
+      console.error(error);
     } finally {
       setActionKey(null);
     }
   };
-console.log("sentRequests", sentRequests);
+
   return (
     <Root>
       <Header> <ForwardToInboxOutlinedIcon/>
@@ -122,7 +124,6 @@ console.log("sentRequests", sentRequests);
             {sentRequests.map((request) => {
               const user = request.receiver;
               const cancelling = actionKey === request.id;
-              console.log("user test", user);
               return (
                 <Card
                   key={request.id}

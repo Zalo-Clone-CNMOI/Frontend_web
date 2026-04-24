@@ -8,6 +8,8 @@ import ChatHeader from "./ChatHeader";
 import MessageList from "./MessageList";
 import ChatInput from "./ChatInput";
 import ForwardModal from "./ForwardModal";
+import PinnedBar from "./PinnedBar";
+import PinnedList from "./PinnedList";
 import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
@@ -20,12 +22,15 @@ import {
 } from "@/src/common/action/chat.action";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { formatTypingIndicator } from "@/src/common/service/typingIndicatorService";
+import { usePinnedMessages } from "@/src/common/hooks/usePinnedMessages";
+import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 
 interface ChatPanelProps {
   accessToken: string;
   currentUserId: string;
   conversationId: string;
   title?: string;
+  onToggleSearch?: () => void;
 }
 
 const Root = styled(Box)({
@@ -57,6 +62,7 @@ const MessageListWrap = styled(Box)({
 const InputWrap = styled(Box)({
   minHeight: 50,
   flexShrink: 0,
+  backgroundColor: "red",
 });
 
 export default function ChatPanel({
@@ -64,6 +70,7 @@ export default function ChatPanel({
   currentUserId,
   conversationId,
   title,
+  onToggleSearch,
 }: ChatPanelProps) {
   const listRef = useRef<HTMLDivElement | null>(null);
 
@@ -84,6 +91,8 @@ export default function ChatPanel({
   const [replyMessage, setReplyMessage] = useState<UiMessage | null>(null);
   const [isForwardModalVisible, setIsForwardModalVisible] = useState(false);
   const [selectedMessageForForward, setSelectedMessageForForward] = useState<UiMessage | null>(null);
+  const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
+  const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
 
   const {
     socketConnected,
@@ -117,6 +126,57 @@ export default function ChatPanel({
     () => formatTypingIndicator(typingUsers, currentUserId),
     [typingUsers, currentUserId]
   );
+
+  const { pinnedMessages, refetch: refetchPinnedMessages } = usePinnedMessages(conversationId);
+  const { togglePin } = useMessagePin();
+
+  const pinnedMessagesByConversation = useChatStore((s) => s.pinnedMessagesByConversation[conversationId]);
+  const realtimePinnedMessages = useMemo(() => {
+    if (!pinnedMessagesByConversation) return [];
+    const pinnedSet = pinnedMessagesByConversation;
+    return messages.filter((msg) => pinnedSet.has(msg.messageId));
+  }, [messages, pinnedMessagesByConversation]);
+
+  const handlePressPinnedMessage = (message: UiMessage) => {
+    const wrap = listRef.current;
+    if (!wrap) return;
+
+    // Set highlight
+    setHighlightedMessageId(message.messageId);
+
+    // Clear highlight after 2 seconds
+    setTimeout(() => {
+      setHighlightedMessageId(null);
+    }, 2000);
+
+    const messageElement = document.getElementById(`message-${message.messageId}`);
+    if (messageElement) {
+      messageElement.scrollIntoView({ behavior: "smooth", block: "center" });
+    }
+  };
+
+  const handleUnpinMessage = async (message: UiMessage) => {
+    try {
+      await togglePin(message.conversationId, message.createdAt, message.messageId);
+      refetchPinnedMessages();
+    } catch (error) {
+      console.error("Failed to unpin message:", error);
+    }
+  };
+
+  const handlePinMessage = async (message: UiMessage) => {
+    try {
+      await togglePin(message.conversationId, message.createdAt, message.messageId);
+      refetchPinnedMessages();
+    } catch (error) {
+      console.error("Failed to pin message:", error);
+    }
+  };
+
+  const handlePinnedMenuClick = (message: UiMessage) => {
+    // TODO: Show menu with options (Bỏ ghim, Xem chi tiết)
+    alert("Menu clicked for message: " + message.messageId);
+  };
 
   const isNearBottom = () => {
     const wrap = listRef.current;
@@ -361,10 +421,31 @@ export default function ChatPanel({
           title={title}
           socketConnected={socketConnected}
           error={error}
+          onToggleSearch={onToggleSearch}
         />
       </HeaderWrap>
 
       <MessageListWrap>
+        {realtimePinnedMessages.length > 0 && (
+          <>
+            {isPinnedExpanded ? (
+              <PinnedList
+                pinnedMessages={realtimePinnedMessages}
+                onPressMessage={handlePressPinnedMessage}
+                onUnpinMessage={handleUnpinMessage}
+                onCollapse={() => setIsPinnedExpanded(false)}
+                onMenuClick={handlePinnedMenuClick}
+              />
+            ) : (
+              <PinnedBar
+                message={realtimePinnedMessages[0]}
+                totalCount={realtimePinnedMessages.length}
+                onExpand={() => setIsPinnedExpanded(true)}
+                onMenuClick={handlePinnedMenuClick}
+              />
+            )}
+          </>
+        )}
         <MessageList
           listRef={listRef}
           messages={messages}
@@ -375,6 +456,7 @@ export default function ChatPanel({
           showScrollbar={showScrollbar}
           onMediaLoad={handleMediaLoad}
           onForwardMessage={handleForwardMessage}
+          highlightedMessageId={highlightedMessageId}
         />
         {typingState.visible && <TypingIndicator text={typingState.text} />}
       </MessageListWrap>
