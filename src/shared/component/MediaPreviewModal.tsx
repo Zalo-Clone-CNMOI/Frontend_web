@@ -11,6 +11,17 @@ export interface MediaPreviewItem {
   type: "image" | "video" | string;
 }
 
+// ✅ FIX: Safe S3 URL builder with fallback
+const S3_BASE_URL = process.env.NEXT_PUBLIC_S3_BASE_URL || "http://18.138.217.102:9000";
+
+export const buildS3Url = (key?: string | null): string => {
+  if (!key) return "";
+  // Prevent double slashes
+  const cleanBase = S3_BASE_URL.replace(/\/+$/, "");
+  const cleanKey = key.replace(/^\/+/, "");
+  return `${cleanBase}/${cleanKey}`;
+};
+
 interface MediaPreviewModalProps {
   open: boolean;
   media: MediaPreviewItem | null;
@@ -80,9 +91,8 @@ export default function MediaPreviewModal({
   media,
   onClose,
 }: MediaPreviewModalProps) {
-  const mediaUrl = media?.key
-    ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${media.key}`
-    : "";
+  // ✅ FIX: Use safe URL builder
+  const mediaUrl = buildS3Url(media?.key);
 
   const isVideo = media?.type === "video";
   const handleDownload = async () => {

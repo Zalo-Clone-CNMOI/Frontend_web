@@ -20,6 +20,7 @@ interface MessageListProps {
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
   highlightedMessageId?: string | null;
+  onOpenMedia?: (media: MediaPreviewItem, allMedia?: MediaPreviewItem[], initialIndex?: number) => void;
 }
 
 const MessagesWrap = styled(Box, {
@@ -95,6 +96,7 @@ export default function MessageList({
   onMediaLoad,
   onForwardMessage,
   highlightedMessageId,
+  onOpenMedia,
 }: MessageListProps) {
   const paginationByConversation = useChatStore((s) => s.paginationByConversation);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
@@ -166,6 +168,7 @@ export default function MessageList({
                 onMediaLoad={onMediaLoad}
                 onForwardMessage={onForwardMessage}
                 isHighlighted={message.messageId === highlightedMessageId}
+                onOpenMedia={onOpenMedia}
               />
             );
           })}

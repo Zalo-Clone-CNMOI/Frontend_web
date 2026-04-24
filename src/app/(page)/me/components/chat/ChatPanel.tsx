@@ -25,7 +25,7 @@ import { UiMessage } from "@/src/common/interface/chat-interface";
 import { formatTypingIndicator } from "@/src/common/service/typingIndicatorService";
 import { usePinnedMessages } from "@/src/common/hooks/usePinnedMessages";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
-import MediaPreviewModal, { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
+import MediaPreviewModal, { MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -96,6 +96,8 @@ export default function ChatPanel({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
+  const [previewMediaList, setPreviewMediaList] = useState<MediaPreviewItem[]>([]);
+  const [previewInitialIndex, setPreviewInitialIndex] = useState(0);
   const [pinnedMenuAnchor, setPinnedMenuAnchor] = useState<HTMLElement | null>(null);
   const [selectedPinnedMessage, setSelectedPinnedMessage] = useState<UiMessage | null>(null);
 
@@ -254,13 +256,19 @@ export default function ChatPanel({
       });
     });
   };
-  const handleOpenMediaPreview = (media: MediaPreviewItem) => {
+
+  const handleOpenMediaPreview = (media: MediaPreviewItem, allMedia?: MediaPreviewItem[], initialIndex?: number) => {
     setPreviewMedia(media);
+    setPreviewMediaList(allMedia || []);
+    setPreviewInitialIndex(initialIndex || 0);
   };
 
   const handleCloseMediaPreview = () => {
     setPreviewMedia(null);
+    setPreviewMediaList([]);
+    setPreviewInitialIndex(0);
   };
+
   const handleMediaLoad = (messageId: UiMessage["messageId"]) => {
     const wrap = listRef.current;
     if (!wrap) return;
@@ -268,274 +276,279 @@ export default function ChatPanel({
     const lastMessage = messages[messages.length - 1];
     if (!lastMessage) return;
 
-    const isLastMessage = lastMessage.messageId === messageId;
-    if (!isLastMessage) return;
+const isLastMessage = lastMessage.messageId === messageId;
+if (!isLastMessage) return;
 
-    const shouldScroll =
-      lastMessage.senderId === currentUserId ||
-      isNearBottom() ||
-      pendingMediaScrollMessageIdRef.current === messageId;
+const shouldScroll =
+lastMessage.senderId === currentUserId ||
+isNearBottom() ||
+pendingMediaScrollMessageIdRef.current === messageId;
 
-    if (!shouldScroll) return;
+if (!shouldScroll) return;
 
-    requestAnimationFrame(() => {
-      scrollToBottomStable();
+requestAnimationFrame(() => {
+scrollToBottomStable();
 
-      if (pendingMediaScrollMessageIdRef.current === messageId) {
-        pendingMediaScrollMessageIdRef.current = null;
-      }
-    });
-  };
+if (pendingMediaScrollMessageIdRef.current === messageId) {
+pendingMediaScrollMessageIdRef.current = null;
+}
+});
+};
 
-  const tryLoadMore = async () => {
-    const wrap = listRef.current;
-    if (!wrap || !conversationId || loading || loadingMore || !pagination?.hasMore) {
-      return;
-    }
+const tryLoadMore = async () => {
+const wrap = listRef.current;
+if (!wrap || !conversationId || loading || loadingMore || !pagination?.hasMore) {
+return;
+}
 
-    prevScrollHeightRef.current = wrap.scrollHeight;
-    isLoadingMoreRef.current = true;
-    scrollIntentRef.current = "load-more";
-    await loadMoreMessages(conversationId);
-  };
+prevScrollHeightRef.current = wrap.scrollHeight;
+isLoadingMoreRef.current = true;
+scrollIntentRef.current = "load-more";
+await loadMoreMessages(conversationId);
+};
 
-  const handleScroll = () => {
-    if (isAutoScrollingRef.current) return;
+const handleScroll = () => {
+if (isAutoScrollingRef.current) return;
 
-    const wrap = listRef.current;
-    if (!wrap) return;
+const wrap = listRef.current;
+if (!wrap) return;
 
-    setShowScrollbar(true);
+setShowScrollbar(true);
 
-    if (scrollHideTimeoutRef.current) {
-      clearTimeout(scrollHideTimeoutRef.current);
-    }
+if (scrollHideTimeoutRef.current) {
+clearTimeout(scrollHideTimeoutRef.current);
+}
 
-    scrollHideTimeoutRef.current = setTimeout(() => setShowScrollbar(false), 800);
+scrollHideTimeoutRef.current = setTimeout(() => setShowScrollbar(false), 800);
 
-    if (scrollIntentRef.current === "none" && wrap.scrollTop <= 80) {
-      void tryLoadMore();
-    }
-  };
+if (scrollIntentRef.current === "none" && wrap.scrollTop <= 80) {
+void tryLoadMore();
+}
+};
 
-  const handleReplyMessage = (msg: UiMessage) => {
-    setEditMessage(null);
-    setReplyMessage(msg);
-  };
+const handleReplyMessage = (msg: UiMessage) => {
+setEditMessage(null);
+setReplyMessage(msg);
+};
 
-  const handleCancelReply = () => {
-    setReplyMessage(null);
-  };
+const handleCancelReply = () => {
+setReplyMessage(null);
+};
 
-  const handleCancelEdit = () => {
-    setEditMessage(null);
-  };
+const handleCancelEdit = () => {
+setEditMessage(null);
+};
 
-  const handleForwardMessage = (msg: UiMessage) => {
-    setSelectedMessageForForward(msg);
-    setIsForwardModalVisible(true);
-  };
+const handleForwardMessage = (msg: UiMessage) => {
+setSelectedMessageForForward(msg);
+setIsForwardModalVisible(true);
+};
 
-  const handleForward = async (message: UiMessage, targetConversationIds: string[], optionalMessage?: string) => {
-    if (!message || !targetConversationIds || targetConversationIds.length === 0) {
-      return;
-    }
-    try {
-      const forwardId = crypto.randomUUID();
-      const sourceMessageId = message.messageId;
-      const targets = targetConversationIds.map((conversationId) => ({
-        message_id: crypto.randomUUID(),
-        conversation_id: conversationId,
-      }));
+const handleForward = async (message: UiMessage, targetConversationIds: string[], optionalMessage?: string) => {
+if (!message || !targetConversationIds || targetConversationIds.length === 0) {
+return;
+}
+try {
+const forwardId = crypto.randomUUID();
+const sourceMessageId = message.messageId;
+const targets = targetConversationIds.map((conversationId) => ({
+message_id: crypto.randomUUID(),
+conversation_id: conversationId,
+}));
 
-      const payload = {
-        forward_id: forwardId,
-        source_message_id: sourceMessageId,
-        targets: targets,
-      };
+const payload = {
+forward_id: forwardId,
+source_message_id: sourceMessageId,
+targets: targets,
+};
 
-      const response = await chatService.forwardMessage(payload);
+const response = await chatService.forwardMessage(payload);
 
-      // Send optional message to accepted conversations if provided
-      if (optionalMessage && optionalMessage.trim()) {
-        const acceptedConversationIds = response?.payload?.data?.results
-          ?.filter((r: any) => r.status === 'accepted')
-          .map((r: any) => r.conversation_id) || targetConversationIds;
+// Send optional message to accepted conversations if provided
+if (optionalMessage && optionalMessage.trim()) {
+const acceptedConversationIds = response?.payload?.data?.results
+?.filter((r: any) => r.status === 'accepted')
+.map((r: any) => r.conversation_id) || targetConversationIds;
 
-        // Wait a bit to ensure forwarded message arrives first
-        await new Promise(resolve => setTimeout(resolve, 500));
+// Wait a bit to ensure forwarded message arrives first
+await new Promise(resolve => setTimeout(resolve, 500));
 
-        for (const conversationId of acceptedConversationIds) {
-          try {
-            await sendMessage(conversationId, optionalMessage.trim());
-          } catch (error) {
-            console.error('Failed to send optional message to:', conversationId, error);
-          }
-        }
-      }
+for (const conversationId of acceptedConversationIds) {
+try {
+await sendMessage(conversationId, optionalMessage.trim());
+} catch (error) {
+console.error('Failed to send optional message to:', conversationId, error);
+}
+}
+}
 
-      const acceptedCount = response?.payload?.data?.results
-        ?.filter((r: any) => r.status === 'accepted').length || targetConversationIds.length;
-      alert(`Đã chuyển tiếp tin nhắn đến ${acceptedCount}/${targetConversationIds.length} cuộc trò chuyện`);
-    } catch (error) {
-      console.error("Forward failed:", error);
-      alert("Chuyển tiếp tin nhắn thất bại");
-    }
-  };
+const acceptedCount = response?.payload?.data?.results
+?.filter((r: any) => r.status === 'accepted').length || targetConversationIds.length;
+alert(`Đã chuyển tiếp tin nhắn đến ${acceptedCount}/${targetConversationIds.length} cuộc trò chuyện`);
+} catch (error) {
+console.error("Forward failed:", error);
+alert("Chuyển tiếp tin nhắn thất bại");
+}
+};
 
-  useEffect(() => {
-    if (!conversationId) return;
+useEffect(() => {
+if (!conversationId) return;
 
-    prevConversationIdRef.current = conversationId;
-    scrollIntentRef.current = "open";
-    isLoadingMoreRef.current = false;
-    prevScrollHeightRef.current = 0;
-    prevFirstMessageIdRef.current = null;
-    prevLastMessageIdRef.current = null;
-    fetchConversationDetail(conversationId);
-    openConversation(conversationId);
-  }, [conversationId, fetchConversationDetail]);
+prevConversationIdRef.current = conversationId;
+scrollIntentRef.current = "open";
+isLoadingMoreRef.current = false;
+prevScrollHeightRef.current = 0;
+prevFirstMessageIdRef.current = null;
+prevLastMessageIdRef.current = null;
+fetchConversationDetail(conversationId);
+openConversation(conversationId);
+}, [conversationId, fetchConversationDetail]);
 
-  useLayoutEffect(() => {
-    const wrap = listRef.current;
-    if (!wrap) return;
+useLayoutEffect(() => {
+const wrap = listRef.current;
+if (!wrap) return;
 
-    const intent = scrollIntentRef.current;
+const intent = scrollIntentRef.current;
 
-    if (intent === "open" && !loading && !loadingMore && messages.length > 0) {
-      scrollToBottomStable();
-      scrollIntentRef.current = "none";
-      prevFirstMessageIdRef.current = firstMessageId;
-      prevLastMessageIdRef.current = lastMessageId;
-      return;
-    }
+if (intent === "open" && !loading && !loadingMore && messages.length > 0) {
+scrollToBottomStable();
+scrollIntentRef.current = "none";
+prevFirstMessageIdRef.current = firstMessageId;
+prevLastMessageIdRef.current = lastMessageId;
+return;
+}
 
-    if (intent === "load-more" && !loadingMore) {
-      isLoadingMoreRef.current = false;
-      scrollIntentRef.current = "none";
-      prevFirstMessageIdRef.current = firstMessageId;
-      prevLastMessageIdRef.current = lastMessageId;
-      return;
-    }
+if (intent === "load-more" && !loadingMore) {
+isLoadingMoreRef.current = false;
+scrollIntentRef.current = "none";
+prevFirstMessageIdRef.current = firstMessageId;
+prevLastMessageIdRef.current = lastMessageId;
+return;
+}
 
-    if (intent === "none" && !isLoadingMoreRef.current) {
-      const prevLastMessageId = prevLastMessageIdRef.current;
-      const isAppendedNewMessage =
-        prevLastMessageId !== null &&
-        lastMessageId !== null &&
-        prevLastMessageId !== lastMessageId;
+if (intent === "none" && !isLoadingMoreRef.current) {
+const prevLastMessageId = prevLastMessageIdRef.current;
+const isAppendedNewMessage =
+prevLastMessageId !== null &&
+lastMessageId !== null &&
+prevLastMessageId !== lastMessageId;
 
-      if (isAppendedNewMessage && !loading && !loadingMore) {
-        const lastMessage = messages[messages.length - 1];
-        const isOwnMessage = lastMessage?.senderId === currentUserId;
+if (isAppendedNewMessage && !loading && !loadingMore) {
+const lastMessage = messages[messages.length - 1];
+const isOwnMessage = lastMessage?.senderId === currentUserId;
 
-        const hasMedia =
-          lastMessage?.attachments?.some(
-            (att) => att.type === "image" || att.type === "video"
-          ) ?? false;
+const hasMedia =
+lastMessage?.attachments?.some(
+(att) => att.type === "image" || att.type === "video"
+) ?? false;
 
-        if (isOwnMessage || isNearBottom()) {
-          requestAnimationFrame(() => scrollToBottomStable());
+if (isOwnMessage || isNearBottom()) {
+requestAnimationFrame(() => scrollToBottomStable());
 
-          if (hasMedia && lastMessage?.messageId !== null && lastMessage?.messageId !== undefined) {
-            pendingMediaScrollMessageIdRef.current = lastMessage.messageId;
-          } else {
-            pendingMediaScrollMessageIdRef.current = null;
-          }
-        }
-      }
+if (hasMedia && lastMessage?.messageId !== null && lastMessage?.messageId !== undefined) {
+pendingMediaScrollMessageIdRef.current = lastMessage.messageId;
+} else {
+pendingMediaScrollMessageIdRef.current = null;
+}
+}
+}
 
-      prevFirstMessageIdRef.current = firstMessageId;
-      prevLastMessageIdRef.current = lastMessageId;
-    }
-  }, [conversationId, messages, firstMessageId, lastMessageId, loading, loadingMore, currentUserId]);
+prevFirstMessageIdRef.current = firstMessageId;
+prevLastMessageIdRef.current = lastMessageId;
+}
+}, [conversationId, messages, firstMessageId, lastMessageId, loading, loadingMore, currentUserId]);
 
-  useEffect(() => {
-    return () => {
-      if (scrollHideTimeoutRef.current) {
-        clearTimeout(scrollHideTimeoutRef.current);
-      }
-    };
-  }, []);
+useEffect(() => {
+return () => {
+if (scrollHideTimeoutRef.current) {
+clearTimeout(scrollHideTimeoutRef.current);
+}
+};
+}, []);
 
-  return (
-    <Root>
-      <HeaderWrap>
-        <ChatHeader
-          conversationId={conversationId}
-          title={title}
-          socketConnected={socketConnected}
-          error={error}
-          onToggleSearch={onToggleSearch}
-        />
-      </HeaderWrap>
+return (
+<Root>
+<HeaderWrap>
+<ChatHeader
+conversationId={conversationId}
+title={title}
+socketConnected={socketConnected}
+error={error}
+onToggleSearch={onToggleSearch}
+/>
+</HeaderWrap>
 
-      <MessageListWrap>
-        {realtimePinnedMessages.length > 0 && (
-          <>
-            {isPinnedExpanded ? (
-              <PinnedList
-                pinnedMessages={realtimePinnedMessages}
-                onPressMessage={handlePressPinnedMessage}
-                onUnpinMessage={handleUnpinMessage}
-                onCollapse={() => setIsPinnedExpanded(false)}
-                onMenuClick={handlePinnedMenuClick}
-              />
-            ) : (
-              <PinnedBar
-                message={realtimePinnedMessages[0]}
-                totalCount={realtimePinnedMessages.length}
-                onExpand={() => setIsPinnedExpanded(true)}
-                onMenuClick={handlePinnedMenuClick}
-              />
-            )}
-          </>
-        )}
-        <MessageList
-          listRef={listRef}
-          messages={messages}
-          onReplyMessage={handleReplyMessage}
-          currentUserId={currentUserId}
-          conversationId={conversationId}
-          onScroll={handleScroll}
-          showScrollbar={showScrollbar}
-          onMediaLoad={handleMediaLoad}
-          onForwardMessage={handleForwardMessage}
-          highlightedMessageId={highlightedMessageId}
-        />
-        {typingState.visible && <TypingIndicator text={typingState.text} />}
-      </MessageListWrap>
+<MessageListWrap>
+{realtimePinnedMessages.length > 0 && (
+<>
+{isPinnedExpanded ? (
+<PinnedList
+pinnedMessages={realtimePinnedMessages}
+members={conversationDetail?.members}
+currentUserId={currentUserId}
+onPressMessage={handlePressPinnedMessage}
+onUnpinMessage={handleUnpinMessage}
+onCollapse={() => setIsPinnedExpanded(false)}
+onMenuClick={handlePinnedMenuClick}
+/>
+) : (
+<PinnedBar
+message={realtimePinnedMessages[0]}
+totalCount={realtimePinnedMessages.length}
+onExpand={() => setIsPinnedExpanded(true)}
+onMenuClick={handlePinnedMenuClick}
+/>
+)}
+</>
+)}
+<MessageList
+listRef={listRef}
+messages={messages}
+onReplyMessage={handleReplyMessage}
+currentUserId={currentUserId}
+conversationId={conversationId}
+onScroll={handleScroll}
+showScrollbar={showScrollbar}
+onMediaLoad={handleMediaLoad}
+onForwardMessage={handleForwardMessage}
+highlightedMessageId={highlightedMessageId}
+onOpenMedia={handleOpenMediaPreview}
+/>
+{typingState.visible && <TypingIndicator text={typingState.text} />}
+</MessageListWrap>
 
-      <InputWrap>
-        <ChatInput
-          disabled={false}
-          replyMessage={replyMessage}
-          editMessage={editMessage}
-          onCancelReply={handleCancelReply}
-          onCancelEdit={handleCancelEdit}
-          onSend={(text, attachments = []) =>
-            sendMessage(conversationId, text, attachments, replyMessage)
-          }
-        />
-      </InputWrap>
+<InputWrap>
+<ChatInput
+disabled={false}
+replyMessage={replyMessage}
+editMessage={editMessage}
+onCancelReply={handleCancelReply}
+onCancelEdit={handleCancelEdit}
+onSend={(text, attachments = []) =>
+sendMessage(conversationId, text, attachments, replyMessage)
+}
+/>
+</InputWrap>
 
-      <ForwardModal
-        visible={isForwardModalVisible}
-        message={selectedMessageForForward}
-        onClose={() => setIsForwardModalVisible(false)}
-        onForward={handleForward}
-      />
-      <MediaPreviewModal
-        open={Boolean(previewMedia)}
-        media={previewMedia}
-        onClose={handleCloseMediaPreview}
-      />
-      <MenuPopover
-        anchorEl={pinnedMenuAnchor}
-        open={Boolean(pinnedMenuAnchor)}
-        onClose={handleClosePinnedMenu}
-        items={pinnedMenuItems}
-      />
-    </Root>
-  );
+<ForwardModal
+visible={isForwardModalVisible}
+message={selectedMessageForForward}
+onClose={() => setIsForwardModalVisible(false)}
+onForward={handleForward}
+/>
+<MediaPreviewModal
+open={Boolean(previewMedia)}
+media={previewMedia}
+mediaList={previewMediaList}
+initialIndex={previewInitialIndex}
+onClose={handleCloseMediaPreview}
+/>
+<MenuPopover
+anchorEl={pinnedMenuAnchor}
+open={Boolean(pinnedMenuAnchor)}
+onClose={handleClosePinnedMenu}
+items={pinnedMenuItems}
+/>
+</Root>
+);
 }

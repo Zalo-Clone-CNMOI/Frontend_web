@@ -4,10 +4,12 @@ import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
-import { UiMessage } from "@/src/common/interface/chat-interface";
+import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 
 interface PinnedItemProps {
   message: UiMessage;
+  members?: ConversationMemberDto[];
+  currentUserId?: string;
   onPress: () => void;
   onUnpin: () => void;
   onMenu: (event?: React.MouseEvent<HTMLElement>) => void;
@@ -89,6 +91,8 @@ const MenuButton = styled(IconButton)({
 
 export default function PinnedItem({
   message,
+  members,
+  currentUserId,
   onPress,
   onUnpin,
   onMenu,
@@ -105,7 +109,11 @@ export default function PinnedItem({
   const truncatedText =
     previewText.length > 50 ? previewText.substring(0, 50) + "..." : previewText;
 
-  const senderName = "Bạn"; // TODO: Get actual sender name from conversation members
+  // Get sender name from members
+  const sender = members?.find((m) => m.userId === message.senderId);
+  const senderName = message.senderId === currentUserId
+    ? "Bạn"
+    : (sender?.nickname || sender?.fullName || "Người dùng");
 
   return (
     <Container onClick={onPress}>
