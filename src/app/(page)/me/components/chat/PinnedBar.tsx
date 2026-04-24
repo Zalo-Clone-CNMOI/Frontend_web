@@ -11,7 +11,7 @@ interface PinnedBarProps {
   message: UiMessage;
   totalCount: number;
   onExpand: () => void;
-  onMenuClick: (message: UiMessage) => void;
+  onMenuClick: (message: UiMessage, event?: React.MouseEvent<HTMLElement>) => void;
 }
 
 const Container = styled(Box)(({ theme }) => ({
@@ -152,7 +152,7 @@ export default function PinnedBar({
           size="small"
           onClick={(e) => {
             e.stopPropagation();
-            onMenuClick(message);
+            onMenuClick(message, e);
           }}
         >
           <MoreVertIcon sx={{ fontSize: 18 }} />

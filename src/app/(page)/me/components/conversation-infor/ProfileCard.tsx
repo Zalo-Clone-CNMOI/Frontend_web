@@ -159,6 +159,8 @@ export default function ProfileCard() {
   const [updatingGroupName, setUpdatingGroupName] = useState(false);
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? currentConversation?.members ?? [];
+  const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const canEditGroup = isGroup && (myRole === 'owner' || myRole === 'admin');
 
   const otherMember = !isGroup
     ? members.find((m) => m.userId !== currentUserId)
@@ -277,9 +279,11 @@ export default function ProfileCard() {
               {displayName}
             </ConversationName>
 
-            <EditCircleButton onClick={handleOpenEditName}>
-              <EditOutlinedIcon sx={{ fontSize: "16px" }} />
-            </EditCircleButton>
+            {canEditGroup && (
+              <EditCircleButton onClick={handleOpenEditName}>
+                <EditOutlinedIcon sx={{ fontSize: "16px" }} />
+              </EditCircleButton>
+            )}
           </NameRow>
 
           <ActionsRow>
@@ -306,14 +310,16 @@ export default function ProfileCard() {
               </ActionText>
             </ActionItem>
 
-            <ActionItem>
-              <ActionIcon onClick={handleGroupAction}>
-                <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
-              </ActionIcon>
-              <ActionText>
-                {isGroup ? "Thêm thành viên" : "Tạo nhóm trò chuyện"}
-              </ActionText>
-            </ActionItem>
+            {canEditGroup && (
+              <ActionItem>
+                <ActionIcon onClick={handleGroupAction}>
+                  <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
+                </ActionIcon>
+                <ActionText>
+                  {isGroup ? "Thêm thành viên" : "Tạo nhóm trò chuyện"}
+                </ActionText>
+              </ActionItem>
+            )}
           </ActionsRow>
         </TopInfo>
       </Card>

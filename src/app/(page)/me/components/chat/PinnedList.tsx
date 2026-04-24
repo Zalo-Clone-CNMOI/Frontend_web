@@ -13,7 +13,7 @@ interface PinnedListProps {
   onPressMessage: (message: UiMessage) => void;
   onUnpinMessage: (message: UiMessage) => void;
   onCollapse: () => void;
-  onMenuClick: (message: UiMessage) => void;
+  onMenuClick: (message: UiMessage, event?: React.MouseEvent<HTMLElement>) => void;
 }
 
 const Container = styled(Box)(({ theme }) => ({
@@ -93,7 +93,7 @@ export default function PinnedList({
             message={message}
             onPress={() => onPressMessage(message)}
             onUnpin={() => onUnpinMessage(message)}
-            onMenu={() => onMenuClick(message)}
+            onMenu={(e) => onMenuClick(message, e)}
           />
         ))}
       </ListContent>

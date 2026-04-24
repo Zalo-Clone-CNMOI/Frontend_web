@@ -10,7 +10,7 @@ interface PinnedItemProps {
   message: UiMessage;
   onPress: () => void;
   onUnpin: () => void;
-  onMenu: () => void;
+  onMenu: (event?: React.MouseEvent<HTMLElement>) => void;
 }
 
 const Container = styled(Box)({
@@ -124,7 +124,7 @@ export default function PinnedItem({
           size="small"
           onClick={(e) => {
             e.stopPropagation();
-            onMenu();
+            onMenu(e);
           }}
         >
           <MoreVertIcon sx={{ fontSize: 18 }} />

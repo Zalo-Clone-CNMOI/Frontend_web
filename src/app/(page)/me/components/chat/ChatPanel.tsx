@@ -11,6 +11,7 @@ import ForwardModal from "./ForwardModal";
 import PinnedBar from "./PinnedBar";
 import PinnedList from "./PinnedList";
 import { TypingIndicator } from "@/src/shared/component/TypingIndicator";
+import MenuPopover, { PopoverMenuItem } from "@/src/shared/component/MenuPopover";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
 import { usePresenceHeartbeat } from "@/src/common/hooks/usePresenceHeartbeat";
@@ -95,6 +96,8 @@ export default function ChatPanel({
   const [highlightedMessageId, setHighlightedMessageId] = useState<string | null>(null);
   const [isPinnedExpanded, setIsPinnedExpanded] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
+  const [pinnedMenuAnchor, setPinnedMenuAnchor] = useState<HTMLElement | null>(null);
+  const [selectedPinnedMessage, setSelectedPinnedMessage] = useState<UiMessage | null>(null);
 
   const {
     socketConnected,
@@ -175,10 +178,44 @@ export default function ChatPanel({
     }
   };
 
-  const handlePinnedMenuClick = (message: UiMessage) => {
-    // TODO: Show menu with options (Bỏ ghim, Xem chi tiết)
-    alert("Menu clicked for message: " + message.messageId);
+  const handlePinnedMenuClick = (message: UiMessage, event?: React.MouseEvent<HTMLElement>) => {
+    if (event) {
+      setPinnedMenuAnchor(event.currentTarget);
+    }
+    setSelectedPinnedMessage(message);
   };
+
+  const handleClosePinnedMenu = () => {
+    setPinnedMenuAnchor(null);
+    setSelectedPinnedMessage(null);
+  };
+
+  const handleUnpinFromMenu = async () => {
+    if (!selectedPinnedMessage) return;
+    await handleUnpinMessage(selectedPinnedMessage);
+    handleClosePinnedMenu();
+  };
+
+  const handleCopyMessageContent = () => {
+    if (!selectedPinnedMessage) return;
+    const textToCopy = selectedPinnedMessage.body || "";
+    if (textToCopy) {
+      navigator.clipboard.writeText(textToCopy).catch(() => {
+        // Silently fail if copy doesn't work
+      });
+    }
+    handleClosePinnedMenu();
+  };
+
+  const conversationDetail = useChatStore((s) => s.conversationDetailById?.[conversationId || ""] ?? null);
+  const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const isGroup = conversationDetail?.type === "group";
+  const canUnpin = !isGroup || myRole === 'owner' || myRole === 'admin';
+
+  const pinnedMenuItems: PopoverMenuItem[] = [
+    { key: "copy", label: "Sao chép nội dung", onClick: handleCopyMessageContent },
+    ...(canUnpin ? [{ key: "unpin", label: "Bỏ ghim", danger: true, onClick: handleUnpinFromMenu }] : []),
+  ];
 
   const isNearBottom = () => {
     const wrap = listRef.current;
@@ -492,6 +529,12 @@ export default function ChatPanel({
         open={Boolean(previewMedia)}
         media={previewMedia}
         onClose={handleCloseMediaPreview}
+      />
+      <MenuPopover
+        anchorEl={pinnedMenuAnchor}
+        open={Boolean(pinnedMenuAnchor)}
+        onClose={handleClosePinnedMenu}
+        items={pinnedMenuItems}
       />
     </Root>
   );
