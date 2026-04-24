@@ -227,6 +227,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
 
                 <MessageMediaGroup
@@ -235,6 +236,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
               </>
             )}
@@ -311,6 +313,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
 
                 <MessageMediaGroup
@@ -319,6 +322,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
               </>
             )}

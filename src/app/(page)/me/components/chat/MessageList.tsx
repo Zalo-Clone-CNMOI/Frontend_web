@@ -7,6 +7,7 @@ import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import MessageItem from "./MessageItem";
 import SystemMessageBanner from "./message-system/SystemMessageBanner";
+import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface MessageListProps {
   listRef: RefObject<HTMLDivElement | null>;
@@ -149,11 +150,11 @@ export default function MessageList({
         <MessagesContent>
           {messages.map((message) => {
             const isSystemMessage = message.type === 'system' || message.senderId === 'SYSTEM';
-            
+
             if (isSystemMessage) {
               return <SystemMessageBanner key={message.messageId} message={message} />;
             }
-            
+
             return (
               <MessageItem
                 key={message.messageId}

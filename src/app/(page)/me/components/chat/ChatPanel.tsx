@@ -215,7 +215,13 @@ export default function ChatPanel({
       });
     });
   };
+  const handleOpenMediaPreview = (media: MediaPreviewItem) => {
+    setPreviewMedia(media);
+  };
 
+  const handleCloseMediaPreview = () => {
+    setPreviewMedia(null);
+  };
   const handleMediaLoad = (messageId: UiMessage["messageId"]) => {
     const wrap = listRef.current;
     if (!wrap) return;
@@ -479,6 +485,11 @@ export default function ChatPanel({
         message={selectedMessageForForward}
         onClose={() => setIsForwardModalVisible(false)}
         onForward={handleForward}
+      />
+      <MediaPreviewModal
+        open={Boolean(previewMedia)}
+        media={previewMedia}
+        onClose={handleCloseMediaPreview}
       />
     </Root>
   );
