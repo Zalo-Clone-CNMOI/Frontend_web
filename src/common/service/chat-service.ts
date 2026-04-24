@@ -95,5 +95,15 @@ export const chatService = {
     return http.get<IApiResponse<any>>(
       API.API_MESSAGES_PINNED(conversationId)
     );
+  },
+  searchMessages(conversationId: string, params: { q: string; senderId?: string; from?: number; to?: number }) {
+    const searchParams = new URLSearchParams();
+    searchParams.set("q", params.q);
+    if (params.senderId) searchParams.set("senderId", params.senderId);
+    if (params.from) searchParams.set("from", String(params.from));
+    if (params.to) searchParams.set("to", String(params.to));
+    return http.get<IApiResponse<any>>(
+      `${API.API_MESSAGES_SEARCH(conversationId)}?${searchParams.toString()}`
+    );
   }
 };

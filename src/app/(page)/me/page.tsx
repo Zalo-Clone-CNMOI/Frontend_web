@@ -195,6 +195,11 @@ const Me = () => {
     const setActiveConversationId = useChatStore((s)=> s.setActiveConversationId)
     const activeConversationId = useChatStore((s) => s.activeConversationId);
 
+    // Close search sidebar when conversation changes
+    useEffect(() => {
+        setShowSearchSidebar(false);
+    }, [activeConversationId]);
+
     const handleSelectedIcon = (iconName: SidebarKey) => {
         setSelectedIcon(iconName);
         if (iconName === "contact") {

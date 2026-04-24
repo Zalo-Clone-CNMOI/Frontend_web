@@ -429,6 +429,7 @@ export default function ChatPanel({
           title={title}
           socketConnected={socketConnected}
           error={error}
+          onToggleSearch={onToggleSearch}
         />
       </HeaderWrap>
 
