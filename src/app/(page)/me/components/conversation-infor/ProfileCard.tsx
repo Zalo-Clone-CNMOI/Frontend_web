@@ -157,9 +157,13 @@ export default function ProfileCard() {
   const [openEditGroupNameDialog, setOpenEditGroupNameDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [updatingGroupName, setUpdatingGroupName] = useState(false);
+  const [openEditNicknameDialog, setOpenEditNicknameDialog] = useState(false);
+  const [nickname, setNickname] = useState("");
+  const [updatingNickname, setUpdatingNickname] = useState(false);
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? currentConversation?.members ?? [];
   const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const myNickname = conversationDetail?.mySettings?.nickname ?? "";
   const canEditGroup = isGroup && (myRole === 'owner' || myRole === 'admin');
 
   const otherMember = !isGroup
@@ -263,6 +267,36 @@ export default function ProfileCard() {
 
     event.target.value = "";
   };
+
+  const handleOpenEditNickname = () => {
+    setNickname(myNickname);
+    setOpenEditNicknameDialog(true);
+  };
+
+  const handleSaveNickname = async () => {
+    if (!activeConversationId) return;
+
+    const trimmedNickname = nickname.trim();
+
+    if (trimmedNickname.length > 100) {
+      alert("Nickname không được quá 100 ký tự");
+      return;
+    }
+
+    try {
+      setUpdatingNickname(true);
+      await groupService.updateMySettings(activeConversationId, trimmedNickname || undefined);
+      await fetchConversationDetail(activeConversationId, true);
+      await fetchListConversation({ page: 1, limit: 10 });
+      setOpenEditNicknameDialog(false);
+    } catch (error) {
+      console.error("Update nickname failed", error);
+      alert("Không thể cập nhật nickname");
+    } finally {
+      setUpdatingNickname(false);
+    }
+  };
+
   return (
     <>
       <Card>
@@ -308,6 +342,13 @@ export default function ProfileCard() {
               <ActionText>
                 {isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"}
               </ActionText>
+            </ActionItem>
+
+            <ActionItem>
+              <ActionIcon onClick={handleOpenEditNickname}>
+                <EditOutlinedIcon sx={{ fontSize: 20 }} />
+              </ActionIcon>
+              <ActionText>Đổi biệt danh</ActionText>
             </ActionItem>
 
             {canEditGroup && (
@@ -405,6 +446,57 @@ export default function ProfileCard() {
               }}
             >
               Xác nhận
+            </Button>
+
+          </Box>
+        </Box>
+      </AppModal>
+
+      <AppModal
+        open={openEditNicknameDialog}
+        headerDivider
+        onClose={() => setOpenEditNicknameDialog(false)}
+        title="Đổi biệt danh"
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
+          <Typography sx={{ fontSize: 12.5, textAlign: "center" }}>
+            Đặt biệt danh cho người này trong cuộc trò chuyện này.
+          </Typography>
+
+          <GroupNameTextField
+            fullWidth
+            size="small"
+            placeholder="Nhập biệt danh..."
+            value={nickname}
+            onChange={(e) => setNickname(e.target.value)}
+            autoFocus
+          />
+
+          <Box sx={{ display: "flex", justifyContent: "flex-end", gap: 1 }}>
+            <Button
+              color="inherit"
+              onClick={() => setOpenEditNicknameDialog(false)}
+              disabled={updatingNickname}
+              sx={{
+                textTransform: "none",
+              }}
+            >
+              Hủy
+            </Button>
+
+            <Button
+              onClick={handleSaveNickname}
+              disabled={updatingNickname}
+              sx={{
+                backgroundColor: (theme) => theme.palette.primary.main,
+                color: "#fff",
+                textTransform: "none",
+                "&:hover": {
+                  backgroundColor: (theme) => theme.palette.primary.dark,
+                },
+              }}
+            >
+              {updatingNickname ? "Đang lưu..." : "Lưu"}
             </Button>
 
           </Box>

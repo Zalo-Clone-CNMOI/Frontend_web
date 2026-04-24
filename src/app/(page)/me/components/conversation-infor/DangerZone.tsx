@@ -125,7 +125,7 @@ export default function DangerZone() {
           if (leaving) return;
           setOpenLeaveGroupModal(false);
         }}
-        title="Rời nhóm và xóa cuộc trò chuyện"
+        title={isOwner ? "Rời nhóm và chuyển quyền sở hữu" : "Rời nhóm và xóa cuộc trò chuyện"}
         headerDivider
         actions={
           <>
@@ -148,7 +148,9 @@ export default function DangerZone() {
         }
       >
         <Typography fontSize={14}>
-          Bạn sẽ không thể xem lại tin nhắn này sau khi rời khỏi nhóm.
+          {isOwner
+            ? "Bạn sẽ chuyển quyền sở hữu cho một thành viên khác khi rời khỏi nhóm. Bạn sẽ không thể xem lại tin nhắn này."
+            : "Bạn sẽ không thể xem lại tin nhắn này sau khi rời khỏi nhóm."}
         </Typography>
       </AppModal>
 

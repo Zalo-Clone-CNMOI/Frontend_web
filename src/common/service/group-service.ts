@@ -50,5 +50,11 @@ export const groupService = {
             API.API_CONVERSATIONS_UPDATE(conversationId),
             { name, avatarUrl }
         );
+    },
+    updateMySettings(conversationId: string, nickname?: string) {
+        return http.patch<IApiResponse<void>>(
+            `/api/conversations/${conversationId}/settings`,
+            { nickname }
+        );
     }
 };

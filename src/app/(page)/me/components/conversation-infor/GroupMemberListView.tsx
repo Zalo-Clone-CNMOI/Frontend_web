@@ -144,12 +144,9 @@ const canUpdateMemberRole = (
   if (!myRole || !memberRole) return false;
   if (isSelf) return false;
 
+  // Only Owner can update member roles
   if (myRole === "owner") {
     return memberRole === "admin" || memberRole === "member";
-  }
-
-  if (myRole === "admin") {
-    return memberRole === "member";
   }
 
   return false;
@@ -171,8 +168,7 @@ export default function GroupMemberListView({
   );
 
   const members = conversationDetail?.members ?? [];
-  const myMember = members.find((m) => m.userId === currentUserId);
-  const myRole = myMember?.role;
+  const myRole = conversationDetail?.mySettings?.role ?? 'member';
 
   const handleOpenMemberMenu = (
     event: React.MouseEvent<HTMLElement>,
