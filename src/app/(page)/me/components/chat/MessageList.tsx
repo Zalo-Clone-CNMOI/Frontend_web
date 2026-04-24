@@ -7,6 +7,7 @@ import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import MessageItem from "./MessageItem";
 import SystemMessageBanner from "./message-system/SystemMessageBanner";
+import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface MessageListProps {
   listRef: RefObject<HTMLDivElement | null>;
@@ -18,6 +19,7 @@ interface MessageListProps {
   showScrollbar: boolean;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
+  onOpenMedia: (media: MediaPreviewItem) => void;
 }
 
 const MessagesWrap = styled(Box, {
@@ -92,6 +94,7 @@ export default function MessageList({
   showScrollbar,
   onMediaLoad,
   onForwardMessage,
+  onOpenMedia,
 }: MessageListProps) {
   const paginationByConversation = useChatStore((s) => s.paginationByConversation);
   const deleteMessage = useChatStore((s) => s.deleteMessage);
@@ -147,11 +150,11 @@ export default function MessageList({
         <MessagesContent>
           {messages.map((message) => {
             const isSystemMessage = message.type === 'system' || message.senderId === 'SYSTEM';
-            
+
             if (isSystemMessage) {
               return <SystemMessageBanner key={message.messageId} message={message} />;
             }
-            
+
             return (
               <MessageItem
                 key={message.messageId}
@@ -162,6 +165,7 @@ export default function MessageList({
                 onScrollToMessage={scrollToRepliedMessage}
                 onMediaLoad={onMediaLoad}
                 onForwardMessage={onForwardMessage}
+                onOpenMedia={onOpenMedia}
               />
             );
           })}

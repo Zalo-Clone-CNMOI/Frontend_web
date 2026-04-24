@@ -9,6 +9,7 @@ import MessageReplyPreview from "./MessageReplyPreview";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import AppAvatar from "@/src/shared/component/Avatar";
+import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 
 interface MessageItemProps {
@@ -23,6 +24,7 @@ interface MessageItemProps {
   onScrollToMessage: (targetMessageId?: UiMessage["messageId"] | null) => void;
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
   onForwardMessage: (message: UiMessage) => void;
+  onOpenMedia: (media: MediaPreviewItem) => void;
 }
 
 const MessageRow = styled(Box, {
@@ -121,6 +123,7 @@ export default function MessageItem({
   onScrollToMessage,
   onMediaLoad,
   onForwardMessage,
+  onOpenMedia,
 }: MessageItemProps) {
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
@@ -219,6 +222,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
 
                 <MessageMediaGroup
@@ -227,6 +231,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
               </>
             )}
@@ -284,6 +289,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
 
                 <MessageMediaGroup
@@ -292,6 +298,7 @@ export default function MessageItem({
                   mine={mine}
                   messageId={message.messageId}
                   onMediaLoad={onMediaLoad}
+                  onOpenMedia={onOpenMedia}
                 />
               </>
             )}

@@ -3,6 +3,7 @@
 import { Box } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { UiMessage } from "@/src/common/interface/chat-interface";
+import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface MessageMediaGroupProps {
   attachments: any[];
@@ -10,8 +11,14 @@ interface MessageMediaGroupProps {
   mine?: boolean;
   messageId: UiMessage["messageId"];
   onMediaLoad?: (messageId: UiMessage["messageId"]) => void;
+  onOpenMedia?: (media: MediaPreviewItem) => void;
 }
-
+const MediaItem = styled(Box)({
+  cursor: "pointer",
+  overflow: "hidden",
+  borderRadius: 8,
+  lineHeight: 0,
+});
 const MediaWrap = styled(Box)({
   display: "flex",
   flexDirection: "column",
@@ -45,6 +52,7 @@ export default function MessageMediaGroup({
   mine,
   messageId,
   onMediaLoad,
+  onOpenMedia,
 }: MessageMediaGroupProps) {
   if (!attachments.length) return null;
 
@@ -54,24 +62,37 @@ export default function MessageMediaGroup({
         alignItems: mine ? "flex-end" : "flex-start",
       }}
     >
-      {attachments.map((file) =>
-        type === "image" ? (
-          <MessageImage
-            key={file.key}
-            src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}
-            alt={file.name ?? "image"}
-            onLoad={() => onMediaLoad?.(messageId)}
-          />
-        ) : (
-          <MessageVideo
-            key={file.key}
-            controls
-            preload="metadata"
-            src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`}
-            onLoadedMetadata={() => onMediaLoad?.(messageId)}
-          />
-        )
+      {attachments.map((file) => {
+  const mediaUrl = `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${file.key}`;
+
+  return (
+    <MediaItem
+      key={file.key}
+      onClick={() =>
+        onOpenMedia?.({
+          key: file.key,
+          name: file.name,
+          type,
+        })
+      }
+    >
+      {type === "image" ? (
+        <MessageImage
+          src={mediaUrl}
+          alt={file.name || "image"}
+          onLoad={() => onMediaLoad?.(messageId)}
+        />
+      ) : (
+        <MessageVideo
+          src={mediaUrl}
+          muted
+          playsInline
+          onLoadedMetadata={() => onMediaLoad?.(messageId)}
+        />
       )}
+    </MediaItem>
+  );
+})}
     </MediaWrap>
   );
 }
