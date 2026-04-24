@@ -8,8 +8,6 @@ import MessageMediaGroup from "./MessageMediaGroup";
 import MessageReplyPreview from "./MessageReplyPreview";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
-import { chatService } from "@/src/common/service/chat-service";
-import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 
@@ -179,7 +177,25 @@ export default function MessageItem({
 
   const member =
     conversationDetail?.members?.find((m) => m.userId === message.senderId) ?? null;
+  const messagesInConversation = useChatStore((s) =>
+    message.conversationId
+      ? s.messagesByConversation[message.conversationId] ?? []
+      : []
+  );
 
+  const repliedMessage = message.replyTo?.messageId
+    ? messagesInConversation.find((m) => m.messageId === message.replyTo?.messageId)
+    : null;
+
+  const displayReplyTo =
+    message.replyTo && repliedMessage
+      ? {
+        ...message.replyTo,
+        body: repliedMessage.isDeleted ? "" : repliedMessage.body,
+        attachments: repliedMessage.isDeleted ? [] : repliedMessage.attachments ?? [],
+        isDeleted: Boolean(repliedMessage.isDeleted),
+      }
+      : message.replyTo;
   const isGroup = conversationDetail?.type === "group";
 
   const avatarSrc = member?.avatarUrl
@@ -225,12 +241,14 @@ export default function MessageItem({
 
             {showBubble && (
               <Bubble mine={mine}>
-                <MessageReplyPreview
-                  senderId={senderId}
-                  replyTo={message.replyTo}
-                  onClick={() => onScrollToMessage(message.replyTo?.messageId)}
-                  mine={mine}
-                />
+                {!message.isDeleted && (
+                  <MessageReplyPreview
+                    senderId={senderId}
+                    replyTo={displayReplyTo}
+                    onClick={() => onScrollToMessage(displayReplyTo?.messageId)}
+                    mine={mine}
+                  />
+                )}
 
                 {message.isDeleted ? (
                   <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
@@ -307,12 +325,14 @@ export default function MessageItem({
 
             {showBubble && (
               <Bubble mine={mine}>
-                <MessageReplyPreview
-                  senderId={senderId}
-                  replyTo={message.replyTo}
-                  onClick={() => onScrollToMessage(message.replyTo?.messageId)}
-                  mine={mine}
-                />
+                {!message.isDeleted && (
+                  <MessageReplyPreview
+                    senderId={senderId}
+                    replyTo={displayReplyTo}
+                    onClick={() => onScrollToMessage(message.replyTo?.messageId)}
+                    mine={mine}
+                  />
+                )}
 
                 {message.isDeleted ? (
                   <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>

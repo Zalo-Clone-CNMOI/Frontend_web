@@ -70,74 +70,14 @@ export const chatService = {
       API.API_CONVERSATIONS_DETAIL(conversationId)
     );
   },
-
-  pinMessage(
-    conversationId: string,
-    createdAt: number,
-    messageId: string,
-    userId: string
-  ) {
-    return http.post<IApiResponse<{ message: string }>>(
-      API.API_MESSAGE_PIN(conversationId, createdAt, messageId),
-      undefined,
-      {
-        headers: {
-          "x-user-id": userId,
-        },
-      }
+  pinConversation(conversationId: string) {
+    return http.post<IApiResponse<any>>(
+      API.API_CONVERSATIONS_PIN(conversationId)
     );
   },
-
-  unpinMessage(
-    conversationId: string,
-    createdAt: number,
-    messageId: string,
-    userId: string
-  ) {
-    return http.delete<IApiResponse<{ message: string }>>(
-      API.API_MESSAGE_PIN(conversationId, createdAt, messageId),
-      {
-        headers: {
-          "x-user-id": userId,
-        },
-      }
+  unpinConversation(conversationId: string) {
+    return http.delete<IApiResponse<any>>(
+      API.API_CONVERSATIONS_PIN(conversationId)
     );
-  },
-
-  fetchPinnedMessages(
-    conversationId: string,
-    userId: string,
-    limit: number = 20
-  ) {
-    return http.get<IApiResponse<{ items: UiMessage[] }>>(
-      `${API.API_MESSAGES_PINNED(conversationId)}?limit=${limit}`,
-      {
-        headers: {
-          "x-user-id": userId,
-        },
-      }
-    );
-  },
-
-  searchMessages(
-    conversationId: string,
-    params: {
-      q?: string;
-      senderId?: string;
-      from?: number;
-      to?: number;
-      fileType?: 'images' | 'video' | 'files';
-    }
-  ) {
-    const searchParams = new URLSearchParams();
-    if (params.q) searchParams.set('q', params.q);
-    if (params.senderId) searchParams.set('senderId', params.senderId);
-    if (params.from) searchParams.set('from', String(params.from));
-    if (params.to) searchParams.set('to', String(params.to));
-    if (params.fileType) searchParams.set('fileType', params.fileType);
-
-    return http.get<IApiResponse<{ items: UiMessage[]; total: number }>>(
-      `${API.API_MESSAGES_SEARCH(conversationId)}?${searchParams.toString()}`
-    );
-  },
+  }
 };

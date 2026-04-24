@@ -4,29 +4,51 @@ import { IApiResponse } from "../interface/auth-interface";
 import { ConversationDto } from "../interface/chat-interface";
 
 export const groupService = {
-    createGroupConversation(name: string, memberIds: string[]) {
+    createGroupConversation(
+        name: string,
+        memberIds: string[],
+        avatarUrl?: string | null
+    ) {
         return http.post<IApiResponse<ConversationDto>>(
             API.API_CONVERSATIONS_CREATE_GROUP,
-            { name, memberIds }
+            {
+                name,
+                memberIds,
+                avatarUrl,
+            }
         );
     },
-
     addMembersToGroup(conversationId: string, memberIds: string[]) {
         return http.post<IApiResponse<void>>(
             API.API_CONVERSATIONS_ADD_MEMBER(conversationId),
             { memberIds }
         );
     },
-
     removeMemberFromGroup(conversationId: string, memberId: string) {
         return http.delete<IApiResponse<void>>(
             API.API_CONVERSATIONS_REMOVE_MEMBER(conversationId, memberId)
         );
     },
-    updateMemberRole(conversationId: string, memberId: string, role:"admin" | "member"){
+    updateMemberRole(conversationId: string, memberId: string, role: "admin" | "member") {
         return http.patch<IApiResponse<void>>(
             API.API_CONVERSATIONS_UPDATE_ROLE(conversationId, memberId),
             { role }
+        );
+    },
+    leaveGroup(conversationId: string) {
+        return http.post<IApiResponse<void>>(
+            API.API_CONVERSATIONS_LEAVE(conversationId)
+        );
+    },
+    disbandGroup(conversationId: string) {
+        return http.post<IApiResponse<void>>(
+            API.API_CONVERSATIONS_GROUP_DISBAND(conversationId)
+        );
+    },
+    updateConversation(conversationId: string, name: string, avatarUrl: string | null) {
+        return http.patch<IApiResponse<ConversationDto>>(
+            API.API_CONVERSATIONS_UPDATE(conversationId),
+            { name, avatarUrl }
         );
     }
 };

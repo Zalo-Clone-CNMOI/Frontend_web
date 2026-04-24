@@ -25,8 +25,6 @@ import { authService } from "@/src/common/service/auth-service";
 import { clearAuthStorage, redirectToLogin } from "@/src/common/utilities/utils";
 import ProfileModals from "./ProfileModals";
 import ChangePasswordModal from "./ChangePswModal";
-import { IUser } from "@/src/common/interface/auth-interface";
-// import { resolveMediaUrl } from "@/src/common/helpers/displayMedia.helpers";
 
 const Sidebar = styled(Box)({
   minWidth: 56,
@@ -65,15 +63,16 @@ const AppSidebar = ({
   const [openProfileModal, setOpenProfileModal] = useState(false);
   const [pendingOpenEdit, setPendingOpenEdit] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
-  const authData = useAuthStore((s) => s.authData);
-  const openMenuPopover = Boolean(menuAnchorEl) && Boolean(activePopover);
   const [openChangePasswordModal, setOpenChangePasswordModal] = useState(false);
+
+  const openMenuPopover = Boolean(menuAnchorEl) && Boolean(activePopover);
 
   const handleOpenChangePasswordModal = () => {
     closePopoverThen(() => {
       setOpenChangePasswordModal(true);
     });
   };
+
   const handleMenuItemClick =
     (action?: () => void) =>
       () => {
@@ -95,11 +94,8 @@ const AppSidebar = ({
 
         setMenuAnchorEl(event.currentTarget);
         setActivePopover(type);
-
-        if (type === "settings") {
-          onSelect("settings");
-        }
       };
+
   const closePopoverThen = (action?: () => void) => {
     const el = document.activeElement as HTMLElement | null;
     el?.blur();
@@ -113,6 +109,7 @@ const AppSidebar = ({
       });
     });
   };
+
   const handleClosePopover = () => {
     setMenuAnchorEl(null);
     setActivePopover(null);
@@ -205,8 +202,9 @@ const AppSidebar = ({
     ],
     [onOpenProfile]
   );
+
   const avatarUrl = useAuthStore((s) => s.authData?.data?.user?.avatarUrl);
-  const avatarSrc = avatarUrl
+
   const currentItems =
     activePopover === "avatar"
       ? avatarItems
@@ -214,13 +212,12 @@ const AppSidebar = ({
         ? settingsItems
         : [];
 
-
   return (
     <Grid data-testid="app-sidebar" sx={{ minWidth: 56, height: "100vh" }}>
       <Sidebar>
         <Box mt="32px">
           <AvatarStyled
-            src={avatarSrc || undefined}
+            src={avatarUrl ?? ""}
             onClick={(e) => {
               e.stopPropagation();
               handleOpenPopover("avatar")(e);
@@ -234,10 +231,12 @@ const AppSidebar = ({
           pendingOpenEdit={pendingOpenEdit}
           setPendingOpenEdit={setPendingOpenEdit}
         />
+
         <ChangePasswordModal
           open={openChangePasswordModal}
           onClose={() => setOpenChangePasswordModal(false)}
         />
+
         <Stack justifyContent="space-between" height="100%">
           <Stack mt={2} spacing={1.25} alignItems="center">
             <BoxIcon
@@ -280,7 +279,7 @@ const AppSidebar = ({
             <BoxIcon
               outlined={SettingsOutlinedIcon}
               filled={SettingsIcon}
-              selected={selectedIcon === "settings" && activePopover === "settings"}
+              selected={activePopover === "settings"}
               onClick={handleOpenPopover("settings")}
             />
           </Stack>

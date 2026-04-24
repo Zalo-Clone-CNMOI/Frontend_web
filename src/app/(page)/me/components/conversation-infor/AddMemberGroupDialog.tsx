@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Checkbox,
+  IconButton,
   InputBase,
   List,
   ListItemButton,
@@ -18,6 +19,7 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckIcon from "@mui/icons-material/Check";
+import { trace } from "console";
 
 interface AddMemberGroupDialogProps {
   open: boolean;
@@ -41,17 +43,17 @@ const SearchInput = styled(InputBase)({
   flex: 1,
   fontSize: 14,
 });
-const UncheckedIcon = styled(Box)({
-  width: 20,
-  height: 20,
+export const UncheckedIcon = styled(Box)({
+  width: 16,
+  height: 16,
   border: "1px solid #b5b5b5",
   borderRadius: "50%",
   boxSizing: "border-box",
 });
 
-const CheckedIcon = styled(Box)(({ theme }) => ({
-  width: 22,
-  height: 22,
+export const CheckedIcon = styled(Box)(({ theme }) => ({
+  width: 18,
+  height: 18,
   border: "1px solid currentColor",
   borderRadius: "50%",
   display: "flex",
@@ -62,7 +64,7 @@ const CheckedIcon = styled(Box)(({ theme }) => ({
   boxSizing: "border-box",
 }));
 
-const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
+export const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
   marginLeft: 0,
   padding: "2px",
   color: theme.palette.primary.main,
@@ -71,10 +73,23 @@ const StyledCheckbox = styled(Checkbox)(({ theme }) => ({
     opacity: 0.5,
   },
 }));
-const StyledCheckIcon = styled(CheckIcon)({
-  fontSize: 16,
+export const StyledCheckIcon = styled(CheckIcon)({
+  fontSize: 12,
 });
-
+export const RemoveSelectedButton = styled(IconButton)(({ theme }) => ({
+  width: 14,
+  height: 14,
+  padding: 0,
+  backgroundColor: theme.palette.primary.dark,
+  color: "#FFFFFF",
+  "& .MuiSvgIcon-root": {
+    fontSize: 10,
+  },
+  "&:hover": {
+    backgroundColor: "#0a3d91",
+    transition: "background-color 0.2s ease",
+  },
+}));
 export default function AddMemberGroupDialog({
   open,
   onClose,
@@ -181,7 +196,7 @@ export default function AddMemberGroupDialog({
                 gap: "8px"
               }}
             >
-              <ListItemIcon sx={{ minWidth: "28px" }}>
+              <ListItemIcon sx={{ minWidth: "20px" }}>
                 <StyledCheckbox
                   edge="start"
                   checked={checked}

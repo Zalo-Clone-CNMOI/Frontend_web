@@ -1,6 +1,7 @@
 import { buildDerivedDataFromMessages, dedupeByMessageId, extractFilesFromMessage, extractLinksFromMessage, extractMediaFromMessage, normalizeMessage, uniqAttachments, uniqStrings, upsertIncomingMessage } from "../helpers/chat.helpers";
 import { buildChatAttachmentsPayload } from "../helpers/chatAttachment.helpers";
 import { cleanMessageBody, HIDDEN_BODY } from "../helpers/cleanBodyMedia";
+import { sortConversations } from "../helpers/sortConservation";
 import { ConversationDto, ConversationLastMessageDto, UiMessage } from "../interface/chat-interface";
 import { ChatAttachmentPayload, IUploadedMedia } from "../interface/media-interface";
 import { chatService } from "../service/chat-service";
@@ -57,19 +58,41 @@ const applyDeletedMessage = (
   messageId: string,
   deletedAt: number
 ): UiMessage[] => {
-  return messages.map((msg) =>
-    msg.messageId === messageId
-      ? {
-        ...msg,
-        body: "",
-        isDeleted: true,
-        deletedAt,
-        attachments: [],
-        pending: false,
-        failed: false,
-      }
-      : msg
-  );
+  return messages.map((msg): UiMessage => {
+    const isTargetMessage = msg.messageId === messageId;
+    const replyTo = msg.replyTo;
+    const isReplyToTarget = replyTo?.messageId === messageId;
+
+    if (!isTargetMessage && !isReplyToTarget) return msg;
+
+    return {
+      ...msg,
+
+      ...(isTargetMessage
+        ? {
+          body: "",
+          isDeleted: true,
+          deletedAt,
+          attachments: [],
+          pending: false,
+          failed: false,
+        }
+        : {}),
+
+      ...(replyTo && isReplyToTarget
+        ? {
+          replyTo: {
+            ...replyTo,
+            messageId: replyTo.messageId,
+            senderId: replyTo.senderId,
+            body: "",
+            attachments: [],
+            isDeleted: true,
+          },
+        }
+        : {}),
+    };
+  });
 };
 
 const patchConversationPreviewWhenDeleted = (
@@ -104,7 +127,9 @@ export const openMockConversation = (conversationId: string) => {
   useChatStore.getState().setActiveConversationId(conversationId);
 };
 
-export const fetchListConversation = async (params: { page?: number; limit?: number } = {}) => {
+export const fetchListConversation = async (
+  params: { page?: number; limit?: number } = {}
+) => {
   const state = useChatStore.getState();
 
   state.setConversationLoading(true);
@@ -120,7 +145,7 @@ export const fetchListConversation = async (params: { page?: number; limit?: num
     const items = Array.isArray(payload?.data) ? payload.data : [];
     const meta = payload?.meta ?? null;
 
-    state.setListConversation(items);
+    state.setListConversation(sortConversations(items));
     state.setConversationMeta(meta);
     state.setConversationLoading(false);
     state.setConversationFetched(true);
@@ -174,7 +199,9 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("chat:typing:update");
   socket.off("conversation:member:removed");
   socket.off("conversation:member:added");
-  socket.off("chat.system_message");
+  socket.off("conversation:created");
+  socket.off("conversation:disbanded");
+  socket.off("chat:system-message");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -252,20 +279,10 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     useChatStore.setState((state) => ({
       messagesByConversation: {
         ...state.messagesByConversation,
-        [conversationId]: (state.messagesByConversation[conversationId] || []).map((msg) =>
-          msg.messageId === messageId
-            ? {
-              ...msg,
-              body: "",
-              isDeleted: true,
-              deletedAt,
-              attachments: [],
-              pending: false,
-              failed: false,
-              isPinned: false,
-              pinnedAt: undefined,
-            }
-            : msg
+        [conversationId]: applyDeletedMessage(
+          state.messagesByConversation[conversationId] || [],
+          messageId,
+          deletedAt
         ),
       },
       listConversation: patchConversationPreviewWhenDeleted(
@@ -316,27 +333,67 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   };
 
   const handleSystemMessage = (raw: any) => {
-    const normalized = normalizeMessage(raw);
+    console.log("[chat:system-message raw full]", raw);
+    console.log("[chat:system-message raw json]", JSON.stringify(raw, null, 2));
 
-    if (!normalized.conversationId || !normalized.messageId) return;
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const messageId = raw?.message_id ?? raw?.messageId;
+
+    if (!conversationId || !messageId) {
+      console.log("[chat:system-message] missing ids", raw);
+      return;
+    }
 
     const systemMessage: UiMessage = {
-      ...normalized,
-      type: 'system',
-      senderId: 'SYSTEM',
+      messageId,
+      conversationId,
+      senderId: raw?.sender_id ?? raw?.senderId ?? "SYSTEM",
+      body: raw?.body ?? "",
+      createdAt:
+        raw?.created_at ??
+        raw?.createdAt ??
+        raw?.sent_at ??
+        Date.now(),
+      attachments: [],
+      type: "system",
+      message_type: raw?.message_type ?? raw?.messageType ?? "system",
+      system_event_type: raw?.system_event_type ?? raw?.systemEventType,
+      metadata: raw?.metadata ?? undefined,
+      replyTo: null,
+      replyToMessageId: null,
+      isDeleted: false,
+      pending: false,
+      failed: false,
     };
+
+    console.log("[chat:system-message mapped]", systemMessage);
 
     useChatStore.setState((state) => {
       const currentMessages =
-        state.messagesByConversation[systemMessage.conversationId] || [];
+        state.messagesByConversation[conversationId] || [];
 
       const nextMessages = upsertIncomingMessage(currentMessages, systemMessage);
+      console.log("[systemMessage before upsert]", systemMessage);
+      console.log(
+        "[systemMessage after upsert]",
+        nextMessages.find((m) => m.messageId === systemMessage.messageId)
+      );
+      const nextConversations = state.listConversation.some(
+        (cvs) => cvs.id === conversationId
+      )
+        ? moveConversationToTopWithLastMessage(
+          state.listConversation,
+          conversationId,
+          systemMessage
+        )
+        : state.listConversation;
 
       return {
         messagesByConversation: {
           ...state.messagesByConversation,
-          [systemMessage.conversationId]: nextMessages,
+          [conversationId]: nextMessages,
         },
+        listConversation: nextConversations,
       };
     });
   };
@@ -412,8 +469,10 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("chat:message:pinned", handlePinnedMessage);
   socket.on("chat:message:unpinned", handleUnpinnedMessage);
   socket.on("conversation:member:added", handleConversationMemberAdded);
+  socket.on("conversation:created", handleConversationCreated);
+  socket.on("conversation:disbanded", handleConversationDisbanded);
   socket.on("conversation:member:removed", handleConversationMemberRemoved);
-  socket.on("chat.system_message", handleSystemMessage);
+  socket.on("chat:system-message", handleSystemMessage);
   socket.on("chat:typing:update", (payload: any) => {
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
     const users = payload?.users || [];
@@ -736,18 +795,10 @@ export const deleteMessage = (
   useChatStore.setState((prev) => ({
     messagesByConversation: {
       ...prev.messagesByConversation,
-      [conversationId]: (prev.messagesByConversation[conversationId] || []).map((msg) =>
-        msg.messageId === messageId
-          ? {
-            ...msg,
-            body: "",
-            isDeleted: true,
-            deletedAt: Date.now(),
-            attachments: [],
-            pending: false,
-            failed: false,
-          }
-          : msg
+      [conversationId]: applyDeletedMessage(
+        prev.messagesByConversation[conversationId] || [],
+        messageId,
+        Date.now()
       ),
     },
     listConversation: patchConversationPreviewWhenDeleted(
@@ -763,6 +814,35 @@ export const deleteMessage = (
     created_at: Number(createdAt),
   });
 };
+const handleConversationDisbanded = (payload: any) => {
+  console.log("[conversation:disbanded]", payload);
+
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  if (!conversationId) return;
+
+  const current = useChatStore.getState();
+  current.removeConversationLocally(conversationId);
+};
+const handleConversationCreated = async (payload: any) => {
+  console.log("[conversation:created]", payload);
+
+  const conversationId =
+    payload?.conversation_id ?? payload?.conversationId;
+
+  const type = payload?.type;
+  const current = useChatStore.getState();
+  const currentUserId = current.currentUserId;
+
+  if (!conversationId || !currentUserId) return;
+
+  await fetchListConversation({ page: 1, limit: 10 });
+
+  await current.fetchConversationDetail(conversationId, true);
+};
+const handleConversationMemberAdded = async (payload: any) => {
+  console.log("[conversation:member:added]", payload);
 
 const handleConversationMemberAdded = async (payload: any) => {
   const conversationId =
@@ -830,7 +910,9 @@ export const cleanupChat = () => {
   socket?.off("chat:typing:update");
   socket?.off("conversation:member:added");
   socket?.off("conversation:member:removed");
-  socket?.off("chat.system_message");
+  socket?.off("conversation:created");
+  socket?.off("conversation:disbanded");
+  socket?.off("chat:system-message");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();
@@ -904,9 +986,5 @@ export const moveConversationToTopWithLastMessage = (
       }
       : cvs
   );
-
-  const current = updatedList.find((cvs) => cvs.id === conversationId);
-  const rest = updatedList.filter((cvs) => cvs.id !== conversationId);
-
-  return current ? [current, ...rest] : updatedList;
+  return sortConversations(updatedList);
 };
