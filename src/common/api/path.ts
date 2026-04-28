@@ -88,4 +88,7 @@ export const API = {
 
     API_MESSAGES_SEARCH: (conversationId: string) =>
       `/api/messages/${conversationId}/search`,
+
+    /* ================= CALL ================= */
+    API_ICE_SERVERS: "/api/ice-servers",
 } as const;

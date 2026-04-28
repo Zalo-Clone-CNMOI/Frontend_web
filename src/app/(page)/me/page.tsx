@@ -27,6 +27,8 @@ import InfConvColumn from "./components/conversation-infor/page";
 import SearchSidebar from "./components/chat/SearchSidebar";
 import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
+import { registerCallHandlers, syncCallState } from "@/src/common/service/call-service";
+import CallContainer from "./components/call/CallContainer";
 import ContactFunctionList, { ContactView } from "./components/friend/ContactFunctionList";
 import ContactContentPanel from "./components/friend/ContactContentPanel";
 import { useTrans } from "@/src/common/utilities/hook/trans";
@@ -200,6 +202,11 @@ const Me = () => {
     // Close search sidebar when conversation changes
     useEffect(() => {
         setShowSearchSidebar(false);
+        
+        // Sync call state when opening a conversation
+        if (activeConversationId) {
+            syncCallState(activeConversationId);
+        }
     }, [activeConversationId]);
 
     const handleSelectedIcon = (iconName: SidebarKey) => {
@@ -242,6 +249,14 @@ const Me = () => {
         authData?.data?.user?.id ||
         getcurrentUserId() ||
         "";
+
+    // Register call handlers on mount
+    useEffect(() => {
+        if (currentUserId) {
+            const unregister = registerCallHandlers(currentUserId);
+            return () => unregister();
+        }
+    }, [currentUserId]);
 
     return (
         <Root container>
@@ -379,6 +394,8 @@ const Me = () => {
                     ) : null}
                 </Panel>
             </ChatColumn>
+            
+            <CallContainer />
         </Root>
     );
 };

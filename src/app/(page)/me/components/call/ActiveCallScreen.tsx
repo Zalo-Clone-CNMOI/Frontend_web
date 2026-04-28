@@ -1,0 +1,298 @@
+"use client";
+
+import { useEffect, useRef, useState, useMemo } from "react";
+import { Box, Typography, IconButton, Grid } from "@mui/material";
+import { styled } from "@mui/material/styles";
+import CallEndIcon from "@mui/icons-material/CallEnd";
+import MicIcon from "@mui/icons-material/Mic";
+import MicOffIcon from "@mui/icons-material/MicOff";
+import VideocamIcon from "@mui/icons-material/Videocam";
+import VideocamOffIcon from "@mui/icons-material/VideocamOff";
+import { useCallStore } from "@/src/common/store/useCallStore";
+import { endCall, leaveCall } from "@/src/common/service/call-service";
+import AppAvatar from "@/src/shared/component/Avatar";
+import { useTrans } from "@/src/common/utilities/hook/trans";
+
+const Container = styled(Box)({
+  width: "100%",
+  height: "100%",
+  display: "flex",
+  flexDirection: "column",
+  background: "#1a1a2e",
+  position: "relative",
+});
+
+const VideoGrid = styled(Grid)({
+  flex: 1,
+  padding: 16,
+  overflow: "auto",
+});
+
+const VideoTile = styled(Box)({
+  position: "relative",
+  width: "100%",
+  aspectRatio: "16/9",
+  background: "#2d2d44",
+  borderRadius: 12,
+  overflow: "hidden",
+});
+
+const VideoElement = styled("video")({
+  width: "100%",
+  height: "100%",
+  objectFit: "cover",
+});
+
+const LocalVideo = styled("video")({
+  position: "absolute",
+  bottom: 100,
+  right: 16,
+  width: 160,
+  height: 120,
+  borderRadius: 12,
+  objectFit: "cover",
+  zIndex: 10,
+  border: "2px solid rgba(255,255,255,0.3)",
+  transform: "scaleX(-1)",
+});
+
+const Controls = styled(Box)({
+  display: "flex",
+  justifyContent: "center",
+  gap: 24,
+  padding: "20px 0",
+  background: "rgba(0,0,0,0.5)",
+});
+
+const ControlButton = styled(IconButton)({
+  width: 56,
+  height: 56,
+  borderRadius: "50%",
+  background: "rgba(255,255,255,0.2)",
+  color: "#fff",
+  "&:hover": { background: "rgba(255,255,255,0.3)" },
+});
+
+const EndButton = styled(IconButton)({
+  width: 56,
+  height: 56,
+  borderRadius: "50%",
+  background: "#ef4444",
+  color: "#fff",
+  "&:hover": { background: "#dc2626" },
+});
+
+const UserLabel = styled(Typography)({
+  position: "absolute",
+  bottom: 8,
+  left: 8,
+  color: "#fff",
+  fontSize: 14,
+  fontWeight: 500,
+  background: "rgba(0,0,0,0.5)",
+  padding: "4px 8px",
+  borderRadius: 4,
+});
+
+const Timer = styled(Typography)({
+  position: "absolute",
+  top: 16,
+  left: "50%",
+  transform: "translateX(-50%)",
+  color: "#fff",
+  fontSize: 16,
+  fontWeight: 500,
+  background: "rgba(0,0,0,0.5)",
+  padding: "4px 12px",
+  borderRadius: 16,
+});
+
+function formatDuration(seconds: number): string {
+  const mins = Math.floor(seconds / 60);
+  const secs = seconds % 60;
+  return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
+}
+
+export default function ActiveCallScreen() {
+  const t = useTrans();
+  const localStream = useCallStore((s) => s.localStream);
+  const remoteStreams = useCallStore((s) => s.remoteStreams);
+  const activeCall = useCallStore((s) => s.activeCall);
+  const isMuted = useCallStore((s) => s.isMuted);
+  const isCameraOff = useCallStore((s) => s.isCameraOff);
+  const callDuration = useCallStore((s) => s.callDuration);
+  const setMuted = useCallStore((s) => s.setMuted);
+  const setCameraOff = useCallStore((s) => s.setCameraOff);
+
+  const localVideoRef = useRef<HTMLVideoElement>(null);
+  const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
+  const [connecting, setConnecting] = useState(true);
+
+  const isGroup = activeCall?.conversation_type === "group";
+  const isVideo = activeCall?.call_type === "video";
+  
+  const remoteEntries = useMemo(() => Array.from(remoteStreams.entries()), [remoteStreams]);
+
+  useEffect(() => {
+    if (localVideoRef.current && localStream) {
+      localVideoRef.current.srcObject = localStream;
+    }
+  }, [localStream]);
+
+  useEffect(() => {
+    console.log("[ActiveCallScreen] remoteStreams changed:", remoteStreams.size, "entries:", Array.from(remoteStreams.entries()).map(([k,v]) => [k, v.id, v.getTracks().length]));
+    
+    remoteStreams.forEach((stream, userId) => {
+      console.log("[ActiveCallScreen] setting stream for userId:", userId, "streamId:", stream.id);
+      const videoEl = remoteVideoRefs.current.get(userId);
+      if (videoEl) {
+        console.log("[ActiveCallScreen] videoEl found, setting srcObject");
+        videoEl.srcObject = stream;
+      } else {
+        console.log("[ActiveCallScreen] videoEl NOT found for userId:", userId);
+      }
+    });
+    
+    if (remoteStreams.size > 0) {
+      setConnecting(false);
+    }
+  }, [remoteStreams]);
+
+  const handleEndCall = () => {
+    if (isGroup) {
+      leaveCall();
+    } else {
+      endCall();
+    }
+  };
+
+  return (
+    <Container>
+      <Timer>{formatDuration(callDuration)}</Timer>
+
+      {isVideo && localStream && (
+        <LocalVideo ref={localVideoRef} autoPlay muted playsInline />
+      )}
+
+      {connecting && remoteStreams.size === 0 ? (
+        <Box
+          sx={{
+            flex: 1,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            flexDirection: "column",
+            gap: 2,
+          }}
+        >
+          <Typography sx={{ color: "#fff", fontSize: 18 }}>
+            {t("CALL.CONNECTING")}
+          </Typography>
+        </Box>
+      ) : isGroup ? (
+        <VideoGrid container spacing={2}>
+          {remoteEntries.map(([userId, stream]) => (
+            <Grid size={{ xs: 12, sm: 6, md: 4 }} key={userId}>
+              <VideoTile>
+                {isVideo ? (
+                  <VideoElement
+                    ref={(el) => {
+                      if (el && el.srcObject !== stream) {
+                        console.log("[ActiveCallScreen] group video ref set for userId:", userId);
+                        remoteVideoRefs.current.set(userId, el);
+                        el.srcObject = stream;
+                      }
+                    }}
+                    autoPlay
+                    playsInline
+                    muted={false}
+                    onLoadedMetadata={(e) => {
+                      console.log("[ActiveCallScreen] group video loadedmetadata");
+                      e.currentTarget.play().catch(err => console.log("[ActiveCallScreen] group play error:", err.message));
+                    }}
+                  />
+                ) : (
+                  <Box
+                    sx={{
+                      width: "100%",
+                      height: "100%",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    <AppAvatar name={userId} size={80} fontSize={32} />
+                  </Box>
+                )}
+                <UserLabel>{userId.slice(0, 8)}</UserLabel>
+              </VideoTile>
+            </Grid>
+          ))}
+        </VideoGrid>
+      ) : (
+        <Box sx={{ flex: 1, position: "relative" }}>
+          {remoteEntries.map(([userId, stream]) => (
+            <Box
+              key={userId}
+              sx={{
+                width: "100%",
+                height: "100%",
+                display: "flex",
+                alignItems: "center",
+                justifyContent: "center",
+              }}
+            >
+              {isVideo ? (
+                <VideoElement
+                  ref={(el) => {
+                    if (el && el.srcObject !== stream) {
+                      console.log("[ActiveCallScreen] direct video ref set for userId:", userId);
+                      remoteVideoRefs.current.set(userId, el);
+                      el.srcObject = stream;
+                      console.log("[ActiveCallScreen] direct stream assigned, tracks:", stream.getTracks().map(t => ({kind: t.kind, enabled: t.enabled, muted: t.muted, readyState: t.readyState})));
+                    }
+                  }}
+                  autoPlay
+                  playsInline
+                  muted={false}
+                  style={{ maxHeight: "80%", maxWidth: "80%" }}
+                  onLoadedMetadata={(e) => {
+                    console.log("[ActiveCallScreen] video loadedmetadata, playing...");
+                    const video = e.currentTarget;
+                    video.play().catch(err => console.log("[ActiveCallScreen] play error:", err.message));
+                  }}
+                  onCanPlay={(e) => {
+                    console.log("[ActiveCallScreen] video canplay");
+                  }}
+                />
+              ) : (
+                <Box sx={{ textAlign: "center" }}>
+                  <AppAvatar name={userId} size={150} fontSize={60} />
+                  <Typography sx={{ color: "#fff", mt: 2, fontSize: 20 }}>
+                    {userId.slice(0, 8)}
+                  </Typography>
+                </Box>
+              )}
+            </Box>
+          ))}
+        </Box>
+      )}
+
+      <Controls>
+        <ControlButton onClick={() => setMuted(!isMuted)}>
+          {isMuted ? <MicOffIcon /> : <MicIcon />}
+        </ControlButton>
+
+        {isVideo && (
+          <ControlButton onClick={() => setCameraOff(!isCameraOff)}>
+            {isCameraOff ? <VideocamOffIcon /> : <VideocamIcon />}
+          </ControlButton>
+        )}
+
+        <EndButton onClick={handleEndCall}>
+          <CallEndIcon />
+        </EndButton>
+      </Controls>
+    </Container>
+  );
+}

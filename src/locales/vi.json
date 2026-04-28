@@ -379,5 +379,21 @@
   "LANDING.CONTACT": "Liên hệ",
   "LANDING.RECRUITMENT": "Tuyển dụng",
   "LANDING.ZALO_PC": "Zalo PC",
-  "LANDING.ZALO_WEB": "Zalo Web"
+  "LANDING.ZALO_WEB": "Zalo Web",
+
+  "// ============================== CALL ==============================": "",
+  "CALL.VIDEO_INCOMING": "Cuộc gọi video đến",
+  "CALL.AUDIO_INCOMING": "Cuộc gọi thoại đến",
+  "CALL.CALLING": "Đang gọi...",
+  "CALL.WAITING_FOR_ANSWER": "Đang chờ trả lời",
+  "CALL.CONNECTING": "Đang kết nối...",
+  "CALL.CONNECTED": "Đã kết nối",
+  "CALL.CALL_ENDED": "Cuộc gọi đã kết thúc",
+  "CALL.DURATION": "Thời lượng",
+  "CALL.MUTE": "Tắt mic",
+  "CALL.UNMUTE": "Bật mic",
+  "CALL.TURN_OFF_CAMERA": "Tắt camera",
+  "CALL.TURN_ON_CAMERA": "Bật camera",
+  "CALL.END_CALL": "Kết thúc",
+  "CALL.LEAVE_CALL": "Rời cuộc gọi"
 }
