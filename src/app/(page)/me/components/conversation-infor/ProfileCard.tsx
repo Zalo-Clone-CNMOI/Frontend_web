@@ -24,6 +24,7 @@ import CreateGroupModal from "../chat/CreateGroupModal";
 import { chatService } from "@/src/common/service/chat-service";
 import AppModal from "@/src/shared/component/AppModal";
 import { fetchListConversation } from "@/src/common/action/chat.action";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Card = styled(Box)({
   background: "#fff",
@@ -135,6 +136,7 @@ const ActionText = styled(Typography)({
 });
 
 export default function ProfileCard() {
+  const t = useTrans();
   const listConversation = useChatStore((s) => s.listConversation);
   const activeConversationId = useChatStore((s) => s.activeConversationId);
   const fetchConversationDetail = useChatStore((s) => s.fetchConversationDetail);
@@ -340,7 +342,7 @@ export default function ProfileCard() {
               </ActionIcon>
 
               <ActionText>
-                {isPinned ? "Bỏ ghim hội thoại" : "Ghim hội thoại"}
+                {isPinned ? t("COMMON.UNPIN_CHAT") : t("COMMON.PIN_CHAT")}
               </ActionText>
             </ActionItem>
 
@@ -348,7 +350,7 @@ export default function ProfileCard() {
               <ActionIcon onClick={handleOpenEditNickname}>
                 <EditOutlinedIcon sx={{ fontSize: 20 }} />
               </ActionIcon>
-              <ActionText>Đổi biệt danh</ActionText>
+              <ActionText>{t("CONVO.CHANGE_NICKNAME")}</ActionText>
             </ActionItem>
 
             {canEditGroup && (
@@ -357,7 +359,7 @@ export default function ProfileCard() {
                   <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
                 </ActionIcon>
                 <ActionText>
-                  {isGroup ? "Thêm thành viên" : "Tạo nhóm trò chuyện"}
+                  {isGroup ? t("CONVO.ADD_MEMBER") : t("CONVO.CREATE_GROUP_CHAT")}
                 </ActionText>
               </ActionItem>
             )}
@@ -385,7 +387,7 @@ export default function ProfileCard() {
         open={openEditGroupNameDialog}
         headerDivider
         onClose={() => setOpenEditGroupNameDialog(false)}
-        title="Cập nhật ảnh & tên nhóm"
+        title={t("CONVO.UPDATE_AVATAR_NAME")}
       >
         <Box sx={{ display: "flex", flexDirection: "column", gap: 2 }}>
           <Box sx={{ alignItems: "center", display: "flex", flexDirection: "column" }}>
@@ -410,7 +412,7 @@ export default function ProfileCard() {
             </EditAvatarWrap>
           </Box>
           <Typography sx={{ fontSize: 12.5, textAlign: "center" }}>
-            Bạn có chắc chắn muốn đổi tên nhóm, khi xác nhận tên nhóm mới sẽ hiển thị với tất cả thành viên.
+            {t("CONVO.UPDATE_NAME_CONFIRM")}
           </Typography>
 
           <GroupNameTextField
@@ -430,7 +432,7 @@ export default function ProfileCard() {
                 textTransform: "none",
               }}
             >
-              Hủy
+              {t("COMMON.BACK")}
             </Button>
 
             <Button
@@ -445,7 +447,7 @@ export default function ProfileCard() {
                 },
               }}
             >
-              Xác nhận
+              {t("CONVO.CONFIRM")}
             </Button>
 
           </Box>
@@ -481,7 +483,7 @@ export default function ProfileCard() {
                 textTransform: "none",
               }}
             >
-              Hủy
+              {t("COMMON.BACK")}
             </Button>
 
             <Button

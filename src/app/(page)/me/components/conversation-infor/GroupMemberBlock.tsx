@@ -4,6 +4,7 @@ import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import GroupOutlinedIcon from "@mui/icons-material/GroupOutlined";
 import KeyboardArrowDownRoundedIcon from "@mui/icons-material/KeyboardArrowDownRounded";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface GroupMemberBlockProps {
   memberCount: number;
@@ -46,16 +47,17 @@ export default function GroupMemberBlock({
   memberCount,
   onClick,
 }: GroupMemberBlockProps) {
+  const t = useTrans();
   return (
     <Root onClick={onClick}>
       <Header>
-        <Title>Thành viên nhóm</Title>
+        <Title>{t("CONVO.MEMBERS_GROUP")}</Title>
         <KeyboardArrowDownRoundedIcon />
       </Header>
 
       <Row>
         <GroupOutlinedIcon />
-        <Text>{memberCount} thành viên</Text>
+        <Text>{memberCount} {t("CONVO.MEMBERS")}</Text>
       </Row>
     </Root>
   );

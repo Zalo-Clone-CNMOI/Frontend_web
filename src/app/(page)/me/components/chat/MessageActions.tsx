@@ -6,6 +6,7 @@ import ReplyOutlinedIcon from "@mui/icons-material/ReplyOutlined";
 import DeleteOutlineIcon from "@mui/icons-material/DeleteOutline";
 import ForwardToInboxIcon from "@mui/icons-material/ForwardToInbox";
 import PushPinIcon from "@mui/icons-material/PushPin";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface MessageActionsProps {
   mine?: boolean;
@@ -46,10 +47,11 @@ export default function MessageActions({
   onForward,
   onTogglePin,
 }: MessageActionsProps) {
+  const t = useTrans();
   return (
     <ActionsWrap className="message-actions" mine={mine}>
       {canReply && (
-        <Tooltip title="Trả lời">
+        <Tooltip title={t("CHAT.ACTION_REPLY")}>
           <IconButton size="small" onClick={onReply}>
             <ReplyOutlinedIcon fontSize="small" />
           </IconButton>
@@ -57,7 +59,7 @@ export default function MessageActions({
       )}
 
       {canForward && (
-        <Tooltip title="Chuyển tiếp">
+        <Tooltip title={t("CHAT.ACTION_FORWARD")}>
           <IconButton size="small" onClick={onForward}>
             <ForwardToInboxIcon fontSize="small" />
           </IconButton>
@@ -65,7 +67,7 @@ export default function MessageActions({
       )}
 
       {canPin && (
-        <Tooltip title={isPinned ? "Bỏ ghim" : "Ghim tin nhắn"}>
+        <Tooltip title={isPinned ? t("CHAT.ACTION_UNPIN") : t("CHAT.ACTION_PIN")}>
           <IconButton size="small" onClick={onTogglePin}>
             <PushPinIcon fontSize="small" sx={{ color: isPinned ? "#005AE0" : "inherit" }} />
           </IconButton>
@@ -73,7 +75,7 @@ export default function MessageActions({
       )}
 
       {canDelete && (
-        <Tooltip title="Xóa tin nhắn">
+        <Tooltip title={t("CHAT.ACTION_DELETE")}>
           <IconButton size="small" onClick={onDelete}>
             <DeleteOutlineIcon fontSize="small" />
           </IconButton>

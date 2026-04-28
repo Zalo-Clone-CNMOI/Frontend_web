@@ -6,6 +6,7 @@ import CloseIcon from "@mui/icons-material/Close";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { getReplyPreview } from "@/src/common/helpers/displayPreviewReply";
 import { sanitizeInputText } from "@/src/common/helpers/chatInput.helpers";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface ComposerActionPreviewProps {
   replyMessage?: UiMessage | null;
@@ -67,6 +68,7 @@ export default function ComposerActionPreview({
   onCancelReply,
   onCancelEdit,
 }: ComposerActionPreviewProps) {
+  const t = useTrans();
   if (replyMessage && !editMessage) {
     const replyPreview = getReplyPreview(replyMessage);
 
@@ -74,7 +76,7 @@ export default function ComposerActionPreview({
       <ActionPreviewWrap>
         <ActionPreviewLeft>
           <ActionPreviewTitle sx={{ color: "#2563EB" }}>
-            Đang trả lời
+            {t("CHAT.REPLYING")}
           </ActionPreviewTitle>
 
           <ActionPreviewText>{replyPreview.text}</ActionPreviewText>
@@ -111,11 +113,11 @@ export default function ComposerActionPreview({
       <ActionPreviewWrap>
         <ActionPreviewLeft>
           <ActionPreviewTitle sx={{ color: "#D97706" }}>
-            Đang chỉnh sửa tin nhắn
+            {t("CHAT.EDITING_MESSAGE")}
           </ActionPreviewTitle>
 
           <ActionPreviewText>
-            {sanitizeInputText(editMessage.body) || "Tin nhắn"}
+            {sanitizeInputText(editMessage.body) || t("CHAT.MESSAGE")}
           </ActionPreviewText>
         </ActionPreviewLeft>
 

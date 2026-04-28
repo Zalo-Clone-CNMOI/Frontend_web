@@ -6,6 +6,7 @@ import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import SearchIcon from "@mui/icons-material/Search";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface ChatHeaderProps {
   title?: string;
@@ -81,6 +82,7 @@ export default function ChatHeader({
   conversationId,
   onToggleSearch,
 }: ChatHeaderProps) {
+  const t = useTrans();
   const listConversation = useChatStore((s) => s.listConversation);
   const conversationDetail = useChatStore(
     (s) => s.conversationDetailById?.[conversationId || ""] ?? null
@@ -102,19 +104,18 @@ export default function ChatHeader({
     ? currentConversation?.name ?? ""
     : otherMember?.nickname || otherMember?.fullName || currentConversation?.name || "";
 
-
   const otherUserId = !isGroup ? otherMember?.userId : null;
   const otherUserPresence = otherUserId ? presenceMap[otherUserId] : null;
 
   const getStatusText = () => {
     if (isGroup) {
-      return `${members.length} thành viên`;
+      return t("CHAT.MEMBER_COUNT").replace("{count}", String(members.length));
     }
 
     if (!otherUserPresence) return "";
 
-    if (otherUserPresence.status === "online") return "Đang hoạt động";
-    if (!otherUserPresence.last_seen_at) return "Offline";
+    if (otherUserPresence.status === "online") return t("CHAT.STATUS_ONLINE");
+    if (!otherUserPresence.last_seen_at) return t("CHAT.STATUS_OFFLINE");
 
     const now = Date.now();
     const diff = now - otherUserPresence.last_seen_at;
@@ -122,10 +123,10 @@ export default function ChatHeader({
     const hours = Math.floor(diff / 3600000);
     const days = Math.floor(diff / 86400000);
 
-    if (minutes < 1) return "Vừa truy cập";
-    if (minutes < 60) return `${minutes} phút trước`;
-    if (hours < 24) return `${hours} giờ trước`;
-    if (days < 7) return `${days} ngày trước`;
+    if (minutes < 1) return t("CHAT.STATUS_JUST_VIEWED");
+    if (minutes < 60) return t("CHAT.STATUS_MINUTES_AGO").replace("{count}", String(minutes));
+    if (hours < 24) return t("CHAT.STATUS_HOURS_AGO").replace("{count}", String(hours));
+    if (days < 7) return t("CHAT.STATUS_DAYS_AGO").replace("{count}", String(days));
     return new Date(otherUserPresence.last_seen_at).toLocaleDateString("vi-VN");
   };
 

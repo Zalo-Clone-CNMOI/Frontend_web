@@ -12,6 +12,7 @@ import { styled } from "@mui/material/styles";
 import EditOutlinedIcon from "@mui/icons-material/EditOutlined";
 import AppModal from "@/src/shared/component/AppModal";
 import { IUserSearchItem } from "@/src/common/interface/search-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface FriendRequestConfirmModalProps {
     open: boolean;
@@ -92,11 +93,12 @@ export default function FriendRequestConfirmModal({
     loading = false,
     onViewProfile,
 }: FriendRequestConfirmModalProps) {
+    const t = useTrans();
     return (
         <AppModal
             open={open}
             onClose={onClose}
-            title="Thông tin tài khoản"
+            title={t("PROFILE.TITLE")}
             maxWidth="xs"
             fullWidth
             headerDivider
@@ -116,7 +118,7 @@ export default function FriendRequestConfirmModal({
                         onClick={onConfirm}
                         disabled={!user || loading}
                     >
-                        Kết bạn
+                        {t("FRIEND.ACCEPT")}
                     </FooterButton>
                 </>
             }
@@ -145,7 +147,7 @@ export default function FriendRequestConfirmModal({
                             minRows={4}
                             value={message}
                             onChange={(e) => onChangeMessage(e.target.value.slice(0, 150))}
-                            helperText={`${message.length}/150 ký tự`}
+                            helperText={`${message.length}/150 ${t("COMMON.CHARACTERS") || "characters"}`}
                         />
                     </MessageWrap>
 

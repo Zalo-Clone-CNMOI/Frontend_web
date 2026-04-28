@@ -37,6 +37,7 @@ import CropDialog from "@/src/shared/component/CropDialog";
 import { Gender } from "@/src/common/interface/auth-interface";
 import AppModal from "@/src/shared/component/AppModal";
 import BorderColorOutlinedIcon from '@mui/icons-material/BorderColorOutlined';
+import { useTrans } from "@/src/common/utilities/hook/trans";
 const ProfileHeader = styled(Box)({
   display: "flex",
   alignItems: "center",
@@ -90,6 +91,7 @@ export default function ProfileModals({
   pendingOpenEdit,
   setPendingOpenEdit,
 }: ProfileModalsProps) {
+  const t = useTrans();
   const authData = useAuthStore((s) => s.authData);
   const setLoadingAuth = useAuthStore((s) => s.setLoadingAuth);
   const setErrorAuth = useAuthStore((s) => s.setErrorAuth);
@@ -127,7 +129,7 @@ export default function ProfileModals({
       const errors: Partial<Record<keyof IUpdateMyProfilePayload, string>> = {};
 
       if (!values.fullName?.trim()) {
-        errors.fullName = "Họ và tên không được để trống";
+        errors.fullName = t("PROFILE.FULL_NAME_REQUIRED");
       }
 
       return errors;
@@ -136,7 +138,7 @@ export default function ProfileModals({
       const userId = currentUser?.id;
 
       if (!userId) {
-        setErrorAuth("Không tìm thấy thông tin người dùng");
+        setErrorAuth(t("PROFILE.USER_NOT_FOUND"));
         return;
       }
 
@@ -206,7 +208,7 @@ export default function ProfileModals({
           error?.message ||
           error?.payload?.message ||
           error?.response?.data?.message ||
-          "Cập nhật hồ sơ thất bại"
+          t("PROFILE.UPDATE_FAILED")
         );
       } finally {
         setLoadingAuth(false);
@@ -251,7 +253,7 @@ export default function ProfileModals({
     }
 
     if (!file.type.startsWith("image/")) {
-      setErrorAuth("Vui lòng chọn file ảnh");
+      setErrorAuth(t("PROFILE.SELECT_IMAGE"));
       event.target.value = "";
       return;
     }
@@ -287,7 +289,7 @@ export default function ProfileModals({
       safeRevokeObjectUrl(selectedImageSrc);
       setSelectedImageSrc("");
     } catch (error: any) {
-      setErrorAuth(error?.message ?? "Không thể crop ảnh");
+      setErrorAuth(error?.message ?? t("PROFILE.CROP_ERROR"));
     }
   };
 
@@ -303,7 +305,7 @@ export default function ProfileModals({
       <AppModal
         open={openProfileModal}
         onClose={handleCloseProfileModal}
-        title="Thông tin tài khoản"
+        title={t("PROFILE.ACCOUNT_INFO")}
         maxWidth="xs"
         headerDivider
         slotProps={{
@@ -323,7 +325,7 @@ export default function ProfileModals({
               setOpenProfileModal(false);
             }}
           >
-            Cập nhật
+            {t("PROFILE.UPDATE")}
           </Button>
         }
       >
@@ -340,22 +342,20 @@ export default function ProfileModals({
             </Typography>
           </Box>
         </ProfileHeader>
-
-        {/* <Divider sx={{ mb: 2 }} /> */}
         <Stack gap="10px">
-          <Typography fontSize={16} fontWeight={600}>Thông tin cá nhân</Typography>
+          <Typography fontSize={16} fontWeight={600}>{t("PROFILE.TITLE")}</Typography>
           <Stack gap="10px">
-            {currentUser?.bio ? <InfoRow label="Bio" value={currentUser.bio} /> : null}
-            <InfoRow label="Giới tính" value={currentUser?.gender ?? ""} />
+            {currentUser?.bio ? <InfoRow label={t("PROFILE.BIO")} value={currentUser.bio} /> : null}
+            <InfoRow label={t("PROFILE.GENDER")} value={currentUser?.gender ?? ""} />
             <InfoRow
-              label="Ngày sinh"
+              label={t("PROFILE.DATE_OF_BIRTH")}
               value={
                 currentUser?.dateOfBirth
                   ? String(currentUser.dateOfBirth).slice(0, 10)
                   : ""
               }
             />
-            <InfoRow label="Điện thoại" value={currentUser?.phone ?? ""} />
+            <InfoRow label={t("PROFILE.PHONE")} value={currentUser?.phone ?? ""} />
           </Stack>
         </Stack>
 
@@ -366,7 +366,7 @@ export default function ProfileModals({
       <AppModal
         open={openEditProfileModal}
         onClose={handleCloseEditModal}
-        title="Chỉnh sửa thông tin"
+        title={t("PROFILE.EDIT_INFO")}
         maxWidth="xs"
         actions={
           <>
@@ -376,7 +376,7 @@ export default function ProfileModals({
               onClick={handleCloseEditModal}
               disabled={loadingAuth}
             >
-              Hủy
+              {t("COMMON.BACK")}
             </Button>
 
             <LoadingButton
@@ -389,7 +389,7 @@ export default function ProfileModals({
                 formik.submitForm();
               }}
             >
-              Lưu
+              {t("PROFILE.SAVE")}
             </LoadingButton>
           </>
         }
@@ -408,7 +408,7 @@ export default function ProfileModals({
                 {currentUser?.fullName ?? ""}
               </Typography>
               <Typography fontSize={13} color="text.secondary">
-                Nhấn vào ảnh để đổi avatar
+                {t("PROFILE.CHANGE_AVATAR_HINT")}
               </Typography>
             </Box>
 
@@ -426,7 +426,7 @@ export default function ProfileModals({
           <TextField
             fullWidth
             margin="dense"
-            label="Họ và tên"
+            label={t("PROFILE.FULL_NAME")}
             name="fullName"
             value={formik.values.fullName ?? ""}
             onChange={formik.handleChange}
@@ -438,7 +438,7 @@ export default function ProfileModals({
           <TextField
             fullWidth
             margin="dense"
-            label="Bio"
+            label={t("PROFILE.BIO")}
             name="bio"
             value={formik.values.bio ?? ""}
             onChange={formik.handleChange}
@@ -446,23 +446,23 @@ export default function ProfileModals({
           />
 
           <FormControl component="fieldset" margin="dense" sx={{ mt: 2 }}>
-            <FormLabel component="legend">Giới tính</FormLabel>
+            <FormLabel component="legend">{t("PROFILE.GENDER")}</FormLabel>
             <RadioGroup
               row
               name="gender"
               value={formik.values.gender ?? "other"}
               onChange={formik.handleChange}
             >
-              <FormControlLabel value="male" control={<Radio />} label="Nam" />
-              <FormControlLabel value="female" control={<Radio />} label="Nữ" />
-              <FormControlLabel value="other" control={<Radio />} label="Khác" />
+              <FormControlLabel value="male" control={<Radio />} label={t("PROFILE.GENDER_MALE")} />
+              <FormControlLabel value="female" control={<Radio />} label={t("PROFILE.GENDER_FEMALE")} />
+              <FormControlLabel value="other" control={<Radio />} label={t("PROFILE.GENDER_OTHER")} />
             </RadioGroup>
           </FormControl>
 
           <TextField
             fullWidth
             margin="dense"
-            label="Ngày sinh"
+            label={t("PROFILE.DATE_OF_BIRTH")}
             type="date"
             name="dateOfBirth"
             value={formik.values.dateOfBirth ?? ""}
@@ -474,7 +474,7 @@ export default function ProfileModals({
           <TextField
             fullWidth
             margin="dense"
-            label="Điện thoại"
+            label={t("PROFILE.PHONE")}
             value={currentUser?.phone ?? ""}
             disabled
           />

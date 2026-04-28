@@ -5,6 +5,7 @@ import {
     Box,
     Container,
     Grid,
+    IconButton,
     Link,
     Stack,
     Tab,
@@ -18,6 +19,8 @@ import TabPanel from "@mui/lab/TabPanel";
 import LanguageOutlinedIcon from "@mui/icons-material/LanguageOutlined";
 import HomeTab from "./components/HomeTab";
 import ProductTab from "./components/ProductTab";
+import { useTrans } from "@/src/common/utilities/hook/trans";
+import { useTranslation } from "react-i18next";
 
 export const HeaderLandingStyled = styled(Box)({
     minHeight: "10vh",
@@ -87,6 +90,14 @@ const ContainerLink = styled(Container)({
 
 const LandingPage = () => {
     const [tabs, setTabs] = React.useState("home");
+    const t = useTrans();
+    const { i18n } = useTranslation();
+
+    const handleLanguageToggle = () => {
+        const newLang = i18n.language === 'vi' ? 'en' : 'vi';
+        i18n.changeLanguage(newLang);
+        localStorage.setItem('language', newLang);
+    };
 
     const handleChangeTabs = (_event: React.SyntheticEvent, newTab: string) => {
         setTabs(newTab);
@@ -121,17 +132,19 @@ const LandingPage = () => {
                                 variant="scrollable"
                                 scrollButtons="auto"
                             >
-                                <Tab label="Trang chủ" value="home" />
-                                <Tab label="Sản phẩm & Dịch vụ" value="products" />
-                                <Tab label="AI & Công nghệ" value="ai" />
-                                <Tab label="Tác động xã hội & Trách nhiệm" value="impact" />
-                                <Tab label="Về chúng tôi" value="about" />
+                                <Tab label={t("LANDING.TAB_HOME")} value="home" />
+                                <Tab label={t("LANDING.TAB_PRODUCTS")} value="products" />
+                                <Tab label={t("LANDING.TAB_AI")} value="ai" />
+                                <Tab label={t("LANDING.TAB_IMPACT")} value="impact" />
+                                <Tab label={t("LANDING.TAB_ABOUT")} value="about" />
                             </TabLandingStyled>
 
                         </Box>
 
                         <BoxIcon>
-                            <LanguageOutlinedIcon />
+                            <IconButton onClick={handleLanguageToggle}>
+                                <LanguageOutlinedIcon />
+                            </IconButton>
                         </BoxIcon>
                     </HeaderLandingStyled>
 
@@ -166,74 +179,74 @@ const LandingPage = () => {
                                 height={50}
                             />
                             <Typography marginBottom="16px" variant="body1">
-                                VNG Campus, Phường Tân Thuận, TP.HCM
+                                {t("LANDING.FOOTER_ADDRESS")}
                             </Typography>
                         </StackAdress>
 
                         <Grid container spacing={3}>
                             <Grid size={4}>
                                 <Typography variant="h6" fontWeight={600} mb={2}>
-                                    Giải pháp
+                                    {t("LANDING.FOOTER_SOLUTIONS")}
                                 </Typography>
                                 <Stack spacing={2}>
                                     <LinkStyled href="#" variant="body1">
-                                        Zalo AI
+                                        {t("LANDING.ZALO_AI")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Giải pháp doanh nghiệp
+                                        {t("LANDING.BUSINESS_SOLUTION")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Chuyển đổi số
+                                        {t("LANDING.DIGITAL_TRANSFORMATION")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Adtima
+                                        {t("LANDING.ADTIMA")}
                                     </LinkStyled>
                                 </Stack>
                             </Grid>
 
                             <Grid size={4}>
                                 <Typography variant="h6" fontWeight={600} mb={2}>
-                                    Hỗ trợ & liên hệ
+                                    {t("LANDING.FOOTER_SUPPORT")}
                                 </Typography>
                                 <Stack spacing={2}>
                                     <LinkStyled href="#" variant="body1">
-                                        Hỗ trợ người dùng
+                                        {t("LANDING.USER_SUPPORT")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Hỗ trợ nhà phát triển
+                                        {t("LANDING.DEVELOPER_SUPPORT")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Bảo mật
+                                        {t("LANDING.SECURITY")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Báo cáo vi phạm
+                                        {t("LANDING.REPORT_VIOLATION")}
                                     </LinkStyled>
                                     <LinkStyled href="#" variant="body1">
-                                        Liên hệ
+                                        {t("LANDING.CONTACT")}
                                     </LinkStyled>
                                 </Stack>
                             </Grid>
 
                             <Grid size={4}>
                                 <Typography variant="h6" fontWeight={600} mb={2}>
-                                    Zalo
+                                    {t("LANDING.FOOTER_ZALO")}
                                 </Typography>
 
                                 <Stack spacing={2}>
                                     <LinkStyled href="#" variant="body1">
-                                        Tuyển dụng
+                                        {t("LANDING.RECRUITMENT")}
                                     </LinkStyled>
 
                                     <Typography variant="h6" fontWeight={600} mb={2} mt={1}>
-                                        Tải xuống
+                                        {t("LANDING.FOOTER_DOWNLOAD")}
                                     </Typography>
 
                                     <Stack spacing={2}>
                                         <LinkStyled href="#" variant="body1">
-                                            Zalo PC
+                                            {t("LANDING.ZALO_PC")}
                                         </LinkStyled>
                                         <LinkStyled href="#" variant="body1">
-                                            Zalo Web
+                                            {t("LANDING.ZALO_WEB")}
                                         </LinkStyled>
                                     </Stack>
                                 </Stack>

@@ -19,6 +19,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import PersonRemoveOutlinedIcon from "@mui/icons-material/PersonRemoveOutlined";
 
 import { useFriendStore } from "@/src/common/store/useFriendStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Root = styled(Box)({
   height: "100%",
@@ -82,16 +83,15 @@ function normalizeText(value?: string | null) {
 }
 
 export default function FriendList() {
+  const t = useTrans();
   const [keyword, setKeyword] = useState("");
   const [actionKey, setActionKey] = useState<string | null>(null);
 
-  const {
-    friends,
-    loadingFriends,
-    error,
-    fetchFriends,
-    removeFriend,
-  } = useFriendStore();
+  const friends = useFriendStore((s) => s.friends);
+  const fetchFriends = useFriendStore((s) => s.fetchFriends);
+  const removeFriend = useFriendStore((s) => s.removeFriend);
+  const loadingFriends = useFriendStore((s) => s.loadingFriends);
+  const error = useFriendStore((s) => s.error);
 
   useEffect(() => {
     void fetchFriends();
@@ -122,11 +122,11 @@ export default function FriendList() {
   return (
     <Root>
       <Header>
-        <HeaderTitle>Danh sách bạn bè</HeaderTitle>
+        <HeaderTitle>{t("FRIEND.LIST_TITLE")}</HeaderTitle>
       </Header>
 
       <Content>
-        <SectionTitle>Bạn bè ({friends.length})</SectionTitle>
+        <SectionTitle>{t("FRIEND.SECTION_TITLE").replace("{count}", String(friends.length))}</SectionTitle>
 
         <FilterWrap>
           <TextField
@@ -151,13 +151,13 @@ export default function FriendList() {
           <EmptyWrap>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CircularProgress size={22} />
-              <Typography>Đang tải danh sách bạn bè...</Typography>
+              <Typography>{t("FRIEND.LOADING")}</Typography>
             </Stack>
           </EmptyWrap>
         ) : filteredFriends.length === 0 ? (
           <ListCard>
             <EmptyWrap>
-              <Typography>Không có bạn bè nào phù hợp.</Typography>
+              <Typography>{t("FRIEND.NO_FRIENDS")}</Typography>
             </EmptyWrap>
           </ListCard>
         ) : (
@@ -196,22 +196,20 @@ export default function FriendList() {
                       </Typography>
 
                       <Typography sx={{ fontSize: 13, color: "#64748B", mt: 0.5 }}>
-                        {friend.phone || friend.bio || "Bạn bè trong hệ thống"}
+                        {friend.phone || friend.bio || t("FRIEND.IN_SYSTEM")}
                       </Typography>
                     </Box>
                   </Stack>
 
                   <Button
-                  sx={{
-                    fontSize: 13,
-                    fontWeight: 600,
-                    color:"#FFFFFF",
-                    backgroundColor:"#D50000",
-                    textTransform: "none",
-                    padding: "6px 16px",
-                  }}
-                    // variant="outlined"
-                    // color="error"
+                    sx={{
+                      fontSize: 13,
+                      fontWeight: 600,
+                      color: "#FFFFFF",
+                      backgroundColor: "#D50000",
+                      textTransform: "none",
+                      padding: "6px 16px",
+                    }}
                     startIcon={
                       removing ? (
                         <CircularProgress  />
@@ -222,7 +220,7 @@ export default function FriendList() {
                     disabled={removing}
                     onClick={() => handleRemoveFriend(friend.id)}
                   >
-                    Hủy kết bạn
+                    {t("FRIEND.REJECT")}
                   </Button>
                 </CardContent>
               );

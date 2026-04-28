@@ -16,6 +16,7 @@ import { uploadManyChatMedia } from "@/src/common/service/chat-media-service";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useTypingIndicator } from "@/src/common/hooks/useTypingIndicator";
 import { getSocket } from "@/src/common/socket/socket";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 import ComposerToolbar from "./ComposerToolbar";
 import { buildChatAttachmentPayload, sanitizeInputText } from "@/src/common/helpers/chatInput.helpers";
@@ -130,6 +131,7 @@ export default function ChatInput({
   onSend,
   onEdit,
 }: ChatInputProps) {
+  const t = useTrans();
   const [value, setValue] = useState("");
   const [openEmoji, setOpenEmoji] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<
@@ -308,7 +310,7 @@ export default function ChatInput({
             multiline
             minRows={1}
             maxRows={1}
-            placeholder="Nhập tin nhắn..."
+            placeholder={t("CHAT.PLACEHOLDER")}
             value={value}
             onChange={handleInputChange}
             onKeyDown={handleKeyDown}

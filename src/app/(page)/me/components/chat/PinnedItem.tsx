@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface PinnedItemProps {
   message: UiMessage;
@@ -97,13 +98,14 @@ export default function PinnedItem({
   onUnpin,
   onMenu,
 }: PinnedItemProps) {
+  const t = useTrans();
   const messageText = message.body || "";
   const hasAttachments = message.attachments && message.attachments.length > 0;
 
   let previewText = messageText;
   if (!previewText) {
-    if (hasAttachments) previewText = "📎 Tệp";
-    else previewText = "Tin nhắn";
+    if (hasAttachments) previewText = t("CHAT.FILE_ATTACHMENT");
+    else previewText = t("CHAT.MESSAGE");
   }
 
   const truncatedText =
@@ -112,8 +114,8 @@ export default function PinnedItem({
   // Get sender name from members
   const sender = members?.find((m) => m.userId === message.senderId);
   const senderName = message.senderId === currentUserId
-    ? "Bạn"
-    : (sender?.nickname || sender?.fullName || "Người dùng");
+    ? t("CHAT.YOU")
+    : (sender?.nickname || sender?.fullName || t("CHAT.USER"));
 
   return (
     <Container onClick={onPress}>
@@ -121,7 +123,7 @@ export default function PinnedItem({
         <MessageIcon>
           <PushPinIcon sx={{ fontSize: 14 }} />
         </MessageIcon>
-        <Label>Tin nhắn</Label>
+        <Label>{t("CHAT.MESSAGE")}</Label>
         <Content>
           <SenderName>{senderName}:</SenderName>
           <MessagePreview>{truncatedText}</MessagePreview>

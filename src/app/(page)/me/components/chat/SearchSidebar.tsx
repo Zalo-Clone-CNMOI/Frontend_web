@@ -9,6 +9,7 @@ import KeyboardArrowDownIcon from "@mui/icons-material/KeyboardArrowDown";
 import { chatService } from "@/src/common/service/chat-service";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface SearchSidebarProps {
   conversationId: string;
@@ -196,6 +197,7 @@ const ResultCount = styled(Typography)(({ theme }) => ({
 }));
 
 export default function SearchSidebar({ conversationId, onClose, onMessageClick }: SearchSidebarProps) {
+  const t = useTrans();
   const [searchQuery, setSearchQuery] = useState("");
   const [searchResults, setSearchResults] = useState<UiMessage[]>([]);
   const [totalResults, setTotalResults] = useState(0);
@@ -301,7 +303,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
 
   const getSenderName = (senderId: string) => {
     const member = members.find((m) => m.userId === senderId);
-    return member?.nickname || member?.fullName || "Người dùng";
+    return member?.nickname || member?.fullName || t("CHAT.USER");
   };
 
   const getSenderAvatar = (senderId: string): string | undefined => {
@@ -326,7 +328,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
   return (
     <Root>
       <Header>
-        <HeaderTitle>Tìm kiếm trong trò chuyện</HeaderTitle>
+        <HeaderTitle>{t("SEARCH.TITLE")}</HeaderTitle>
         <IconButton onClick={onClose} sx={{ color: "text.secondary" }}>
           <CloseIcon />
         </IconButton>
@@ -338,7 +340,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
             <SearchIcon />
           </SearchIconWrapper>
           <SearchInput
-            placeholder="Nhập từ khóa để tìm kiếm"
+            placeholder={t("SEARCH.PLACEHOLDER")}
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
             fullWidth
@@ -347,11 +349,11 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
         </Box>
 
         <FilterBar>
-          <FilterLabel>Lọc theo:</FilterLabel>
+          <FilterLabel>{t("SEARCH.FILTER_BY")}</FilterLabel>
           <FilterChip
             label={
               <Box sx={{ display: "flex", alignItems: "center", gap: 4 }}>
-                Người gửi
+                {t("SEARCH.FILTER_SENDER")}
                 <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
               </Box>
             }
@@ -361,7 +363,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
           <FilterChip
             label={
               <Box sx={{ display: "flex", alignItems: "center", gap: 4 }}>
-                Ngày gửi
+                {t("SEARCH.FILTER_DATE")}
                 <KeyboardArrowDownIcon sx={{ fontSize: 16 }} />
               </Box>
             }
@@ -388,7 +390,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
             onClick={() => handleSenderSelect("")}
             sx={{ color: "text.primary", "&:hover": { backgroundColor: "action.hover" } }}
           >
-            Tất cả
+            {t("SEARCH.ALL")}
           </MenuItem>
           {members.map((member) => (
             <MenuItem
@@ -419,28 +421,28 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
             onClick={() => handleDateSelect("")}
             sx={{ color: "text.primary", "&:hover": { backgroundColor: "action.hover" } }}
           >
-            Tất cả
+            {t("SEARCH.ALL")}
           </MenuItem>
           <MenuItem
             onClick={() => handleDateSelect("today")}
             sx={{ color: "text.primary", "&:hover": { backgroundColor: "action.hover" } }}
             selected={dateFilter === "today"}
           >
-            Hôm nay
+            {t("SEARCH.TODAY")}
           </MenuItem>
           <MenuItem
             onClick={() => handleDateSelect("week")}
             sx={{ color: "text.primary", "&:hover": { backgroundColor: "action.hover" } }}
             selected={dateFilter === "week"}
           >
-            7 ngày qua
+            {t("SEARCH.LAST_7_DAYS")}
           </MenuItem>
           <MenuItem
             onClick={() => handleDateSelect("month")}
             sx={{ color: "text.primary", "&:hover": { backgroundColor: "action.hover" } }}
             selected={dateFilter === "month"}
           >
-            30 ngày qua
+            {t("SEARCH.LAST_30_DAYS")}
           </MenuItem>
         </Menu>
 
@@ -448,20 +450,20 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
           <EmptyState>
             <EmptyIcon>🔍</EmptyIcon>
             <EmptyText>
-              Hãy nhập từ khóa để bắt đầu tìm kiếm tin nhắn và file trong trò chuyện
+              {t("SEARCH.EMPTY_HINT")}
             </EmptyText>
           </EmptyState>
         ) : loading ? (
           <EmptyState>
-            <EmptyText>Đang tìm kiếm...</EmptyText>
+            <EmptyText>{t("SEARCH.LOADING")}</EmptyText>
           </EmptyState>
         ) : searchResults.length === 0 ? (
           <EmptyState>
-            <EmptyText>Không tìm thấy kết quả nào</EmptyText>
+            <EmptyText>{t("SEARCH.NO_RESULTS")}</EmptyText>
           </EmptyState>
         ) : (
           <Box>
-            <ResultCount>Tìm thấy {totalResults} kết quả</ResultCount>
+            <ResultCount>{t("SEARCH.RESULTS_COUNT").replace("{count}", String(totalResults))}</ResultCount>
             {searchResults.map((message) => (
               <ResultItem key={message.messageId} onClick={() => handleResultClick(message)}>
                 <ResultAvatar src={getSenderAvatar(message.senderId)} alt={getSenderName(message.senderId)}>
@@ -470,7 +472,7 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
                 <ResultContentWrapper>
                   <ResultSender>{getSenderName(message.senderId)}</ResultSender>
                   <ResultContent>
-                    {message.body ? highlightKeyword(message.body, searchQuery) : "[Tệp đính kèm]"}
+                    {message.body ? highlightKeyword(message.body, searchQuery) : t("CHAT.FILE_ATTACHMENT_ALT")}
                   </ResultContent>
                   <ResultTime>{formatTime(message.createdAt)}</ResultTime>
                 </ResultContentWrapper>

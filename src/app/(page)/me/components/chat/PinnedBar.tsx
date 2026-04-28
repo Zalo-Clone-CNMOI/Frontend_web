@@ -6,6 +6,7 @@ import PushPinIcon from "@mui/icons-material/PushPin";
 import ExpandMoreIcon from "@mui/icons-material/ExpandMore";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { UiMessage } from "@/src/common/interface/chat-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface PinnedBarProps {
   message: UiMessage;
@@ -115,19 +116,20 @@ export default function PinnedBar({
   onExpand,
   onMenuClick,
 }: PinnedBarProps) {
+  const t = useTrans();
   const messageText = message.body || "";
   const hasAttachments = message.attachments && message.attachments.length > 0;
 
   let previewText = messageText;
   if (!previewText) {
-    if (hasAttachments) previewText = "📎 Tệp";
-    else previewText = "Tin nhắn";
+    if (hasAttachments) previewText = t("CHAT.FILE_ATTACHMENT");
+    else previewText = t("CHAT.MESSAGE");
   }
 
   const truncatedText =
     previewText.length > 40 ? previewText.substring(0, 40) + "..." : previewText;
 
-  const senderName = "Bạn"; // TODO: Get actual sender name from conversation members
+  const senderName = t("CHAT.YOU"); // TODO: Get actual sender name from conversation members
 
   return (
     <Container onClick={onExpand}>
@@ -135,7 +137,7 @@ export default function PinnedBar({
         <MessageIcon>
           <PushPinIcon sx={{ fontSize: 16 }} />
         </MessageIcon>
-        <Label>Tin nhắn</Label>
+        <Label>{t("CHAT.MESSAGE")}</Label>
         <Content>
           <SenderName>{senderName}:</SenderName>
           <MessagePreview>{truncatedText}</MessagePreview>
@@ -144,7 +146,7 @@ export default function PinnedBar({
       <RightSection>
         {totalCount > 1 && (
           <CountBadge onClick={(e) => { e.stopPropagation(); onExpand(); }}>
-            <CountText>+{totalCount} ghim</CountText>
+            <CountText>{t("CHAT.PIN_COUNT").replace("{count}", String(totalCount))}</CountText>
             <ExpandMoreIcon sx={{ fontSize: 16, color: "#fff" }} />
           </CountBadge>
         )}

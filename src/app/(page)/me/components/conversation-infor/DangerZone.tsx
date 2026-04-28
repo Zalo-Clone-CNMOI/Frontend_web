@@ -10,6 +10,7 @@ import CancelPresentationOutlinedIcon from "@mui/icons-material/CancelPresentati
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { groupService } from "@/src/common/service/group-service";
 import AppModal from "@/src/shared/component/AppModal";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Card = styled(Box)({
   background: "#fff",
@@ -32,6 +33,7 @@ const DangerRow = styled(Box, {
 }));
 
 export default function DangerZone() {
+  const t = useTrans();
   const conversationId = useChatStore((s) => s.activeConversationId);
   const currentUserId = useChatStore((s) => s.currentUserId);
   const conversationDetail = useChatStore(
@@ -64,7 +66,7 @@ export default function DangerZone() {
       setActiveConversationId(null);
       setOpenLeaveGroupModal(false);
     } catch (error) {
-      console.error("Rời nhóm thất bại", error);
+      console.error(t("CONVO.LEAVE_FAILED"), error);
     } finally {
       setLeaving(false);
     }
@@ -81,7 +83,7 @@ export default function DangerZone() {
       setActiveConversationId(null);
       setOpenDisbandGroupModal(false);
     } catch (error) {
-      console.error("Giải tán nhóm thất bại", error);
+      console.error(t("CONVO.DISBAND_FAILED"), error);
     } finally {
       setDisbanding(false);
     }
@@ -92,27 +94,27 @@ export default function DangerZone() {
       <Card>
         <DangerRow>
           <ReportGmailerrorredRoundedIcon />
-          <Typography fontSize={15}>Báo xấu</Typography>
+          <Typography fontSize={15}>{t("CONVO.REPORT")}</Typography>
         </DangerRow>
 
         <Divider />
 
         <DangerRow danger>
           <DeleteOutlineRoundedIcon />
-          <Typography fontSize={15}>Xoá lịch sử trò chuyện</Typography>
+          <Typography fontSize={15}>{t("CONVO.DELETE_HISTORY")}</Typography>
         </DangerRow>
 
         {isGroup && (
           <Stack>
             <DangerRow danger onClick={() => setOpenLeaveGroupModal(true)}>
               <LogoutOutlinedIcon />
-              <Typography fontSize={15}>Rời nhóm</Typography>
+              <Typography fontSize={15}>{t("CONVO.LEAVE")}</Typography>
             </DangerRow>
 
             {isOwner && (
               <DangerRow danger onClick={() => setOpenDisbandGroupModal(true)}>
                 <CancelPresentationOutlinedIcon />
-                <Typography fontSize={15}>Giải tán nhóm</Typography>
+                <Typography fontSize={15}>{t("CONVO.DISBAND")}</Typography>
               </DangerRow>
             )}
           </Stack>
@@ -125,7 +127,7 @@ export default function DangerZone() {
           if (leaving) return;
           setOpenLeaveGroupModal(false);
         }}
-        title={isOwner ? "Rời nhóm và chuyển quyền sở hữu" : "Rời nhóm và xóa cuộc trò chuyện"}
+        title={isOwner ? t("CONVO.LEAVE_TITLE_OWNER") : t("CONVO.LEAVE_TITLE_MEMBER")}
         headerDivider
         actions={
           <>
@@ -134,7 +136,7 @@ export default function DangerZone() {
               disabled={leaving}
               color="inherit"
             >
-              Hủy
+              {t("COMMON.BACK")}
             </Button>
             <Button
               color="error"
@@ -142,15 +144,15 @@ export default function DangerZone() {
               onClick={handleOutGroup}
               disabled={leaving}
             >
-              Xác nhận
+              {t("CONVO.CONFIRM")}
             </Button>
           </>
         }
       >
         <Typography fontSize={14}>
           {isOwner
-            ? "Bạn sẽ chuyển quyền sở hữu cho một thành viên khác khi rời khỏi nhóm. Bạn sẽ không thể xem lại tin nhắn này."
-            : "Bạn sẽ không thể xem lại tin nhắn này sau khi rời khỏi nhóm."}
+            ? t("CONVO.LEAVE_DESC_OWNER")
+            : t("CONVO.LEAVE_DESC_MEMBER")}
         </Typography>
       </AppModal>
 
@@ -160,7 +162,7 @@ export default function DangerZone() {
           if (disbanding) return;
           setOpenDisbandGroupModal(false);
         }}
-        title="Giải tán nhóm"
+        title={t("CONVO.DISBAND")}
         headerDivider
         actions={
           <>
@@ -169,7 +171,7 @@ export default function DangerZone() {
               disabled={disbanding}
               color="inherit"
             >
-              Hủy
+              {t("COMMON.BACK")}
             </Button>
             <Button
               color="error"
@@ -177,13 +179,13 @@ export default function DangerZone() {
               onClick={handleDisbandGroup}
               disabled={disbanding}
             >
-              Xác nhận
+              {t("CONVO.CONFIRM")}
             </Button>
           </>
         }
       >
         <Typography fontSize={14}>
-          Nhóm sẽ bị giải tán và các thành viên sẽ không thể tiếp tục sử dụng nhóm này.
+          {t("CONVO.DISBAND_DESC")}
         </Typography>
       </AppModal>
     </>

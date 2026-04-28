@@ -17,6 +17,7 @@ import { styled } from "@mui/material/styles";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import ForwardToInboxOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Root = styled(Box)({
   height: "100%",
@@ -70,6 +71,7 @@ function formatDate(value?: string) {
 }
 
 export default function SentFriendRequestList() {
+  const t = useTrans();
   const [actionKey, setActionKey] = useState<string | null>(null);
 
   const {
@@ -98,11 +100,11 @@ export default function SentFriendRequestList() {
   return (
     <Root>
       <Header> <ForwardToInboxOutlinedIcon/>
-        <HeaderTitle>Lời mời đã gửi</HeaderTitle>
+        <HeaderTitle>{t("FRIEND.SENT_TITLE")}</HeaderTitle>
       </Header>
 
       <Content>
-        <SectionTitle>Lời mời đã gửi ({sentRequests.length})</SectionTitle>
+        <SectionTitle>{t("FRIEND.SENT_SECTION").replace("{count}", String(sentRequests.length))}</SectionTitle>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
 
@@ -110,13 +112,13 @@ export default function SentFriendRequestList() {
           <EmptyWrap>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CircularProgress size={22} />
-              <Typography>Đang tải lời mời đã gửi...</Typography>
+              <Typography>{t("FRIEND.SENT_LOADING")}</Typography>
             </Stack>
           </EmptyWrap>
         ) : sentRequests.length === 0 ? (
           <Card sx={{ borderRadius: 3, border: "1px solid #E5E7EB", boxShadow: "none" }}>
             <EmptyWrap>
-              <Typography>Bạn chưa gửi lời mời kết bạn nào.</Typography>
+              <Typography>{t("FRIEND.NO_SENT")}</Typography>
             </EmptyWrap>
           </Card>
         ) : (
@@ -194,7 +196,7 @@ export default function SentFriendRequestList() {
                       disabled={cancelling}
                       onClick={() => handleCancel(request.id)}
                     >
-                      Hủy lời mời
+                      {t("FRIEND.CANCEL_REQUEST")}
                     </Button>
                   </CardContent>
                 </Card>

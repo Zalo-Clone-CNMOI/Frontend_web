@@ -4,6 +4,8 @@ import { useEffect, useState } from "react";
 import { Box, Button, Grid, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
+import { fetchListConversation } from "@/src/common/action/chat.action";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { AttachmentDto, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import DangerZone from "./DangerZone";
@@ -57,6 +59,7 @@ const HeaderTitle = styled(Typography)({
 export default function InfConvColumn({
   conversationId,
 }: InfConvColumnProps) {
+  const t = useTrans();
   const [mounted, setMounted] = useState(false);
   const [view, setView] = useState<"overview" | "members">("overview");
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
@@ -125,7 +128,7 @@ export default function InfConvColumn({
     return (
       <Root>
         <Header>
-          <HeaderTitle>Thông tin hội thoại</HeaderTitle>
+          <HeaderTitle>{t("COMMON.CONVO_INFO_CHAT")}</HeaderTitle>
         </Header>
       </Root>
     );
@@ -136,7 +139,7 @@ export default function InfConvColumn({
       {view === "overview" ? (
         <>
           <Header>
-            <HeaderTitle>{isGroup ? "Thông tin nhóm" : "Thông tin hội thoại"}</HeaderTitle>
+            <HeaderTitle>{isGroup ? t("COMMON.CONVO_INFO_GROUP") : t("COMMON.CONVO_INFO_CHAT")}</HeaderTitle>
           </Header>
 
           <ProfileCard />
@@ -185,23 +188,19 @@ export default function InfConvColumn({
       <AppModal
         open={openConfirmRemove}
         onClose={() => setOpenConfirmRemove(false)}
-        title="Xóa thành viên"
+        title={t("CONVO.DELETE_MEMBER")}
         headerDivider
         actions={
           <>
-            <Button onClick={() => setOpenConfirmRemove(false)}>Hủy</Button>
+            <Button onClick={() => setOpenConfirmRemove(false)}>{t("COMMON.BACK")}</Button>
             <Button color="error" variant="contained" onClick={handleConfirmRemove}>
-              Xóa
+              {t("CONVO.DELETE_MEMBER")}
             </Button>
           </>
         }
       >
         <Typography>
-          Bạn có chắc muốn xóa{" "}
-          <Box component="span" fontWeight={600}>
-            {selectedMember?.nickname || selectedMember?.fullName}
-          </Box>{" "}
-          khỏi nhóm không?
+          {t("CONVO.REMOVE_MEMBER_CONFIRM").replace("{name}", selectedMember?.nickname || selectedMember?.fullName || "")}
         </Typography>
       </AppModal>
 

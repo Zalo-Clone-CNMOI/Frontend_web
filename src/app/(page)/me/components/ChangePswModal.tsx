@@ -24,6 +24,7 @@ import {
 } from "./validate/validateResetPsw";
 import { auth } from "@/src/common/firebase/firebase";
 import React from "react";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface ChangePasswordModalProps {
   open: boolean;
@@ -34,6 +35,7 @@ export default function ChangePasswordModal({
   open,
   onClose,
 }: ChangePasswordModalProps) {
+  const t = useTrans();
   const [submitError, setSubmitError] = useState("");
   const [submitSuccess, setSubmitSuccess] = useState("");
 
@@ -76,7 +78,7 @@ export default function ChangePasswordModal({
           justifyContent: "space-between",
         }}
       >
-        Đổi mật khẩu
+        {t("COMMON.CHANGE_PASSWORD_TITLE")}
         <IconButton onClick={handleClose} size="small">
           <CloseIcon fontSize="small" />
         </IconButton>
@@ -98,7 +100,7 @@ export default function ChangePasswordModal({
               const user = auth.currentUser;
 
               if (!user) {
-                setSubmitError("Không tìm thấy thông tin tài khoản.");
+                setSubmitError(t("COMMON.USER_NOT_FOUND") + ".");
                 return;
               }
 
@@ -120,10 +122,10 @@ export default function ChangePasswordModal({
                 error?.message ||
                 error?.payload?.message ||
                 error?.response?.data?.message ||
-                "Đổi mật khẩu thất bại.";
+                t("COMMON.CHANGE_PASSWORD_FAILED");
 
               if (code === "auth/requires-recent-login") {
-                setSubmitError("Phiên đăng nhập đã cũ. Vui lòng đăng nhập lại để tiếp tục.");
+                setSubmitError(t("COMMON.SESSION_EXPIRED"));
               } else {
                 setSubmitError(String(message));
               }
@@ -147,13 +149,13 @@ export default function ChangePasswordModal({
             return (
               <Form>
                 <Typography fontSize="13px" color="text.secondary" mb={2}>
-                  Nhập mật khẩu mới để cập nhật.
+                  {t("COMMON.CHANGE_PASSWORD_HINT")}
                 </Typography>
 
                 <TextField
                   fullWidth
                   margin="dense"
-                  label="Mật khẩu mới"
+                  label={t("COMMON.NEW_PASSWORD")}
                   name="newPassword"
                   value={values.newPassword}
                   onChange={handleChange}
@@ -168,7 +170,7 @@ export default function ChangePasswordModal({
                 <TextField
                   fullWidth
                   margin="dense"
-                  label="Nhập lại mật khẩu mới"
+                  label={t("COMMON.CONFIRM_NEW_PASSWORD")}
                   name="confirmNewPassword"
                   value={values.confirmNewPassword}
                   onChange={handleChange}
@@ -194,7 +196,7 @@ export default function ChangePasswordModal({
 
                 <Box display="flex" gap={1} mt={2}>
                   <Button fullWidth variant="outlined" onClick={handleClose}>
-                    Hủy
+                    {t("COMMON.BACK")}
                   </Button>
 
                   <Button
@@ -203,7 +205,7 @@ export default function ChangePasswordModal({
                     variant="contained"
                     disabled={!canSubmit || isSubmitting}
                   >
-                    {isSubmitting ? "Đang xác nhận..." : "Xác nhận"}
+                    {isSubmitting ? t("COMMON.CONFIRMING") : t("CONVO.CONFIRM")}
                   </Button>
                 </Box>
               </Form>
@@ -224,7 +226,7 @@ export default function ChangePasswordModal({
     variant="filled"
     sx={{ width: "100%" }}
   >
-    Đổi mật khẩu thành công.
+    {t("COMMON.CHANGE_PASSWORD_SUCCESS")}
   </Alert>
 </Snackbar>
 </React.Fragment>

@@ -17,6 +17,7 @@ import { styled } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
 
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Root = styled(Box)({
   height: "100%",
@@ -74,10 +75,6 @@ function normalizeText(value?: string | null) {
   return (value || "").trim().toLowerCase();
 }
 
-function getConversationName(item: any) {
-  return item?.name || item?.title || item?.conversationName || "Nhóm không tên";
-}
-
 function getConversationAvatar(item: any) {
   return item?.avatarUrl || item?.avatar || item?.imageUrl || null;
 }
@@ -107,11 +104,16 @@ function isGroupConversation(item: any) {
 }
 
 export default function GroupList() {
+  const t = useTrans();
   const [keyword, setKeyword] = useState("");
 
   const listConversation = useChatStore((s) => s.listConversation);
   const conversationLoading = useChatStore((s) => s.conversationLoading);
   const fetchListConversation = useChatStore((s) => s.fetchListConversation);
+
+  const getConversationName = (item: any) => {
+    return item?.name || item?.title || item?.conversationName || t("FRIEND.GROUP_NO_NAME");
+  };
 
   useEffect(() => {
     void fetchListConversation({ page: 1, limit: 100 });
@@ -135,17 +137,17 @@ export default function GroupList() {
     <Root>
       <Header>
         <GroupsOutlinedIcon/>
-        <HeaderTitle>Danh sách nhóm và cộng đồng</HeaderTitle>
+        <HeaderTitle>{t("FRIEND.GROUP_TITLE")}</HeaderTitle>
       </Header>
 
       <Content>
-        <SectionTitle>Nhóm ({groups.length})</SectionTitle>
+        <SectionTitle>{t("FRIEND.GROUP_SECTION").replace("{count}", String(groups.length))}</SectionTitle>
 
         <FilterWrap>
           <TextField
             fullWidth
             size="small"
-            placeholder="Tìm nhóm"
+            placeholder={t("FRIEND.SEARCH_GROUP")}
             value={keyword}
             onChange={(e) => setKeyword(e.target.value)}
             InputProps={{
@@ -162,13 +164,13 @@ export default function GroupList() {
           <EmptyWrap>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CircularProgress size={22} />
-              <Typography>Đang tải danh sách nhóm...</Typography>
+              <Typography>{t("FRIEND.GROUP_LOADING")}</Typography>
             </Stack>
           </EmptyWrap>
         ) : filteredGroups.length === 0 ? (
           <Card sx={{ borderRadius: 3, border: "1px solid #E5E7EB", boxShadow: "none" }}>
             <EmptyWrap>
-              <Typography>Chưa có nhóm nào để hiển thị.</Typography>
+              <Typography>{t("FRIEND.NO_GROUPS")}</Typography>
             </EmptyWrap>
           </Card>
         ) : (
@@ -200,7 +202,7 @@ export default function GroupList() {
                   </Typography>
 
                   <Typography sx={{ fontSize: 13, color: "#64748B", mt: 0.5 }}>
-                    {getConversationMemberCount(group)} thành viên
+                    {getConversationMemberCount(group)} {t("CONVO.MEMBERS")}
                   </Typography>
 
                   <Typography sx={{ fontSize: 13, color: "#475569", mt: 1 }}>
