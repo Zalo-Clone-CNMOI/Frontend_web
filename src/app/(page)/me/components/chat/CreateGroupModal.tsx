@@ -27,6 +27,7 @@ import { CheckedIcon, RemoveSelectedButton, StyledCheckbox, StyledCheckIcon, Unc
 import { useFormik } from "formik";
 import { createGroupValidationSchema, initialValues } from "./validation/validateCreateGroup";
 import { uploadMedia } from "@/src/common/service/media-service";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface CreateGroupModalProps {
   open: boolean;
@@ -77,10 +78,9 @@ const GroupAvatarUpload = styled(Box)({
   flexShrink: 0,
   position: "relative",
 });
-export default function CreateGroupModal({
-  open,
-  onClose,
-}: CreateGroupModalProps) {
+
+export default function CreateGroupModal({ open, onClose }: CreateGroupModalProps) {
+  const t = useTrans();
   const friends = useFriendStore((s) => s.friends);
   const fetchFriends = useFriendStore((s) => s.fetchFriends);
 
@@ -121,7 +121,7 @@ export default function CreateGroupModal({
         );
 
         const newConversation = res?.payload?.data;
-        if (!newConversation) throw new Error("Không tạo được nhóm");
+        if (!newConversation) throw new Error(t("GROUP.CREATE_FAILED"));
 
         upsertConversationToTop(newConversation);
         setConversationDetail(newConversation.id, newConversation);
@@ -131,7 +131,7 @@ export default function CreateGroupModal({
         await openConversation(newConversation.id);
         await fetchConversationDetail(newConversation.id, true);
       } catch (error: any) {
-        formik.setFieldError("groupName", error?.message || "Tạo nhóm thất bại");
+        formik.setFieldError("groupName", error?.message || t("GROUP.CREATE_FAILED"));
       } finally {
         setSubmitting(false);
       }
@@ -203,7 +203,7 @@ export default function CreateGroupModal({
   };
   const handleCreateGroup = async () => {
     if (selectedUserIds.length < 2) {
-      alert("Vui lòng chọn ít nhất 2 thành viên để tạo nhóm");
+      alert(t("GROUP.ALERT_MIN_MEMBERS"));
       return;
     }
 
@@ -217,7 +217,7 @@ export default function CreateGroupModal({
 
       const newConversation = res?.payload?.data;
       if (!newConversation) {
-        throw new Error("Không tạo được nhóm");
+        throw new Error(t("GROUP.CREATE_FAILED"));
       }
 
       upsertConversationToTop(newConversation);
@@ -228,7 +228,7 @@ export default function CreateGroupModal({
       await openConversation(newConversation.id);
       await fetchConversationDetail(newConversation.id, true);
     } catch (error: any) {
-      alert(error?.message || "Tạo nhóm thất bại");
+      alert(error?.message || t("GROUP.CREATE_FAILED"));
     } finally {
       setSubmitting(false);
     }
@@ -238,21 +238,21 @@ export default function CreateGroupModal({
     <AppModal
       open={open}
       onClose={onClose}
-      title="Tạo nhóm"
+      title={t("GROUP.CREATE_TITLE")}
       maxWidth="xs"
       fullWidth
       headerDivider
       actions={
         <>
           <Button onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("GROUP.CREATE_CANCEL")}
           </Button>
           <Button
             variant="contained"
             onClick={() => formik.handleSubmit()}
             disabled={submitting || selectedUserIds.length < 2}
           >
-            {submitting ? "Đang tạo..." : "Tạo nhóm"}
+            {submitting ? t("GROUP.CREATING") : t("GROUP.CREATE_SUBMIT")}
           </Button>
         </>
       }
@@ -285,7 +285,7 @@ export default function CreateGroupModal({
 
         <InputBase
           name="groupName"
-          placeholder="Nhập tên nhóm..."
+          placeholder={t("GROUP.NAME_PLACEHOLDER")}
           value={formik.values.groupName}
           onChange={formik.handleChange}
           onBlur={formik.handleBlur}
@@ -316,7 +316,7 @@ export default function CreateGroupModal({
       )}
 
       <Typography sx={{ mb: 1, fontSize: 13, color: "#6B7280" }}>
-        Thành viên đã chọn ({selectedUserIds.length})
+        {t("GROUP.SELECTED_MEMBERS").replace("{count}", String(selectedUserIds.length))}
       </Typography>
 
       <SelectedWrap>
@@ -338,7 +338,7 @@ export default function CreateGroupModal({
                 whiteSpace: "nowrap",
               }}
             >
-              {item.fullName || "Người dùng"}
+              {item.fullName || t("CHAT.USER")}
             </Typography>
 
             <RemoveSelectedButton
@@ -357,7 +357,7 @@ export default function CreateGroupModal({
       <SearchWrap sx={{border:"1px solid #E5E7EB",borderRadius: 8, ":focus-within":{borderColor: "#2563EB"}}}>
         <SearchIcon sx={{ fontSize: 20, color: "#6B7280" }} />
         <SearchInput
-          placeholder="Tìm bạn bè"
+          placeholder={t("GROUP.SEARCH_FRIENDS")}
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
@@ -398,7 +398,7 @@ export default function CreateGroupModal({
                 sx={{ mr: 1.5 }}
               />
 
-              <ListItemText primary={item.fullName || "Người dùng"} />
+              <ListItemText primary={item.fullName || t("CHAT.USER")} />
             </ListItemButton>
           );
         })}

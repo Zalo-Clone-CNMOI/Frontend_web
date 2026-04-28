@@ -3,6 +3,7 @@
 import {  CardContent, CardMedia, Container, Grid, Stack, styled } from "@mui/material";
 import { BoxMedia, CardContentStyled, CardImageSection, CardMediaStyled, ContentSection, HeadingSection, ImageSubTitle, ImageTextSection, ImageTitle, SubHeadingSection } from "./HomeTab";
 import Image from "next/image";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 const GridMedia = styled(Grid)({
     border: "1px solid #F4F4F5",
     borderTopLeftRadius: "8px",
@@ -15,14 +16,15 @@ const ImaggSubTitleLeft = styled(ImageSubTitle)({
     textAlign: "left",
 })
 const ProductTab = () => {
+    const t = useTrans();
     return <Stack gap={7} data-testid="home-tab">
         <ContentSection >
             <Container maxWidth="lg">
                 <Stack alignItems={'center'} spacing={2}>
-                    <HeadingSection variant="h3">Sản phẩm cho người Việt, chất lượng chuẩn quốc tế</HeadingSection>
+                    <HeadingSection variant="h3">{t("LANDING.PRODUCT_TITLE")}</HeadingSection>
 
                     <SubHeadingSection padding="0px 80px" variant="body1">
-                        Chúng tôi tin rằng người Việt xứng đáng với các sản phẩm công nghệ đẳng cấp thế giới, được tạo dựng trên nền tảng am hiểu bản địa và tinh thần trách nhiệm.                     </SubHeadingSection>
+                        {t("LANDING.PRODUCT_SUBTITLE")}                     </SubHeadingSection>
 
                 </Stack>
 
@@ -43,10 +45,10 @@ const ProductTab = () => {
                         <CardContentStyled>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Zalo
+                                    {t("LANDING.ZALO")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1">
-                                    Ứng dụng nhắn tin số 1 Việt Nam: đơn giản, tin cậy, riêng tư và hiện được nâng cấp với AI.                                </ImaggSubTitleLeft>
+                                    {t("LANDING.ZALO_APP_DESC")}                                </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContentStyled>
                     </CardImageSection>
@@ -68,10 +70,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Zing MP3
+                                    {t("LANDING.ZING_MP3")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Nền tảng âm nhạc hàng đầu Việt Nam, thưởng thức giai điệu yêu thích bất cứ lúc nào, bất cứ nơi đâu.                                </ImaggSubTitleLeft>
+                                    {t("LANDING.ZING_MP3_PRODUCT_DESC")}                                </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                     </CardImageSection>
@@ -89,10 +91,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Zao Video
+                                    {t("LANDING.ZALO_VIDEO")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Khám phá kho video ngắn dành cho bạn: Nội dung gần gũi, hợp gu và hấp dẫn trong từng cú lướt.                                </ImaggSubTitleLeft>
+                                    {t("LANDING.ZAO_VIDEO_DESC")}                                </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                     </CardImageSection>
@@ -116,10 +118,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Báo Mới
+                                    {t("LANDING.BAO_MOI")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Cập nhật mới nhất từ những nguồn uy tín hàng đầu Việt Nam. Thông tin được chắt lọc, tốc độ, và dễ dàng truy cập.                                    </ImaggSubTitleLeft>
+                                    {t("LANDING.BAO_MOI_PRODUCT_DESC")}                                    </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                     </CardImageSection>
@@ -136,10 +138,10 @@ const ProductTab = () => {
                         <CardContentStyled>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Kiki
+                                    {t("LANDING.KIKI")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1">
-                                    Chỉ cần nói - Kiki sẽ giúp bạn điều hướng, mở nhạc, đọc tin và nhiều tác vụ khác.                                    </ImaggSubTitleLeft>
+                                    {t("LANDING.KIKI_PRODUCT_DESC")}                                    </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContentStyled>
                     </CardImageSection>
@@ -164,10 +166,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Laban Key
+                                    {t("LANDING.LABAN_KEY")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Bàn phím gõ tiếng Việt thông minh, nhanh, chuẩn xác, được hàng triệu người Việt tin dùng.                                    </ImaggSubTitleLeft>
+                                    {t("LANDING.LABAN_KEY_DESC")}                                    </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                     </CardImageSection>
@@ -177,7 +179,7 @@ const ProductTab = () => {
 
 
         <ContentSection spacing={14}>
-            <HeadingSection letterSpacing={1} variant="h3">Giải pháp của Zalo giúp doanh nghiệp tiếp cận khách hàng một cách tự nhiên, hiệu quả, và độ phủ lớn</HeadingSection>
+            <HeadingSection letterSpacing={1} variant="h3">{t("LANDING.SOLUTIONS_TITLE")}</HeadingSection>
             <Grid width="100%" container size={12} spacing={5} justifyContent="center">
                 <GridMedia size={6}>
                     <CardImageSection >
@@ -194,10 +196,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Laban Key
+                                    {t("LANDING.LABAN_KEY")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Bàn phím gõ tiếng Việt thông minh, nhanh, chuẩn xác, được hàng triệu người Việt tin dùng.                                    </ImaggSubTitleLeft>
+                                    {t("LANDING.LABAN_KEY_DESC")}                                    </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                     </CardImageSection>
@@ -217,10 +219,10 @@ const ProductTab = () => {
                         <CardContent>
                             <ImageTextSection>
                                 <ImaggTitleLeft variant="h5" gutterBottom>
-                                    Laban Key
+                                    {t("LANDING.LABAN_KEY")}
                                 </ImaggTitleLeft>
                                 <ImaggSubTitleLeft variant="body1" >
-                                    Bàn phím gõ tiếng Việt thông minh, nhanh, chuẩn xác, được hàng triệu người Việt tin dùng.                                    </ImaggSubTitleLeft>
+                                    {t("LANDING.LABAN_KEY_DESC")}                                    </ImaggSubTitleLeft>
                             </ImageTextSection>
                         </CardContent>
                        

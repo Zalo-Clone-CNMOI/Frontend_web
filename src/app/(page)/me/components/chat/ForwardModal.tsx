@@ -24,6 +24,7 @@ import SearchIcon from "@mui/icons-material/Search";
 import { styled } from "@mui/material/styles";
 import { chatService } from "@/src/common/service/chat-service";
 import type { UiMessage } from "@/src/common/interface/chat-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface ForwardModalProps {
   visible: boolean;
@@ -53,6 +54,7 @@ export default function ForwardModal({
   onClose,
   onForward,
 }: ForwardModalProps) {
+  const t = useTrans();
   const [searchQuery, setSearchQuery] = useState("");
   const [allConversations, setAllConversations] = useState<any[]>([]);
   const [loading, setLoading] = useState(false);
@@ -138,7 +140,7 @@ export default function ForwardModal({
     <StyledDialog open={visible} onClose={onClose} maxWidth="sm" fullWidth>
       <DialogTitle sx={{ display: "flex", alignItems: "center", gap: 1 }}>
         <Typography variant="h6" sx={{ flex: 1, textAlign: "center" }}>
-          Chuyển tiếp
+          {t("FORWARD.TITLE")}
         </Typography>
         <IconButton onClick={onClose}>
           <CloseIcon />
@@ -150,7 +152,7 @@ export default function ForwardModal({
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, bgcolor: "#F3F4F6", borderRadius: 1, px: 2, py: 1 }}>
           <SearchIcon sx={{ color: "#8e8e93" }} />
           <TextField
-            placeholder="Tìm kiếm bạn bè, nhóm..."
+            placeholder={t("FORWARD.PLACEHOLDER")}
             variant="standard"
             fullWidth
             value={searchQuery}
@@ -220,7 +222,7 @@ export default function ForwardModal({
             })}
             {filteredChats.length === 0 && (
               <Box sx={{ textAlign: "center", py: 4 }}>
-                <Typography color="#8e8e93">Không tìm thấy cuộc trò chuyện nào</Typography>
+                <Typography color="#8e8e93">{t("FORWARD.NO_RESULTS")}</Typography>
               </Box>
             )}
           </List>
@@ -252,7 +254,7 @@ export default function ForwardModal({
               color: selectedConversationIds.size > 0 ? "#fff" : "#9CA3AF",
             }}
           >
-            Gửi
+            {t("FORWARD.SEND")}
           </Button>
         </Box>
       </DialogContent>

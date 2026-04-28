@@ -6,6 +6,7 @@ import InsertPhotoOutlinedIcon from "@mui/icons-material/InsertPhotoOutlined";
 import SectionBlock from "./SectionBlock";
 import { AttachmentDto } from "@/src/common/interface/chat-interface";
 import { buildS3Url, MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface MediaSectionProps {
   items: AttachmentDto[];
@@ -75,6 +76,7 @@ const ViewAllButton = styled(Button)({
 });
 
 export default function MediaSection({ items, onMediaClick }: MediaSectionProps) {
+  const t = useTrans();
   const handleMediaClick = (item: AttachmentDto) => {
     if (!onMediaClick || !item.key) return;
 
@@ -87,7 +89,7 @@ export default function MediaSection({ items, onMediaClick }: MediaSectionProps)
   };
 
   return (
-    <SectionBlock title="Ảnh/Video" defaultOpen>
+    <SectionBlock title={t("CONVO.MEDIA_TITLE")} defaultOpen>
       {items.length > 0 ? (
         <>
           <MediaGrid>
@@ -110,10 +112,10 @@ export default function MediaSection({ items, onMediaClick }: MediaSectionProps)
             ))}
           </MediaGrid>
 
-          {items.length > 8 && <ViewAllButton fullWidth>Xem tất cả</ViewAllButton>}
+          {items.length > 8 && <ViewAllButton fullWidth>{t("CONVO.VIEW_ALL")}</ViewAllButton>}
         </>
       ) : (
-        <EmptyHint>Chưa có ảnh hoặc video trong hội thoại</EmptyHint>
+        <EmptyHint>{t("CONVO.MEDIA_EMPTY")}</EmptyHint>
       )}
     </SectionBlock>
   );

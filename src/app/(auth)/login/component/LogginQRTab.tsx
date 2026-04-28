@@ -199,7 +199,7 @@ export default function LoginQrTab() {
 
         if (!socketBindingToken) {
           setQrStatus("ERROR");
-          setError("Không nhận được socket binding token");
+          setError(Trans("QR.SOCKET_TOKEN_ERROR"));
           return;
         }
 
@@ -217,7 +217,7 @@ export default function LoginQrTab() {
 
           if (!qrToken || !sessionId) {
             setQrStatus("ERROR");
-            setError("Không nhận được qrToken hoặc sessionId");
+            setError(Trans("QR.QR_TOKEN_ERROR"));
             return;
           }
 
@@ -227,7 +227,7 @@ export default function LoginQrTab() {
           startCountdown(qrExpires > 0 ? qrExpires : 30);
         } catch (error: any) {
           setQrStatus("ERROR");
-          setError(error?.message || "Không thể tạo QR session");
+          setError(error?.message || Trans("QR.CREATE_SESSION_ERROR"));
         }
       };
 
@@ -261,8 +261,8 @@ export default function LoginQrTab() {
         setQrStatus("ERROR");
         setError(
           data?.reason
-            ? `Đăng nhập bị từ chối: ${data.reason}`
-            : "Đăng nhập đã bị từ chối trên mobile",
+            ? Trans("QR.REJECTED_WITH_REASON", { reason: data.reason })
+            : Trans("QR.REJECTED_NO_REASON"),
         );
       };
 
@@ -272,7 +272,7 @@ export default function LoginQrTab() {
         if (e?.code === "RATE_LIMIT_EXCEEDED") {
           stopCountdown();
           setQrStatus("ERROR");
-          setError("Bạn thao tác quá nhanh. Vui lòng thử lại sau ít phút.");
+          setError(Trans("QR.RATE_LIMIT_ERROR"));
           return;
         }
 

@@ -29,6 +29,7 @@ import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
 import ContactFunctionList, { ContactView } from "./components/friend/ContactFunctionList";
 import ContactContentPanel from "./components/friend/ContactContentPanel";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 /* ===================== styled ===================== */
 
 const Root = styled(Grid)(() => ({
@@ -183,6 +184,7 @@ export type FilterCategoryKey =
 /* ===================== component ===================== */
 
 const Me = () => {
+    const t = useTrans();
     // type ContactView = "friends" | "groups" | "friendRequests" | "sentRequests";
     const [selectedIcon, setSelectedIcon] = useState<SidebarKey>("chat");
     const [contactView, setContactView] = useState<ContactView>("friends");
@@ -213,9 +215,9 @@ const Me = () => {
     };
 
     const getCategoryLabel = () => {
-        if (selectedCategories.length === 0) return "Phân loại";
+        if (selectedCategories.length === 0) return t("ME.CATEGORY");
         if (selectedCategories.length === 1) return selectedCategories[0];
-        return `${selectedCategories.length} thẻ`;
+        return t("ME.CATEGORY_COUNT", { count: selectedCategories.length });
     };
 
     useEffect(() => {
@@ -253,8 +255,8 @@ const Me = () => {
                         <TabContext value={chatTab}>
                             <ChatTabsWrapper data-testid="chat-tabs">
                                 <TabListStyled onChange={handleChangeChatTab} aria-label="chat tabs">
-                                    <TabStyled label="Tất cả" value="allChats" />
-                                    <TabStyled label="Chưa đọc" value="unRead" />
+                                    <TabStyled label={t("ME.ALL_CHATS")} value="allChats" />
+                                    <TabStyled label={t("ME.UNREAD")} value="unRead" />
                                 </TabListStyled>
 
                                 <TabsRight>
@@ -301,7 +303,7 @@ const Me = () => {
                                 <ConversationList />
                             </TabPanelStyled>
 
-                            <TabPanelStyled value="unRead">Unread</TabPanelStyled>
+                            <TabPanelStyled value="unRead">{t("ME.UNREAD")}</TabPanelStyled>
                         </TabContext>
                     </>
                 ) : selectedIcon === "contact" ? (
@@ -345,7 +347,7 @@ const Me = () => {
                                         accessToken={accessToken}
                                         currentUserId={currentUserId}
                                         conversationId={activeConversationId}
-                                        title="Tin nhắn"
+                                        title={t("ME.MESSAGES")}
                                         onToggleSearch={() => setShowSearchSidebar(!showSearchSidebar)}
                                     />
                                 </Box>

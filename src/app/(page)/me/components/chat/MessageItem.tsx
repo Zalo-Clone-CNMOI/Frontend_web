@@ -12,6 +12,7 @@ import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -143,6 +144,7 @@ export default function MessageItem({
   onOpenMedia,
   isHighlighted = false,
 }: MessageItemProps) {
+  const t = useTrans();
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
   const canDelete = mine && !message.isDeleted;
@@ -261,7 +263,7 @@ export default function MessageItem({
                 )}
 
                 {message.isDeleted ? (
-                  <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
+                  <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>
                 ) : null}
@@ -281,8 +283,8 @@ export default function MessageItem({
                 <MetaRow>
                   <MetaLeft>
                     <MetaText>{timeText}</MetaText>
-                    {message.failed && <MetaText>Gửi thất bại</MetaText>}
-                    {message.editedAt && <MetaText>Đã sửa</MetaText>}
+                    {message.failed && <MetaText>{t("CHAT.MESSAGE_SEND_FAILED")}</MetaText>}
+                    {message.editedAt && <MetaText>{t("CHAT.MESSAGE_EDITED")}</MetaText>}
                   </MetaLeft>
                 </MetaRow>
               </Bubble>
@@ -347,7 +349,7 @@ export default function MessageItem({
                 )}
 
                 {message.isDeleted ? (
-                  <MessageText isDeleted>Tin nhắn đã được thu hồi</MessageText>
+                  <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>
                 ) : null}
@@ -367,8 +369,8 @@ export default function MessageItem({
                 <MetaRow>
                   <MetaLeft>
                     <MetaText>{timeText}</MetaText>
-                    {message.failed && <MetaText>Gửi thất bại</MetaText>}
-                    {message.editedAt && <MetaText>Đã sửa</MetaText>}
+                    {message.failed && <MetaText>{t("CHAT.MESSAGE_SEND_FAILED")}</MetaText>}
+                    {message.editedAt && <MetaText>{t("CHAT.MESSAGE_EDITED")}</MetaText>}
                   </MetaLeft>
                 </MetaRow>
               </Bubble>

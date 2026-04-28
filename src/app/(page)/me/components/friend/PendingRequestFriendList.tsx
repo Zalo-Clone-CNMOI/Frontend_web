@@ -18,6 +18,7 @@ import DoneOutlinedIcon from "@mui/icons-material/DoneOutlined";
 import CloseOutlinedIcon from "@mui/icons-material/CloseOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 const Root = styled(Box)({
   height: "100%",
@@ -71,6 +72,7 @@ function formatDate(value?: string) {
 }
 
 export default function PendingRequestFriendList() {
+  const t = useTrans();
   const [actionKey, setActionKey] = useState<string | null>(null);
 
   const {
@@ -108,11 +110,11 @@ export default function PendingRequestFriendList() {
     <Root>
       <Header>
         <PersonAddAltOutlinedIcon />
-        <HeaderTitle>Lời mời kết bạn</HeaderTitle>
+        <HeaderTitle>{t("FRIEND.REQUEST_TITLE")}</HeaderTitle>
       </Header>
 
       <Content>
-        <SectionTitle>Lời mời đã nhận ({pendingRequests.length})</SectionTitle>
+        <SectionTitle>{t("FRIEND.REQUEST_SECTION").replace("{count}", String(pendingRequests.length))}</SectionTitle>
 
         {error ? <Alert severity="error">{error}</Alert> : null}
 
@@ -120,13 +122,13 @@ export default function PendingRequestFriendList() {
           <EmptyWrap>
             <Stack direction="row" spacing={1.5} alignItems="center">
               <CircularProgress size={22} />
-              <Typography>Đang tải lời mời kết bạn...</Typography>
+              <Typography>{t("FRIEND.REQUEST_LOADING")}</Typography>
             </Stack>
           </EmptyWrap>
         ) : pendingRequests.length === 0 ? (
           <Card sx={{ borderRadius: 3, border: "1px solid #E5E7EB", boxShadow: "none" }}>
             <EmptyWrap>
-              <Typography>Hiện không có lời mời kết bạn nào.</Typography>
+              <Typography>{t("FRIEND.NO_REQUESTS")}</Typography>
             </EmptyWrap>
           </Card>
         ) : (
@@ -222,7 +224,7 @@ export default function PendingRequestFriendList() {
                         disabled={accepting || rejecting}
                         onClick={() => handleReject(request.id)}
                       >
-                        Từ chối
+                        {t("FRIEND.REJECT")}
                       </Button>
                     </Stack>
                   </CardContent>

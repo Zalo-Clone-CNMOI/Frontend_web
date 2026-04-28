@@ -10,6 +10,7 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import MenuPopover, { PopoverMenuItem } from "@/src/shared/component/MenuPopover";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { ConversationMemberDto } from "@/src/common/interface/chat-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface GroupMemberListViewProps {
   onBack: () => void;
@@ -158,6 +159,7 @@ export default function GroupMemberListView({
   onRemoveMember,
   onUpdateMemberRole,
 }: GroupMemberListViewProps) {
+  const t = useTrans();
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [selectedMember, setSelectedMember] = useState<ConversationMemberDto | null>(null);
 
@@ -209,7 +211,7 @@ export default function GroupMemberListView({
       if (selectedMember.role === "member") {
         items.push({
           key: "promote-admin",
-          label: "Thêm phó nhóm",
+          label: t("CONVO.ADD_DEPUTY"),
           onClick: () => void handleUpdateMemberRole(selectedMember, "admin"),
         });
       }
@@ -217,7 +219,7 @@ export default function GroupMemberListView({
       if (selectedMember.role === "admin") {
         items.push({
           key: "demote-member",
-          label: "Gỡ quyền phó nhóm",
+          label: t("CONVO.REMOVE_DEPUTY"),
           onClick: () => void handleUpdateMemberRole(selectedMember, "member"),
         });
       }
@@ -226,7 +228,7 @@ export default function GroupMemberListView({
     if (removable) {
       items.push({
         key: "remove-member",
-        label: "Xóa khỏi nhóm",
+        label: t("CONVO.REMOVE_FROM_GROUP"),
         danger: true,
         dividerTop: items.length > 0,
         onClick: () => onRemoveMember(selectedMember),
@@ -242,7 +244,7 @@ export default function GroupMemberListView({
         <BackBtn onClick={onBack}>
           <ArrowBackIosNewRoundedIcon fontSize="small" />
         </BackBtn>
-        <Title>Thành viên</Title>
+        <Title>{t("CONVO.MEMBERS")}</Title>
       </Header>
 
       <AddBtnWrap>
@@ -250,13 +252,13 @@ export default function GroupMemberListView({
           startIcon={<PersonAddAlt1OutlinedIcon />}
           onClick={onOpenAddMember}
         >
-          Thêm thành viên
+          {t("CONVO.ADD_MEMBER")}
         </AddMemberButton>
       </AddBtnWrap>
 
       <SectionTitle>
         <Typography sx={{ fontSize: 15, fontWeight: 700 }}>
-          Danh sách thành viên ({members.length})
+          {t("CONVO.MEMBER_LIST").replace("{count}", String(members.length))}
         </Typography>
         <IconButton size="small">
           <MoreHorizRoundedIcon />
@@ -283,7 +285,7 @@ export default function GroupMemberListView({
                 <Name>{member.nickname || member.fullName}</Name>
                 {(member.role === "owner" || member.role === "admin") && (
                   <Role>
-                    {member.role === "owner" ? "Trưởng nhóm" : "Quản trị viên"}
+                    {member.role === "owner" ? t("CONVO.ROLE_OWNER") : t("CONVO.ROLE_ADMIN")}
                   </Role>
                 )}
               </NameWrap>

@@ -6,6 +6,8 @@ import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import ForwardToInboxOutlinedIcon from '@mui/icons-material/ForwardToInboxOutlined';
+import { useTrans } from "@/src/common/utilities/hook/trans";
+
 export type ContactView =
     | "friends"
     | "groups"
@@ -47,16 +49,17 @@ const Label = styled(Typography)({
 });
 
 export default function ContactFunctionList({ value, onChange }: Props) {
+    const t = useTrans();
     return (
         <Wrap>
             <Item active={value === "friends"} onClick={() => onChange("friends")}>
                 <PeopleOutlineIcon fontSize="small" />
-                <Label>Danh sách bạn bè</Label>
+                <Label>{t("FRIEND.LABEL_FRIENDS")}</Label>
             </Item>
 
             <Item active={value === "groups"} onClick={() => onChange("groups")}>
                 <GroupsOutlinedIcon fontSize="small" />
-                <Label>Danh sách nhóm và cộng đồng</Label>
+                <Label>{t("FRIEND.LABEL_GROUPS")}</Label>
             </Item>
 
             <Item
@@ -64,7 +67,7 @@ export default function ContactFunctionList({ value, onChange }: Props) {
                 onClick={() => onChange("friendRequests")}
             >
                 <PersonAddAltOutlinedIcon fontSize="small" />
-                <Label>Lời mời kết bạn</Label>
+                <Label>{t("FRIEND.LABEL_REQUESTS")}</Label>
             </Item>
 
             <Item
@@ -72,7 +75,7 @@ export default function ContactFunctionList({ value, onChange }: Props) {
                 onClick={() => onChange("sentRequests")}
             >
                 <ForwardToInboxOutlinedIcon fontSize="small" />
-                <Label>Lời mời đã gửi</Label>
+                <Label>{t("FRIEND.LABEL_SENT")}</Label>
             </Item>
         </Wrap>
     );

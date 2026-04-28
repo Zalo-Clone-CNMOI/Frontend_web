@@ -6,6 +6,7 @@ import PushPinIcon from "@mui/icons-material/PushPin";
 import CloseIcon from "@mui/icons-material/Close";
 import { useMemo } from "react";
 import { UiMessage } from "@/src/common/interface/chat-interface";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface PinnedMessagesSectionProps {
   pinnedMessages: UiMessage[];
@@ -86,6 +87,7 @@ export default function PinnedMessagesSection({
   onPressMessage,
   onUnpinMessage,
 }: PinnedMessagesSectionProps) {
+  const t = useTrans();
   if (pinnedMessages.length === 0) {
     return null;
   }
@@ -102,7 +104,7 @@ export default function PinnedMessagesSection({
             }}
           />
           <Typography variant="body2" fontWeight={600}>
-            Tin nhắn đã ghim
+            {t("CHAT.PINNED_MESSAGES")}
           </Typography>
         </HeaderLeft>
         <Typography variant="caption" color="text.secondary">
@@ -116,8 +118,8 @@ export default function PinnedMessagesSection({
 
           let previewText = messageText;
           if (!previewText) {
-            if (hasAttachments) previewText = "📎 Tệp";
-            else previewText = "Tin nhắn";
+            if (hasAttachments) previewText = t("CHAT.FILE_ATTACHMENT");
+            else previewText = t("CHAT.MESSAGE");
           }
 
           const truncatedText =
@@ -149,7 +151,7 @@ export default function PinnedMessagesSection({
                 </Typography>
               </PinnedItemLeft>
               {onUnpinMessage && (
-                <Tooltip title="Bỏ ghim">
+                <Tooltip title={t("CHAT.ACTION_UNPIN")}>
                   <UnpinButton
                     size="small"
                     onClick={(e) => {

@@ -23,8 +23,10 @@ import { SidebarKey } from "@/src/app/constant";
 import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { authService } from "@/src/common/service/auth-service";
 import { clearAuthStorage, redirectToLogin } from "@/src/common/utilities/utils";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 import ProfileModals from "./ProfileModals";
 import ChangePasswordModal from "./ChangePswModal";
+import LanguageSwitcher from "@/src/shared/component/LanguageSwitcher";
 
 const Sidebar = styled(Box)({
   minWidth: 56,
@@ -57,6 +59,7 @@ const AppSidebar = ({
   onOpenSettings,
 }: AppSidebarProps) => {
   const resetAuth = useAuthStore((s) => s.resetAuth);
+  const t = useTrans();
 
   const [menuAnchorEl, setMenuAnchorEl] = useState<HTMLElement | null>(null);
   const [activePopover, setActivePopover] = useState<"settings" | "avatar" | null>(null);
@@ -64,12 +67,19 @@ const AppSidebar = ({
   const [pendingOpenEdit, setPendingOpenEdit] = useState(false);
   const [isLoggingOut, setIsLoggingOut] = useState(false);
   const [openChangePasswordModal, setOpenChangePasswordModal] = useState(false);
+  const [openLanguageModal, setOpenLanguageModal] = useState(false);
 
   const openMenuPopover = Boolean(menuAnchorEl) && Boolean(activePopover);
 
   const handleOpenChangePasswordModal = () => {
     closePopoverThen(() => {
       setOpenChangePasswordModal(true);
+    });
+  };
+
+  const handleOpenLanguageModal = () => {
+    closePopoverThen(() => {
+      setOpenLanguageModal(true);
     });
   };
 
@@ -142,31 +152,32 @@ const AppSidebar = ({
     () => [
       {
         key: "account",
-        label: "Thông tin tài khoản",
+        label: t("PROFILE.ACCOUNT_INFO"),
         onClick: handleMenuItemClick(onOpenProfile),
       },
       {
         key: "settings",
-        label: "Cài đặt",
+        label: t("COMMON.SETTINGS"),
         onClick: handleMenuItemClick(onOpenSettings),
       },
       {
         key: "change_password",
-        label: "Đổi mật khẩu",
+        label: t("COMMON.CHANGE_PASSWORD"),
         dividerTop: true,
         onClick: handleOpenChangePasswordModal,
       },
       {
         key: "language",
-        label: "Ngôn ngữ",
+        label: t("COMMON.LANGUAGE"),
+        onClick: handleOpenLanguageModal,
       },
       {
         key: "support",
-        label: "Hỗ trợ",
+        label: t("COMMON.SUPPORT"),
       },
       {
         key: "logout",
-        label: "Đăng xuất",
+        label: t("COMMON.LOGOUT"),
         danger: true,
         dividerTop: true,
         onClick: () => {
@@ -174,25 +185,25 @@ const AppSidebar = ({
         },
       },
     ],
-    [onOpenProfile, onOpenSettings]
+    [onOpenProfile, onOpenSettings, t]
   );
 
   const avatarItems = useMemo<PopoverMenuItem[]>(
     () => [
       {
         key: "account",
-        label: "Thông tin tài khoản",
+        label: t("PROFILE.ACCOUNT_INFO"),
         onClick: handleMenuItemClick(onOpenProfile),
       },
       {
         key: "profile",
-        label: "Hồ sơ của bạn",
+        label: t("PROFILE.YOUR_PROFILE"),
         dividerTop: true,
         onClick: handleOpenProfileModal,
       },
       {
         key: "logout",
-        label: "Đăng xuất",
+        label: t("COMMON.LOGOUT"),
         danger: true,
         dividerTop: true,
         onClick: () => {
@@ -200,7 +211,7 @@ const AppSidebar = ({
         },
       },
     ],
-    [onOpenProfile]
+    [onOpenProfile, t]
   );
 
   const avatarUrl = useAuthStore((s) => s.authData?.data?.user?.avatarUrl);
@@ -235,6 +246,11 @@ const AppSidebar = ({
         <ChangePasswordModal
           open={openChangePasswordModal}
           onClose={() => setOpenChangePasswordModal(false)}
+        />
+
+        <LanguageSwitcher
+          open={openLanguageModal}
+          onClose={() => setOpenLanguageModal(false)}
         />
 
         <Stack justifyContent="space-between" height="100%">

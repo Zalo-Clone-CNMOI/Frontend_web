@@ -21,6 +21,7 @@ import { IUserSearchItem } from "@/src/common/interface/search-interface";
 import FriendRequestConfirmModal from "./FriendRequestConfirmModal";
 import { friendService } from "@/src/common/service/friend-service";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface AddFriendDialogProps {
   open: boolean;
@@ -130,6 +131,7 @@ export default function AddFriendDialog({
   onSendFriendRequest,
   onCancelFriendRequest,
 }: AddFriendDialogProps) {
+  const t = useTrans();
   const [searchValue, setSearchValue] = useState("");
   const [results, setResults] = useState<IUserSearchItem[]>([]);
   const [loading, setLoading] = useState(false);
@@ -231,7 +233,7 @@ export default function AddFriendDialog({
       }
     } catch (err: any) {
       console.error("search user error:", err);
-      setError(err?.message || "Không thể tìm kiếm người dùng");
+      setError(err?.message || t("COMMON.SEARCH_ERROR"));
       setResults([]);
       setHasSearched(true);
     } finally {
@@ -364,7 +366,7 @@ export default function AddFriendDialog({
       <AppModal
         open={open}
         onClose={handleClose}
-        title="Thêm bạn"
+        title={t("FRIEND.ADD_TITLE")}
         maxWidth="xs"
         fullWidth
         headerDivider
@@ -375,14 +377,14 @@ export default function AddFriendDialog({
               color="inherit"
               onClick={handleClose}
             >
-              Hủy
+              {t("COMMON.BACK")}
             </FooterButton>
             <FooterButton
               variant="contained"
               onClick={handleManualSearch}
               disabled={!searchValue.trim() || loading}
             >
-              Tìm kiếm
+              {t("FRIEND.SEARCH_RESULTS")}
             </FooterButton>
           </>
         }
@@ -400,7 +402,7 @@ export default function AddFriendDialog({
             </CountryWrap>
 
             <PhoneInput
-              placeholder="Số điện thoại"
+              placeholder={t("COMMON.SEARCH_PLACEHOLDER")}
               value={searchValue}
               onChange={(e) => setSearchValue(e.target.value)}
             />
@@ -408,7 +410,7 @@ export default function AddFriendDialog({
 
           <Box sx={{ pt: 3 }}>
             <SectionTitle>
-              {hasInput ? "Kết quả tìm kiếm" : "Kết quả gần nhất"}
+              {hasInput ? t("FRIEND.SEARCH_RESULTS") : t("FRIEND.RECENT_RESULTS")}
             </SectionTitle>
 
             {loading ? (
@@ -439,7 +441,7 @@ export default function AddFriendDialog({
 
                           <ListItemText
                             primary={user.fullName}
-                            secondary={hasInput ? user.phone : "Từ tìm kiếm gần nhất"}
+                            secondary={hasInput ? user.phone : t("FRIEND.FROM_RECENT")}
                             slotProps={{
                               primary: {
                                 fontSize: 16,
@@ -456,7 +458,7 @@ export default function AddFriendDialog({
 
                         {isFriend ? null : isIncoming ? (
                           <Button variant="text" disabled>
-                            Đã nhận lời mời
+                            {t("FRIEND.ALREADY_ACCEPTED")}
                           </Button>
                         ) : (
                           <Button
@@ -468,7 +470,7 @@ export default function AddFriendDialog({
                                 : handleAddFriend(user)
                             }
                           >
-                            {isOutgoing ? "Hủy yêu cầu" : "Kết bạn"}
+                            {isOutgoing ? t("FRIEND.CANCEL_REQUEST") : t("FRIEND.ACCEPT")}
                           </Button>
                         )}
                       </RowContent>
@@ -478,7 +480,7 @@ export default function AddFriendDialog({
               </List>
             ) : showNotFound ? (
               <Typography sx={{ fontSize: 14, color: "#64748B" }}>
-                Không tìm thấy người dùng
+                {t("COMMON.SEARCH_ERROR")}
               </Typography>
             ) : null}
 

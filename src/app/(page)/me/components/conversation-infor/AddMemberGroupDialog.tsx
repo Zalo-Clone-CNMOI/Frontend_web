@@ -20,6 +20,7 @@ import { useFriendStore } from "@/src/common/store/useFriendStore";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckIcon from "@mui/icons-material/Check";
 import { trace } from "console";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface AddMemberGroupDialogProps {
   open: boolean;
@@ -96,6 +97,7 @@ export default function AddMemberGroupDialog({
   existingMemberIds,
   onSubmit,
 }: AddMemberGroupDialogProps) {
+  const t = useTrans();
   const friends = useFriendStore((s) => s.friends);
   const fetchFriends = useFriendStore((s) => s.fetchFriends);
 
@@ -146,21 +148,21 @@ export default function AddMemberGroupDialog({
     <AppModal
       open={open}
       onClose={onClose}
-      title="Thêm thành viên"
+      title={t("CONVO.ADD_MEMBER_TITLE")}
       maxWidth="xs"
       fullWidth
       headerDivider
       actions={
         <>
           <Button onClick={onClose} disabled={submitting}>
-            Hủy
+            {t("COMMON.BACK")}
           </Button>
           <Button
             variant="contained"
             onClick={handleSubmit}
             disabled={submitting || selectedUserIds.length === 0}
           >
-            Thêm
+            {t("CONVO.ADD_MEMBER_BTN")}
           </Button>
         </>
       }
@@ -168,7 +170,7 @@ export default function AddMemberGroupDialog({
       <SearchWrap sx={{ marginBottom: "0px" }}>
         <SearchIcon sx={{ fontSize: 20, color: "#6B7280" }} />
         <SearchInput
-          placeholder="Tìm bạn bè"
+          placeholder={t("GROUP.SEARCH_FRIENDS")}
           value={keyword}
           onChange={(e) => setKeyword(e.target.value)}
         />
@@ -219,7 +221,7 @@ export default function AddMemberGroupDialog({
               <ListItemText
                 sx={{ fontSize: "14px" }}
                 primary={item.fullName || "Người dùng"}
-                secondary={isExistingMember ? "Đã tham gia" : undefined}
+                secondary={isExistingMember ? t("CONVO.ALREADY_JOINED") : undefined}
                 slotProps={{
                   secondary: {
                     sx: { fontSize: "12px" }
