@@ -150,13 +150,23 @@ export default function ActiveCallScreen() {
         videoEl.srcObject = stream;
       } else {
         console.log("[ActiveCallScreen] videoEl NOT found for userId:", userId);
+        // For direct calls, create video element if not exists
+        if (!isGroup) {
+          console.log("[ActiveCallScreen] Creating video element for direct call");
+          const newVideoEl = document.createElement('video');
+          newVideoEl.autoplay = true;
+          newVideoEl.playsInline = true;
+          newVideoEl.muted = false;
+          newVideoEl.srcObject = stream;
+          remoteVideoRefs.current.set(userId, newVideoEl);
+        }
       }
     });
     
     if (remoteStreams.size > 0) {
       setConnecting(false);
     }
-  }, [remoteStreams]);
+  }, [remoteStreams, isGroup]);
 
   const handleEndCall = () => {
     if (isGroup) {
