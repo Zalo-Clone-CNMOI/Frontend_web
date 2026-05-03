@@ -30,7 +30,6 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
     const data = res?.payload;
 
     if (!data?.ice_servers) {
-      console.warn("[IceServer] Invalid response from backend, using defaults");
       return getDefaultIceServers();
     }
 
@@ -48,15 +47,12 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
     const msUntilExpiry = data.expires_at - Date.now() - 5 * 60 * 1000;
     if (msUntilExpiry > 0) {
       refreshTimeout = setTimeout(() => {
-        console.log("[IceServer] Refreshing credentials before expiry");
         clearIceServerCache();
       }, msUntilExpiry);
     }
 
-    console.log("[IceServer] Fetched", cachedIceServers.length, "servers from backend");
     return cachedIceServers;
   } catch (error) {
-    console.error("[IceServer] Failed to fetch ICE servers:", error);
     return getDefaultIceServers();
   }
 }

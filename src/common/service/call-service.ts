@@ -137,7 +137,6 @@ function playRingtone(): void {
   if (typeof window === "undefined") return;
   // TODO: Add actual ringtone.mp3 file to public/sounds/
   // Temporarily disabled to avoid 404 error
-  console.log("[Ringtone] Ringtone disabled - add ringtone.mp3 to public/sounds/");
   // if (!ringtoneAudio) {
   //   ringtoneAudio = new Audio("/sounds/ringtone.mp3");
   //   ringtoneAudio.loop = true;
@@ -153,7 +152,7 @@ function stopRingtone(): void {
 }
 
 function showToast(message: string): void {
-  console.log("[Call Toast]", message);
+  // TODO: Implement proper toast notification
 }
 
 function showCallSummary(duration: number, reason?: string): void {
@@ -162,6 +161,9 @@ function showCallSummary(duration: number, reason?: string): void {
   const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
   showToast(`Cuộc gọi kết thúc · ${timeStr}${reason ? ` · ${reason}` : ""}`);
 }
+
+let isCleaningUp = false;
+let pendingCleanup: (() => void) | null = null;
 
 export async function startCall(
   conversationId: string,
@@ -172,9 +174,19 @@ export async function startCall(
   const socket = getSocket();
   if (!socket) return;
 
+  // Wait for any ongoing cleanup to complete
+  if (isCleaningUp) {
+    showToast("Vui lòng đợi giây lát...");
+    return;
+  }
+
   try {
     const callId = uuidv4();
     const currentUserId = getcurrentUserId() || "";
+    
+    // Add small delay to ensure previous cleanup is complete
+    await new Promise(resolve => setTimeout(resolve, 100));
+    
     const localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: callType === "video",
@@ -211,7 +223,6 @@ export async function startCall(
       started_at: Date.now(),
     });
   } catch (err) {
-    console.error("[startCall] Failed to get user media:", err);
     showToast("Không thể truy cập microphone/camera");
   }
 }
@@ -240,7 +251,6 @@ export async function acceptCall(): Promise<void> {
       accepted_at: Date.now(),
     });
   } catch (err) {
-    console.error("[acceptCall] Failed to get user media:", err);
     showToast("Không thể truy cập microphone/camera");
     rejectCall("media_error");
   }
@@ -343,9 +353,22 @@ function emitSignal(
 }
 
 export function cleanup(): void {
-  stopRingtone();
-  destroyAllPeers();
-  useCallStore.getState().reset();
+  isCleaningUp = true;
+  
+  // Perform cleanup asynchronously to avoid blocking
+  setTimeout(() => {
+    stopRingtone();
+    destroyAllPeers();
+    useCallStore.getState().reset();
+    isCleaningUp = false;
+    
+    // Execute any pending cleanup
+    if (pendingCleanup) {
+      const fn = pendingCleanup;
+      pendingCleanup = null;
+      fn();
+    }
+  }, 50);
 }
 
 export function registerCallHandlers(myUserId: string): () => void {
@@ -387,7 +410,6 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallAccepted = async (payload: CallAcceptedPayload) => {
-    console.log("[call:accepted] payload:", payload);
     stopRingtone();
     const currentCall = useCallStore.getState().activeCall;
     if (currentCall?.call_id === payload.call_id) {
@@ -400,13 +422,11 @@ export function registerCallHandlers(myUserId: string): () => void {
     }
 
     if (payload.user_id === myUserId) {
-      console.log("[call:accepted] skipped self user:", payload.user_id);
       return;
     }
 
     const { activeCall, localStream } = useCallStore.getState();
     if (!activeCall || !localStream) {
-      console.log("[call:accepted] skipped - no activeCall or localStream");
       return;
     }
 
@@ -415,7 +435,6 @@ export function registerCallHandlers(myUserId: string): () => void {
       useCallStore.getState().setScreen("connecting");
 
       const iceServers = await getIceServers();
-      console.log("[call:accepted] creating peer for:", payload.user_id, "initiator: true");
 
       createPeer({
         userId: payload.user_id,
@@ -424,7 +443,6 @@ export function registerCallHandlers(myUserId: string): () => void {
         iceServers,
         onSignal: (signal) => emitSignal(activeCall, payload.user_id, signal),
         onStream: (stream) => {
-          console.log("[call:accepted] onStream received from:", payload.user_id, "stream:", stream.id);
           useCallStore.getState().setRemoteStream(payload.user_id, stream);
           useCallStore.getState().setScreen("active");
           useCallStore.getState().startDurationTimer();
@@ -435,37 +453,29 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallSignalReceived = async (payload: CallSignalPayload) => {
-    console.log("[call:signal:received] payload:", payload);
     if (payload.sender_id === myUserId) {
-      console.log("[call:signal:received] skipped self sender:", payload.sender_id);
       return;
     }
     if (payload.target_user_id && payload.target_user_id !== myUserId) {
-      console.log("[call:signal:received] skipped non-target signal:", payload.target_user_id);
       return;
     }
 
     const { activeCall, localStream, stateVersion } = useCallStore.getState();
     if (!activeCall || !localStream) {
-      console.log("[call:signal:received] skipped - no activeCall or localStream");
       return;
     }
     if (payload.call_id !== activeCall.call_id) {
-      console.log("[call:signal:received] skipped different call:", payload.call_id);
       return;
     }
 
     // Drop stale signals
     if (payload.state_version && payload.state_version < stateVersion) {
-      console.log("[call:signal:received] dropped stale signal:", payload.state_version, "<", stateVersion);
       return;
     }
 
     const iceServers = await getIceServers();
-    console.log("[call:signal:received] hasPeer:", hasPeer(payload.sender_id), "sender:", payload.sender_id);
 
     if (!hasPeer(payload.sender_id)) {
-      console.log("[call:signal:received] creating peer for:", payload.sender_id);
       createPeer({
         userId: payload.sender_id,
         initiator: false,
@@ -494,21 +504,18 @@ export function registerCallHandlers(myUserId: string): () => void {
       if (!candidateSignal) return;
       signalData = candidateSignal;
     } else {
-      console.warn("[call:signal:received] Unknown signal type:", payload.signal_type);
       return;
     }
 
     feedSignal(payload.sender_id, signalData);
   };
 
-  const handleCallRejected = (payload: CallRejectedPayload) => {
-    console.log("[call:rejected] payload:", payload);
+  const handleCallRejected = (_payload: CallRejectedPayload) => {
     showToast("Người dùng đã từ chối cuộc gọi");
     cleanup();
   };
 
   const handleCallLeft = (payload: CallLeftPayload) => {
-    console.log("[call:left] payload:", payload);
     destroyPeer(payload.user_id);
     useCallStore.getState().removeRemoteStream(payload.user_id);
     
@@ -521,7 +528,6 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallEnded = (payload: CallEndedPayload) => {
-    console.log("[call:ended] payload:", payload);
     const { activeCall } = useCallStore.getState();
     const duration = activeCall
       ? payload.ended_at - activeCall.started_at
@@ -554,8 +560,6 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallStateUpdated = (payload: CallStateUpdatedPayload) => {
-    console.log("[call:state:updated] payload:", payload);
-    
     if (!payload.state) {
       if (useCallStore.getState().screen !== "idle") cleanup();
       return;
@@ -579,8 +583,6 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleWsError = (payload: WsErrorPayload) => {
-    console.log("[ws:error] payload:", payload);
-    
     if (payload.code === "RATE_LIMITED") {
       showToast(
         `Quá nhiều yêu cầu. Thử lại sau ${payload.details?.retry_after ?? 30}s`

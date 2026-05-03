@@ -275,7 +275,7 @@ export default function ActiveCallScreen() {
   }, [localStream]);
 
   useEffect(() => {
-    console.log("[ActiveCallScreen] remoteStreams changed:", remoteStreams.size, "entries:", Array.from(remoteStreams.entries()).map(([k,v]) => [k, v.id, v.getTracks().length]));
+    // Remote streams updated
   }, [remoteStreams]);
 
   const handleEndCall = () => {
