@@ -5,9 +5,12 @@ import { styled } from "@mui/material/styles";
 import CallEndIcon from "@mui/icons-material/CallEnd";
 import CallIcon from "@mui/icons-material/Call";
 import { useCallStore } from "@/src/common/store/useCallStore";
+import { useChatStore } from "@/src/common/store/useChatStore";
 import { acceptCall, rejectCall } from "@/src/common/service/call-service";
 import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { getcurrentUserId } from "@/src/common/utilities/utils";
+import type { ConversationDto } from "@/src/common/interface/chat-interface";
 
 const Container = styled(Box)({
   width: "100%",
@@ -66,26 +69,60 @@ const AcceptButton = styled(Button)({
   "&:hover": { background: "#16a34a" },
 });
 
+// Helper function to get user display name
+function getUserDisplayName(userId: string, members: ConversationDto["members"]): string {
+  const member = members?.find((m) => m.userId === userId);
+  return member?.nickname || member?.fullName || userId.slice(0, 8);
+}
+
+// Helper function to get conversation display name
+function getConversationDisplayName(conversation: ConversationDto | null, members: ConversationDto["members"], currentUserId: string): string {
+  if (!conversation) return "";
+  
+  const isGroup = conversation.type === "group";
+  if (isGroup) {
+    return conversation.name ?? "";
+  }
+  
+  const otherMember = members?.find((m) => m.userId !== currentUserId);
+  return otherMember?.nickname || otherMember?.fullName || conversation.name || "";
+}
+
 export default function IncomingCallScreen() {
   const t = useTrans();
   const activeCall = useCallStore((s) => s.activeCall);
-  const localStream = useCallStore((s) => s.localStream);
+  
+  // Get conversation and user data
+  const listConversation = useChatStore((s) => s.listConversation);
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById?.[activeCall?.conversation_id || ""] ?? null
+  );
+  const currentUserId = getcurrentUserId() || "";
+  
+  const currentConversation =
+    conversationDetail ?? listConversation.find((n) => n.id === activeCall?.conversation_id);
+  const members = currentConversation?.members ?? [];
 
   const initiatorId = activeCall?.initiator_id;
   const isVideo = activeCall?.call_type === "video";
+  
+  // Get display name for the caller
+  const callerName = initiatorId 
+    ? getUserDisplayName(initiatorId, members)
+    : getConversationDisplayName(currentConversation, members, currentUserId) || t("CHAT.USER");
 
   return (
     <Container>
       <AvatarWrapper>
         <AppAvatar
-          name={initiatorId || t("CHAT.USER")}
+          name={callerName}
           size={120}
           fontSize={48}
         />
       </AvatarWrapper>
 
       <Name>
-        {initiatorId || t("CHAT.USER")}
+        {callerName}
       </Name>
 
       <Subtitle>
