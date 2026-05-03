@@ -9,10 +9,12 @@ import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
 import { useCallStore } from "@/src/common/store/useCallStore";
+import { useChatStore } from "@/src/common/store/useChatStore";
 import { endCall, leaveCall } from "@/src/common/service/call-service";
 import AppAvatar from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { getcurrentUserId } from "@/src/common/utilities/utils";
+import type { ConversationDto } from "@/src/common/interface/chat-interface";
 
 const Container = styled(Box)({
   width: "100%",
@@ -247,6 +249,25 @@ function formatDuration(seconds: number): string {
   return `${mins.toString().padStart(2, "0")}:${secs.toString().padStart(2, "0")}`;
 }
 
+// Helper function to get user display name
+function getUserDisplayName(userId: string, members: ConversationDto["members"]): string {
+  const member = members?.find((m) => m.userId === userId);
+  return member?.nickname || member?.fullName || userId.slice(0, 8);
+}
+
+// Helper function to get conversation display name
+function getConversationDisplayName(conversation: ConversationDto | null, members: ConversationDto["members"], currentUserId: string): string {
+  if (!conversation) return "";
+  
+  const isGroup = conversation.type === "group";
+  if (isGroup) {
+    return conversation.name ?? "";
+  }
+  
+  const otherMember = members?.find((m) => m.userId !== currentUserId);
+  return otherMember?.nickname || otherMember?.fullName || conversation.name || "";
+}
+
 export default function ActiveCallScreen() {
   const t = useTrans();
   const localStream = useCallStore((s) => s.localStream);
@@ -258,11 +279,21 @@ export default function ActiveCallScreen() {
   const setMuted = useCallStore((s) => s.setMuted);
   const setCameraOff = useCallStore((s) => s.setCameraOff);
 
+  // Get conversation and user data
+  const listConversation = useChatStore((s) => s.listConversation);
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById?.[activeCall?.conversation_id || ""] ?? null
+  );
+  const currentUserId = getcurrentUserId() || "";
+  
+  const currentConversation =
+    conversationDetail ?? listConversation.find((n) => n.id === activeCall?.conversation_id);
+  const members = currentConversation?.members ?? [];
+
   const localVideoRef = useRef<HTMLVideoElement>(null);
 
   const isGroup = activeCall?.conversation_type === "group";
   const isVideo = activeCall?.call_type === "video";
-  const currentUserId = getcurrentUserId() || "";
   
   const remoteEntries = useMemo(() => Array.from(remoteStreams.entries()), [remoteStreams]);
   const isConnecting = remoteEntries.length === 0;
@@ -288,6 +319,34 @@ export default function ActiveCallScreen() {
 
   return (
     <Container>
+      {/* Call Header with Conversation Name */}
+      <Box
+        sx={{
+          position: "absolute",
+          top: 16,
+          left: 16,
+          right: 16,
+          zIndex: 20,
+          display: "flex",
+          alignItems: "center",
+          justifyContent: "center",
+        }}
+      >
+        <Typography
+          sx={{
+            color: "#fff",
+            fontSize: 18,
+            fontWeight: 600,
+            background: "rgba(0,0,0,0.5)",
+            padding: "8px 16px",
+            borderRadius: 20,
+            textAlign: "center",
+          }}
+        >
+          {getConversationDisplayName(currentConversation, members, currentUserId) || t("CALL.CALLING")}
+        </Typography>
+      </Box>
+
       <Timer>{formatDuration(callDuration)}</Timer>
 
       {isVideo && localStream && (
@@ -328,10 +387,10 @@ export default function ActiveCallScreen() {
                       justifyContent: "center",
                     }}
                   >
-                    <AppAvatar name={userId} size={80} fontSize={32} />
+                    <AppAvatar name={getUserDisplayName(userId, members)} size={80} fontSize={32} />
                   </Box>
                 )}
-                <UserLabel>{userId.slice(0, 8)}</UserLabel>
+                <UserLabel>{getUserDisplayName(userId, members)}</UserLabel>
               </VideoTile>
             </Grid>
           ))}
@@ -363,9 +422,9 @@ export default function ActiveCallScreen() {
                 <RemoteVideo stream={stream} userId={userId} />
               ) : (
                 <Box sx={{ textAlign: "center" }}>
-                  <AppAvatar name={userId} size={150} fontSize={60} />
+                  <AppAvatar name={getUserDisplayName(userId, members)} size={150} fontSize={60} />
                   <Typography sx={{ color: "#fff", mt: 2, fontSize: 20 }}>
-                    {userId.slice(0, 8)}
+                    {getUserDisplayName(userId, members)}
                   </Typography>
                 </Box>
               )}
