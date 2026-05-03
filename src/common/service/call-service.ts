@@ -9,6 +9,7 @@ import {
   hasPeer,
 } from "./peer-manager";
 import { useCallStore } from "../store/useCallStore";
+import { getcurrentUserId } from "../utilities/utils";
 import type {
   CallStateSnapshot,
   CallConversationType,
@@ -82,6 +83,56 @@ interface WsErrorPayload {
   };
 }
 
+type SimplePeerCandidateSignal = SimplePeer.SignalData & {
+  type?: "candidate";
+  candidate?: RTCIceCandidateInit | string;
+};
+
+function toBackendCandidate(signal: SimplePeer.SignalData): {
+  candidate?: string;
+  sdpMid?: string | null;
+  sdpMLineIndex?: number | null;
+} {
+  const candidateSignal = signal as SimplePeerCandidateSignal;
+  const rawCandidate = candidateSignal.candidate;
+
+  if (!rawCandidate) return {};
+
+  const candidateInit: RTCIceCandidateInit =
+    typeof rawCandidate === "string"
+      ? { candidate: rawCandidate }
+      : rawCandidate;
+
+  return {
+    candidate: JSON.stringify(candidateInit),
+    sdpMid: candidateInit.sdpMid,
+    sdpMLineIndex: candidateInit.sdpMLineIndex,
+  };
+}
+
+function fromBackendCandidate(payload: CallSignalPayload): SimplePeer.SignalData | null {
+  if (!payload.candidate) return null;
+
+  try {
+    const candidateText = payload.candidate.trim();
+    const parsedCandidate = candidateText.startsWith("{")
+      ? (JSON.parse(candidateText) as RTCIceCandidateInit)
+      : ({
+          candidate: candidateText,
+          sdpMid: payload.sdp_mid,
+          sdpMLineIndex: payload.sdp_mline_index,
+        } satisfies RTCIceCandidateInit);
+
+    return {
+      type: "candidate",
+      candidate: parsedCandidate,
+    } as SimplePeer.SignalData;
+  } catch (error) {
+    console.error("[call:signal:received] Failed to parse ICE candidate:", error);
+    return null;
+  }
+}
+
 function playRingtone(): void {
   if (typeof window === "undefined") return;
   // TODO: Add actual ringtone.mp3 file to public/sounds/
@@ -122,16 +173,37 @@ export async function startCall(
   if (!socket) return;
 
   try {
+    const callId = uuidv4();
+    const currentUserId = getcurrentUserId() || "";
     const localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: callType === "video",
     });
 
+    useCallStore.getState().setActiveCall({
+      call_id: callId,
+      conversation_id: conversationId,
+      conversation_type: conversationType,
+      call_type: callType,
+      status: "ringing",
+      initiator_id: currentUserId,
+      participants: Object.fromEntries(
+        [
+          ...(currentUserId
+            ? [[currentUserId, "accepted" as CallParticipantStatus]]
+            : []),
+          ...participantIds.map(
+            (id) => [id, "invited" as CallParticipantStatus] as const
+          ),
+        ]
+      ),
+      started_at: Date.now(),
+    });
     useCallStore.getState().setLocalStream(localStream);
     useCallStore.getState().setScreen("calling");
 
     socket.emit("call:start", {
-      call_id: uuidv4(),
+      call_id: callId,
       conversation_id: conversationId,
       conversation_type: conversationType,
       call_type: callType,
@@ -246,6 +318,7 @@ function emitSignal(
   const signalPayload = signal as Partial<
     RTCSessionDescriptionInit & RTCIceCandidateInit
   >;
+  const candidatePayload = toBackendCandidate(signal);
 
   let signalType: "offer" | "answer" | "ice-candidate" | "renegotiate";
   
@@ -261,9 +334,10 @@ function emitSignal(
     target_user_id: targetUserId,
     signal_type: signalType,
     sdp: signalPayload.sdp,
-    candidate: signalPayload.candidate,
-    sdp_mid: signalPayload.sdpMid ?? undefined,
-    sdp_mline_index: signalPayload.sdpMLineIndex ?? undefined,
+    candidate: candidatePayload.candidate,
+    sdp_mid: candidatePayload.sdpMid ?? signalPayload.sdpMid ?? undefined,
+    sdp_mline_index:
+      candidatePayload.sdpMLineIndex ?? signalPayload.sdpMLineIndex ?? undefined,
     sent_at: Date.now(),
   });
 }
@@ -292,10 +366,18 @@ export function registerCallHandlers(myUserId: string): () => void {
       status: "ringing",
       initiator_id: payload.initiator_id,
       participants: Object.fromEntries(
-        payload.participant_ids.map((id: string) => [
-          id,
-          id === payload.initiator_id ? "accepted" : "invited",
-        ])
+        [
+          [payload.initiator_id, "accepted" as CallParticipantStatus],
+          ...payload.participant_ids.map(
+            (id) =>
+              [
+                id,
+                id === payload.initiator_id
+                  ? "accepted"
+                  : "invited",
+              ] as const
+          ),
+        ]
       ),
       started_at: payload.started_at,
     });
@@ -307,6 +389,16 @@ export function registerCallHandlers(myUserId: string): () => void {
   const handleCallAccepted = async (payload: CallAcceptedPayload) => {
     console.log("[call:accepted] payload:", payload);
     stopRingtone();
+    const currentCall = useCallStore.getState().activeCall;
+    if (currentCall?.call_id === payload.call_id) {
+      useCallStore.getState().setActiveCall({
+        ...currentCall,
+        status: payload.status,
+        participants: payload.participants,
+      });
+      useCallStore.getState().setStateVersion(payload.state_version);
+    }
+
     if (payload.user_id === myUserId) {
       console.log("[call:accepted] skipped self user:", payload.user_id);
       return;
@@ -317,9 +409,6 @@ export function registerCallHandlers(myUserId: string): () => void {
       console.log("[call:accepted] skipped - no activeCall or localStream");
       return;
     }
-
-    // Update state version
-    useCallStore.getState().setStateVersion(payload.state_version);
 
     // Check if call is now ongoing
     if (payload.status === "ongoing" && payload.participants[myUserId] === "accepted") {
@@ -351,10 +440,18 @@ export function registerCallHandlers(myUserId: string): () => void {
       console.log("[call:signal:received] skipped self sender:", payload.sender_id);
       return;
     }
+    if (payload.target_user_id && payload.target_user_id !== myUserId) {
+      console.log("[call:signal:received] skipped non-target signal:", payload.target_user_id);
+      return;
+    }
 
     const { activeCall, localStream, stateVersion } = useCallStore.getState();
     if (!activeCall || !localStream) {
       console.log("[call:signal:received] skipped - no activeCall or localStream");
+      return;
+    }
+    if (payload.call_id !== activeCall.call_id) {
+      console.log("[call:signal:received] skipped different call:", payload.call_id);
       return;
     }
 
@@ -392,35 +489,10 @@ export function registerCallHandlers(myUserId: string): () => void {
         type: payload.signal_type,
         sdp: payload.sdp,
       };
-    } else if (payload.signal_type === "ice-candidate" && payload.candidate) {
-      console.log("[call:signal:received] DEBUG candidate type:", typeof payload.candidate, "value:", payload.candidate);
-      
-      try {
-        let candidate;
-        if (payload.candidate && typeof payload.candidate === "object" && !Array.isArray(payload.candidate)) {
-          // Candidate is already an object
-          console.log("[call:signal:received] Using candidate as object");
-          candidate = payload.candidate;
-        } else if (typeof payload.candidate === "string") {
-          // Candidate is a JSON string, but might be "[object Object]" which is invalid JSON
-          console.log("[call:signal:received] Parsing candidate as JSON string");
-          if (payload.candidate === "[object Object]") {
-            console.error("[call:signal:received] Backend sent stringified object instead of proper JSON");
-            return; // Skip this candidate as it's invalid
-          }
-          candidate = JSON.parse(payload.candidate);
-        } else {
-          throw new Error(`Invalid candidate format: ${typeof payload.candidate}, isArray: ${Array.isArray(payload.candidate)}`);
-        }
-        
-        signalData = {
-          type: "candidate",
-          candidate: candidate,
-        };
-      } catch (error) {
-        console.error("[call:signal:received] Failed to parse ICE candidate:", error, "payload.candidate:", payload.candidate, "type:", typeof payload.candidate, "isArray:", Array.isArray(payload.candidate));
-        return;
-      }
+    } else if (payload.signal_type === "ice-candidate") {
+      const candidateSignal = fromBackendCandidate(payload);
+      if (!candidateSignal) return;
+      signalData = candidateSignal;
     } else {
       console.warn("[call:signal:received] Unknown signal type:", payload.signal_type);
       return;
