@@ -21,11 +21,14 @@ let ringtoneAudio: HTMLAudioElement | null = null;
 
 function playRingtone(): void {
   if (typeof window === "undefined") return;
-  if (!ringtoneAudio) {
-    ringtoneAudio = new Audio("/sounds/ringtone.mp3");
-    ringtoneAudio.loop = true;
-  }
-  ringtoneAudio.play().catch(() => {});
+  // TODO: Add actual ringtone.mp3 file to public/sounds/
+  // Temporarily disabled to avoid 404 error
+  console.log("[Ringtone] Ringtone disabled - add ringtone.mp3 to public/sounds/");
+  // if (!ringtoneAudio) {
+  //   ringtoneAudio = new Audio("/sounds/ringtone.mp3");
+  //   ringtoneAudio.loop = true;
+  // }
+  // ringtoneAudio.play().catch(() => {});
 }
 
 function stopRingtone(): void {
