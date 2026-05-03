@@ -20,12 +20,6 @@ let cacheExpiry = 0;
 let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export async function getIceServers(): Promise<RTCIceServer[]> {
-  // Temporarily disabled API calls to reduce noise while debugging candidate parsing
-  console.log("[IceServer] Using default servers (API temporarily disabled)");
-  return getDefaultIceServers();
-  
-  // Original code (will be re-enabled after fixing candidate parsing)
-  /*
   // Check cache first
   if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
     return cachedIceServers;
@@ -65,7 +59,6 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
     console.error("[IceServer] Failed to fetch ICE servers:", error);
     return getDefaultIceServers();
   }
-  */
 }
 
 function getDefaultIceServers(): RTCIceServer[] {
