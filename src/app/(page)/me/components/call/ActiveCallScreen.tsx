@@ -12,6 +12,7 @@ import { useCallStore } from "@/src/common/store/useCallStore";
 import { endCall, leaveCall } from "@/src/common/service/call-service";
 import AppAvatar from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { getcurrentUserId } from "@/src/common/utilities/utils";
 
 const Container = styled(Box)({
   width: "100%",
@@ -24,8 +25,9 @@ const Container = styled(Box)({
 
 const VideoGrid = styled(Grid)({
   flex: 1,
-  padding: 16,
+  padding: "16px 16px 112px",
   overflow: "auto",
+  minHeight: 0,
 });
 
 const VideoTile = styled(Box)({
@@ -57,6 +59,11 @@ const LocalVideo = styled("video")({
 });
 
 const Controls = styled(Box)({
+  position: "absolute",
+  left: 0,
+  right: 0,
+  bottom: 0,
+  zIndex: 30,
   display: "flex",
   justifyContent: "center",
   gap: 24,
@@ -229,7 +236,7 @@ function RemoteVideo({
       autoPlay
       playsInline
       muted
-      style={group ? undefined : { maxHeight: "80%", maxWidth: "80%" }}
+      style={group ? undefined : { width: "100%", height: "100%" }}
     />
   );
 }
@@ -255,6 +262,7 @@ export default function ActiveCallScreen() {
 
   const isGroup = activeCall?.conversation_type === "group";
   const isVideo = activeCall?.call_type === "video";
+  const currentUserId = getcurrentUserId() || "";
   
   const remoteEntries = useMemo(() => Array.from(remoteStreams.entries()), [remoteStreams]);
   const isConnecting = remoteEntries.length === 0;
@@ -271,7 +279,7 @@ export default function ActiveCallScreen() {
   }, [remoteStreams]);
 
   const handleEndCall = () => {
-    if (isGroup) {
+    if (isGroup && activeCall?.initiator_id !== currentUserId) {
       leaveCall();
     } else {
       endCall();
@@ -295,6 +303,7 @@ export default function ActiveCallScreen() {
             justifyContent: "center",
             flexDirection: "column",
             gap: 2,
+            pb: "112px",
           }}
         >
           <Typography sx={{ color: "#fff", fontSize: 18 }}>
@@ -328,7 +337,14 @@ export default function ActiveCallScreen() {
           ))}
         </VideoGrid>
       ) : (
-        <Box sx={{ flex: 1, position: "relative" }}>
+        <Box
+          sx={{
+            flex: 1,
+            position: "relative",
+            minHeight: 0,
+            overflow: "hidden",
+          }}
+        >
           {remoteEntries.map(([userId, stream]) => (
             <Box
               key={userId}
@@ -338,6 +354,8 @@ export default function ActiveCallScreen() {
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
+                pb: "112px",
+                boxSizing: "border-box",
               }}
             >
               <RemoteAudio stream={stream} userId={userId} />
