@@ -393,17 +393,28 @@ export function registerCallHandlers(myUserId: string): () => void {
         sdp: payload.sdp,
       };
     } else if (payload.signal_type === "ice-candidate" && payload.candidate) {
+      console.log("[call:signal:received] DEBUG candidate type:", typeof payload.candidate, "value:", payload.candidate);
+      
       try {
-        const candidate = typeof payload.candidate === "string" 
-          ? JSON.parse(payload.candidate) 
-          : payload.candidate;
+        let candidate;
+        if (payload.candidate && typeof payload.candidate === "object" && !Array.isArray(payload.candidate)) {
+          // Candidate is already an object
+          console.log("[call:signal:received] Using candidate as object");
+          candidate = payload.candidate;
+        } else if (typeof payload.candidate === "string") {
+          // Candidate is a JSON string, parse it
+          console.log("[call:signal:received] Parsing candidate as JSON string");
+          candidate = JSON.parse(payload.candidate);
+        } else {
+          throw new Error(`Invalid candidate format: ${typeof payload.candidate}, isArray: ${Array.isArray(payload.candidate)}`);
+        }
         
         signalData = {
           type: "candidate",
           candidate: candidate,
         };
       } catch (error) {
-        console.error("[call:signal:received] Failed to parse ICE candidate:", error);
+        console.error("[call:signal:received] Failed to parse ICE candidate:", error, "payload.candidate:", payload.candidate, "type:", typeof payload.candidate, "isArray:", Array.isArray(payload.candidate));
         return;
       }
     } else {
