@@ -395,5 +395,18 @@
   "CALL.TURN_OFF_CAMERA": "Tắt camera",
   "CALL.TURN_ON_CAMERA": "Bật camera",
   "CALL.END_CALL": "Kết thúc",
-  "CALL.LEAVE_CALL": "Rời cuộc gọi"
+  "CALL.LEAVE_CALL": "Rời cuộc gọi",
+  "CALL.REJECTED": "Người dùng đã từ chối cuộc gọi",
+  "CALL.USER_LEFT": "Người dùng đã rời cuộc gọi",
+  "CALL.USER_REMOVED": "Bạn đã bị loại khỏi cuộc trò chuyện",
+  "CALL.CALL_REJECTED": "Cuộc gọi bị từ chối",
+  "CALL.CALL_TIMEOUT": "Cuộc gọi hết thời gian chờ",
+  "CALL.ALL_LEFT": "Tất cả người tham gia đã rời đi",
+  "CALL.CALL_HANGUP": "Cuộc gọi đã kết thúc",
+  "CALL.MEDIA_ERROR": "Không thể truy cập microphone/camera",
+  "CALL.WAIT_PLEASE": "Vui lòng đợi giây lát...",
+  "CALL.RATE_LIMITED": "Quá nhiều yêu cầu. Thử lại sau {{retry_after}}s",
+  "CALL.FORBIDDEN_MEMBER": "Bạn không phải là thành viên của cuộc trò chuyện này",
+  "CALL.FORBIDDEN_ACCESS": "Không có quyền truy cập",
+  "CALL.CALL_ENDED_WITH_DURATION": "Cuộc gọi kết thúc · {{duration}}{{reason}}"
 }

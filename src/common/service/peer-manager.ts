@@ -30,35 +30,27 @@ export function createPeer(params: {
   });
 
   peer.on("signal", (signal) => {
-    console.log(
-      `[peer:${params.userId}] signal:`,
-      (signal as RTCSessionDescriptionInit).type
-    );
     params.onSignal(signal);
   });
   
   peer.on("stream", (stream) => {
-    console.log(`[peer:${params.userId}] stream received:`, stream.id, "tracks:", stream.getTracks().length);
-    stream.getTracks().forEach((t, i) => {
-      console.log(`  track[${i}]:`, t.kind, "enabled:", t.enabled, "muted:", t.muted, "readyState:", t.readyState);
+    stream.getTracks().forEach((t) => {
       // Monitor when track becomes unmuted (ready to play)
       t.onunmute = () => {
-        console.log(`[peer:${params.userId}] track[${i}] ${t.kind} unmuted - ready to play`);
+        // Track unmuted - ready to play
       };
       t.onmute = () => {
-        console.log(`[peer:${params.userId}] track[${i}] ${t.kind} muted`);
+        // Track muted
       };
     });
     params.onStream(stream);
   });
   
   peer.on("close", () => {
-    console.log(`[peer:${params.userId}] closed`);
     params.onClose();
   });
   
   peer.on("error", (err) => {
-    console.error(`[peer:${params.userId}] error:`, err);
     params.onError?.(err);
   });
   
@@ -70,11 +62,28 @@ export function createPeer(params: {
   const pc = (peer as PeerWithConnection)._pc;
   if (pc) {
     peerConnections.set(peer, pc);
-    pc.oniceconnectionstatechange = () => {
-      // ICE connection state changed
+    
+    let cleanupTriggered = false;
+    
+    const triggerCleanup = () => {
+      if (!cleanupTriggered && !peer.destroyed) {
+        cleanupTriggered = true;
+        params.onClose();
+      }
     };
+    
+    pc.oniceconnectionstatechange = () => {
+      // Handle ICE connection failure
+      if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
+        setTimeout(triggerCleanup, 1000);
+      }
+    };
+    
     pc.onconnectionstatechange = () => {
-      // Connection state changed
+      // Handle connection failure
+      if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
+        setTimeout(triggerCleanup, 1000);
+      }
     };
   }
 

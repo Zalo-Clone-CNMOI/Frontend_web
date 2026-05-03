@@ -1,13 +1,7 @@
 import { v4 as uuidv4 } from "uuid";
 import { getSocket } from "../socket/socket";
 import { getIceServers } from "./ice-server.service";
-import {
-  createPeer,
-  destroyPeer,
-  destroyAllPeers,
-  feedSignal,
-  hasPeer,
-} from "./peer-manager";
+import { destroyAllPeers, destroyPeer, createPeer, hasPeer, feedSignal } from "./peer-manager";
 import { useCallStore } from "../store/useCallStore";
 import { getcurrentUserId } from "../utilities/utils";
 import type {
@@ -20,6 +14,7 @@ import type {
 } from "@/src/types/call";
 import type SimplePeer from "simple-peer";
 import { handleCallReconnect } from "./call-reconnect.service";
+import i18n from "../i18n/i18n";
 
 const ringtoneAudio: HTMLAudioElement | null = null;
 
@@ -159,11 +154,12 @@ function showCallSummary(duration: number, reason?: string): void {
   const minutes = Math.floor(duration / 60000);
   const seconds = Math.floor((duration % 60000) / 1000);
   const timeStr = `${minutes}:${seconds.toString().padStart(2, "0")}`;
-  showToast(`Cuộc gọi kết thúc · ${timeStr}${reason ? ` · ${reason}` : ""}`);
+  const reasonText = reason ? ` · ${reason}` : "";
+  showToast(i18n.t("CALL.CALL_ENDED_WITH_DURATION", { duration: timeStr, reason: reasonText }));
 }
 
 let isCleaningUp = false;
-let pendingCleanup: (() => void) | null = null;
+let cleanupPromise: Promise<void> | null = null;
 
 export async function startCall(
   conversationId: string,
@@ -175,11 +171,22 @@ export async function startCall(
   if (!socket) return;
 
   // Wait for any ongoing cleanup to complete
+  if (isCleaningUp && cleanupPromise) {
+    try {
+      await cleanupPromise;
+    } catch {
+      // Cleanup failed, continue anyway
+    }
+  }
+
+  // Double check after waiting
   if (isCleaningUp) {
-    showToast("Vui lòng đợi giây lát...");
+    showToast(i18n.t("CALL.WAIT_PLEASE"));
     return;
   }
 
+  let localStream: MediaStream | null = null;
+  
   try {
     const callId = uuidv4();
     const currentUserId = getcurrentUserId() || "";
@@ -187,11 +194,12 @@ export async function startCall(
     // Add small delay to ensure previous cleanup is complete
     await new Promise(resolve => setTimeout(resolve, 100));
     
-    const localStream = await navigator.mediaDevices.getUserMedia({
+    localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
       video: callType === "video",
     });
 
+    // Set call state first
     useCallStore.getState().setActiveCall({
       call_id: callId,
       conversation_id: conversationId,
@@ -211,6 +219,8 @@ export async function startCall(
       ),
       started_at: Date.now(),
     });
+    
+    // Then set stream (if this fails, stream cleanup will happen in finally)
     useCallStore.getState().setLocalStream(localStream);
     useCallStore.getState().setScreen("calling");
 
@@ -223,7 +233,14 @@ export async function startCall(
       started_at: Date.now(),
     });
   } catch (err) {
-    showToast("Không thể truy cập microphone/camera");
+    // CRITICAL: Clean up stream if any error occurs
+    if (localStream) {
+      localStream.getTracks().forEach(track => track.stop());
+    }
+    showToast(i18n.t("CALL.MEDIA_ERROR"));
+    
+    // Also clean up any partial state
+    useCallStore.getState().reset();
   }
 }
 
@@ -251,12 +268,12 @@ export async function acceptCall(): Promise<void> {
       accepted_at: Date.now(),
     });
   } catch (err) {
-    showToast("Không thể truy cập microphone/camera");
+    showToast(i18n.t("CALL.MEDIA_ERROR"));
     rejectCall("media_error");
   }
 }
 
-export function rejectCall(reason?: string): void {
+export async function rejectCall(reason?: string): Promise<void> {
   const socket = getSocket();
   if (!socket) return;
 
@@ -270,10 +287,10 @@ export function rejectCall(reason?: string): void {
     rejected_at: Date.now(),
   });
 
-  cleanup();
+  await cleanup();
 }
 
-export function endCall(reason?: string): void {
+export async function endCall(reason?: string): Promise<void> {
   const socket = getSocket();
   if (!socket) return;
 
@@ -287,10 +304,10 @@ export function endCall(reason?: string): void {
     ended_at: Date.now(),
   });
 
-  cleanup();
+  await cleanup();
 }
 
-export function leaveCall(reason?: string): void {
+export async function leaveCall(reason?: string): Promise<void> {
   const socket = getSocket();
   if (!socket) return;
 
@@ -304,7 +321,7 @@ export function leaveCall(reason?: string): void {
     left_at: Date.now(),
   });
 
-  cleanup();
+  await cleanup();
 }
 
 export function syncCallState(conversationId: string): void {
@@ -352,23 +369,31 @@ function emitSignal(
   });
 }
 
-export function cleanup(): void {
+export function cleanup(): Promise<void> {
+  if (isCleaningUp) {
+    return cleanupPromise || Promise.resolve();
+  }
+
   isCleaningUp = true;
   
-  // Perform cleanup asynchronously to avoid blocking
-  setTimeout(() => {
-    stopRingtone();
-    destroyAllPeers();
-    useCallStore.getState().reset();
-    isCleaningUp = false;
-    
-    // Execute any pending cleanup
-    if (pendingCleanup) {
-      const fn = pendingCleanup;
-      pendingCleanup = null;
-      fn();
-    }
-  }, 50);
+  cleanupPromise = new Promise((resolve) => {
+    // Perform cleanup asynchronously to avoid blocking
+    setTimeout(() => {
+      try {
+        stopRingtone();
+        destroyAllPeers();
+        useCallStore.getState().reset();
+      } catch (error) {
+        // Log error but don't reject the promise
+      } finally {
+        isCleaningUp = false;
+        cleanupPromise = null;
+        resolve();
+      }
+    }, 50);
+  });
+
+  return cleanupPromise;
 }
 
 export function registerCallHandlers(myUserId: string): () => void {
@@ -511,7 +536,7 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallRejected = (_payload: CallRejectedPayload) => {
-    showToast("Người dùng đã từ chối cuộc gọi");
+    showToast(i18n.t("CALL.REJECTED"));
     cleanup();
   };
 
@@ -521,9 +546,9 @@ export function registerCallHandlers(myUserId: string): () => void {
     
     // Show appropriate message based on reason
     if (payload.reason === "removed_from_conversation") {
-      showToast("Bạn đã bị loại khỏi cuộc trò chuyện");
+      showToast(i18n.t("CALL.USER_REMOVED"));
     } else {
-      showToast("Người dùng đã rời cuộc gọi");
+      showToast(i18n.t("CALL.USER_LEFT"));
     }
   };
 
@@ -540,19 +565,19 @@ export function registerCallHandlers(myUserId: string): () => void {
     let reasonMessage = "";
     switch (payload.reason) {
       case "rejected":
-        reasonMessage = "Cuộc gọi bị từ chối";
+        reasonMessage = i18n.t("CALL.CALL_REJECTED");
         break;
       case "timed_out":
-        reasonMessage = "Cuộc gọi hết thời gian chờ";
+        reasonMessage = i18n.t("CALL.CALL_TIMEOUT");
         break;
       case "all_left":
-        reasonMessage = "Tất cả người tham gia đã rời đi";
+        reasonMessage = i18n.t("CALL.ALL_LEFT");
         break;
       case "hangup":
-        reasonMessage = "Cuộc gọi đã kết thúc";
+        reasonMessage = i18n.t("CALL.CALL_HANGUP");
         break;
       default:
-        reasonMessage = payload.reason || "Cuộc gọi đã kết thúc";
+        reasonMessage = payload.reason || i18n.t("CALL.CALL_HANGUP");
     }
     
     showCallSummary(duration, reasonMessage);
@@ -565,7 +590,15 @@ export function registerCallHandlers(myUserId: string): () => void {
       return;
     }
 
-    // Update state version
+    const { stateVersion } = useCallStore.getState();
+    
+    // Validate state version to prevent stale state overwrites
+    if (payload.state.version !== undefined && payload.state.version < stateVersion) {
+      // Ignore stale state updates
+      return;
+    }
+
+    // Update state version first
     if (payload.state.version !== undefined) {
       useCallStore.getState().setStateVersion(payload.state.version);
     }
@@ -585,14 +618,14 @@ export function registerCallHandlers(myUserId: string): () => void {
   const handleWsError = (payload: WsErrorPayload) => {
     if (payload.code === "RATE_LIMITED") {
       showToast(
-        `Quá nhiều yêu cầu. Thử lại sau ${payload.details?.retry_after ?? 30}s`
+        i18n.t("CALL.RATE_LIMITED", { retry_after: payload.details?.retry_after ?? 30 })
       );
     }
     if (payload.code === "FORBIDDEN") {
       if (payload.details && "conversation_id" in payload.details) {
-        showToast("Bạn không phải là thành viên của cuộc trò chuyện này");
+        showToast(i18n.t("CALL.FORBIDDEN_MEMBER"));
       } else {
-        showToast("Không có quyền truy cập");
+        showToast(i18n.t("CALL.FORBIDDEN_ACCESS"));
       }
       cleanup();
     }
