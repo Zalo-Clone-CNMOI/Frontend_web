@@ -12,12 +12,46 @@ import { useCallStore } from "../store/useCallStore";
 import type {
   CallStateSnapshot,
   CallConversationType,
+  CallSignalPayload,
   CallType,
 } from "@/src/types/call";
-import type { Socket } from "socket.io-client";
 import type SimplePeer from "simple-peer";
 
-let ringtoneAudio: HTMLAudioElement | null = null;
+const ringtoneAudio: HTMLAudioElement | null = null;
+
+interface CallStartedPayload {
+  call_id: string;
+  conversation_id: string;
+  conversation_type?: CallConversationType;
+  call_type: CallType;
+  initiator_id: string;
+  participant_ids: string[];
+  started_at: number;
+}
+
+interface CallAcceptedPayload {
+  user_id: string;
+}
+
+interface CallLeftPayload {
+  user_id: string;
+}
+
+interface CallEndedPayload {
+  ended_at: number;
+  reason?: string;
+}
+
+interface CallStateUpdatedPayload {
+  state: CallStateSnapshot | null;
+}
+
+interface WsErrorPayload {
+  code?: string;
+  details?: {
+    retry_after?: number;
+  };
+}
 
 function playRingtone(): void {
   if (typeof window === "undefined") return;
@@ -180,15 +214,19 @@ function emitSignal(
   const socket = getSocket();
   if (!socket) return;
 
+  const signalPayload = signal as Partial<
+    RTCSessionDescriptionInit & RTCIceCandidateInit
+  >;
+
   socket.emit("call:signal", {
     call_id: activeCall.call_id,
     conversation_id: activeCall.conversation_id,
     target_user_id: targetUserId,
-    signal_type: (signal as any).type ?? "ice-candidate",
-    sdp: (signal as RTCSessionDescriptionInit).sdp,
-    candidate: (signal as RTCIceCandidateInit).candidate,
-    sdp_mid: (signal as RTCIceCandidateInit).sdpMid ?? undefined,
-    sdp_mline_index: (signal as RTCIceCandidateInit).sdpMLineIndex ?? undefined,
+    signal_type: signalPayload.type ?? "ice-candidate",
+    sdp: signalPayload.sdp,
+    candidate: signalPayload.candidate,
+    sdp_mid: signalPayload.sdpMid ?? undefined,
+    sdp_mline_index: signalPayload.sdpMLineIndex ?? undefined,
     sent_at: Date.now(),
   });
 }
@@ -203,7 +241,7 @@ export function registerCallHandlers(myUserId: string): () => void {
   const socket = getSocket();
   if (!socket) return () => {};
 
-  const handleCallStarted = (payload: any) => {
+  const handleCallStarted = (payload: CallStartedPayload) => {
     if (payload.initiator_id === myUserId) return;
 
     useCallStore.getState().setActiveCall({
@@ -226,9 +264,14 @@ export function registerCallHandlers(myUserId: string): () => void {
     playRingtone();
   };
 
-  const handleCallAccepted = async (payload: any) => {
+  const handleCallAccepted = async (payload: CallAcceptedPayload) => {
     console.log("[call:accepted] payload:", payload);
     stopRingtone();
+    if (payload.user_id === myUserId) {
+      console.log("[call:accepted] skipped self user:", payload.user_id);
+      return;
+    }
+
     const { activeCall, localStream } = useCallStore.getState();
     if (!activeCall || !localStream) {
       console.log("[call:accepted] skipped - no activeCall or localStream");
@@ -256,8 +299,13 @@ export function registerCallHandlers(myUserId: string): () => void {
     });
   };
 
-  const handleCallSignalReceived = async (payload: any) => {
+  const handleCallSignalReceived = async (payload: CallSignalPayload) => {
     console.log("[call:signal:received] payload:", payload);
+    if (payload.sender_id === myUserId) {
+      console.log("[call:signal:received] skipped self sender:", payload.sender_id);
+      return;
+    }
+
     const { activeCall, localStream } = useCallStore.getState();
     if (!activeCall || !localStream) {
       console.log("[call:signal:received] skipped - no activeCall or localStream");
@@ -294,17 +342,17 @@ export function registerCallHandlers(myUserId: string): () => void {
     } as SimplePeer.SignalData);
   };
 
-  const handleCallRejected = (payload: any) => {
+  const handleCallRejected = () => {
     showToast("Người dùng đã từ chối cuộc gọi");
   };
 
-  const handleCallLeft = (payload: any) => {
+  const handleCallLeft = (payload: CallLeftPayload) => {
     destroyPeer(payload.user_id);
     useCallStore.getState().removeRemoteStream(payload.user_id);
     showToast("Người dùng đã rời cuộc gọi");
   };
 
-  const handleCallEnded = (payload: any) => {
+  const handleCallEnded = (payload: CallEndedPayload) => {
     const { activeCall } = useCallStore.getState();
     const duration = activeCall
       ? payload.ended_at - activeCall.started_at
@@ -317,7 +365,7 @@ export function registerCallHandlers(myUserId: string): () => void {
     setTimeout(() => useCallStore.getState().setScreen("idle"), 3000);
   };
 
-  const handleCallStateUpdated = (payload: any) => {
+  const handleCallStateUpdated = (payload: CallStateUpdatedPayload) => {
     if (!payload.state) {
       if (useCallStore.getState().screen !== "idle") cleanup();
       return;
@@ -335,7 +383,7 @@ export function registerCallHandlers(myUserId: string): () => void {
     }
   };
 
-  const handleWsError = (payload: any) => {
+  const handleWsError = (payload: WsErrorPayload) => {
     if (payload.code === "RATE_LIMITED") {
       showToast(
         `Quá nhiều yêu cầu. Thử lại sau ${payload.details?.retry_after ?? 30}s`

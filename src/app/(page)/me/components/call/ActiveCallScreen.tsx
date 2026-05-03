@@ -116,7 +116,15 @@ function playElement(
   const playPromise = element.play();
   if (playPromise) {
     playPromise.catch((err) => {
-      console.warn(`[ActiveCallScreen] ${label} play blocked:`, err.message);
+      const message = err instanceof Error ? err.message : String(err);
+      const isExpectedInterruption =
+        err instanceof DOMException &&
+        err.name === "AbortError" &&
+        (message.includes("pause") || message.includes("new load request"));
+
+      if (isExpectedInterruption) return;
+
+      console.warn(`[ActiveCallScreen] ${label} play blocked:`, message);
     });
   }
 }
