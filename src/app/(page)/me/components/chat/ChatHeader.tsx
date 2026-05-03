@@ -6,7 +6,10 @@ import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import SearchIcon from "@mui/icons-material/Search";
+import PhoneIcon from "@mui/icons-material/Phone";
+import VideoCallIcon from "@mui/icons-material/VideoCall";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { startCall } from "@/src/common/service/call-service";
 
 interface ChatHeaderProps {
   title?: string;
@@ -132,6 +135,26 @@ export default function ChatHeader({
 
   const isOnline = !isGroup && otherUserPresence?.status === "online";
 
+  const handleStartAudioCall = () => {
+    if (!conversationId || !currentUserId) return;
+    
+    const participantIds = isGroup
+      ? members.filter((m) => m.userId !== currentUserId).map((m) => m.userId)
+      : otherUserId ? [otherUserId] : [];
+    
+    startCall(conversationId, isGroup ? "group" : "direct", "audio", participantIds);
+  };
+
+  const handleStartVideoCall = () => {
+    if (!conversationId || !currentUserId) return;
+    
+    const participantIds = isGroup
+      ? members.filter((m) => m.userId !== currentUserId).map((m) => m.userId)
+      : otherUserId ? [otherUserId] : [];
+    
+    startCall(conversationId, isGroup ? "group" : "direct", "video", participantIds);
+  };
+
   return (
     <HeaderRoot>
       <HeaderTop>
@@ -157,11 +180,19 @@ export default function ChatHeader({
             </HeaderSubtitle>
           </HeaderLeft>
         </HeaderInfo>
-        {onToggleSearch && (
-          <IconButton onClick={onToggleSearch} sx={{ color: "#6B7280" }}>
-            <SearchIcon />
+        <Box sx={{ display: "flex", gap: 0.5 }}>
+          <IconButton onClick={handleStartAudioCall} sx={{ color: "#6B7280" }}>
+            <PhoneIcon />
           </IconButton>
-        )}
+          <IconButton onClick={handleStartVideoCall} sx={{ color: "#6B7280" }}>
+            <VideoCallIcon />
+          </IconButton>
+          {onToggleSearch && (
+            <IconButton onClick={onToggleSearch} sx={{ color: "#6B7280" }}>
+              <SearchIcon />
+            </IconButton>
+          )}
+        </Box>
       </HeaderTop>
     </HeaderRoot>
   );

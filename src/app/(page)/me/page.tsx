@@ -1,5 +1,8 @@
 "use client";
 
+// Disable SSR to avoid hydration errors
+// TODO: Re-enable after fixing dynamic values causing hydration mismatch
+
 import React, { useState, useEffect } from "react";
 import { Box, Button, Grid, Tab } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -27,6 +30,8 @@ import InfConvColumn from "./components/conversation-infor/page";
 import SearchSidebar from "./components/chat/SearchSidebar";
 import { cleanupChat, initChat } from "@/src/common/action/chat.action";
 import { fetchAuthData } from "@/src/common/helpers/fetchDataHelpers";
+import { registerCallHandlers, syncCallState } from "@/src/common/service/call-service";
+import CallContainer from "./components/call/CallContainer";
 import ContactFunctionList, { ContactView } from "./components/friend/ContactFunctionList";
 import ContactContentPanel from "./components/friend/ContactContentPanel";
 import { useTrans } from "@/src/common/utilities/hook/trans";
@@ -202,6 +207,12 @@ const Me = () => {
         setShowSearchSidebar(false);
     }, [activeConversationId]);
 
+    useEffect(() => {
+        if (activeConversationId) {
+            syncCallState(activeConversationId);
+        }
+    }, [activeConversationId]);
+
     const handleSelectedIcon = (iconName: SidebarKey) => {
         setSelectedIcon(iconName);
         if (iconName === "contact") {
@@ -242,6 +253,14 @@ const Me = () => {
         authData?.data?.user?.id ||
         getcurrentUserId() ||
         "";
+
+    // Register call handlers on mount
+    useEffect(() => {
+        if (currentUserId) {
+            const unregister = registerCallHandlers(currentUserId);
+            return () => unregister();
+        }
+    }, [currentUserId]);
 
     return (
         <Root container>
@@ -379,6 +398,8 @@ const Me = () => {
                     ) : null}
                 </Panel>
             </ChatColumn>
+            
+            <CallContainer />
         </Root>
     );
 };

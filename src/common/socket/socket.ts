@@ -21,7 +21,7 @@ export const connectSocket = (accessToken?: string) => {
     });
 
     socketInstance.on("connect_error", (err) => {
-      console.error("[Socket] Connection error:", err.message, err);
+      // Connection error
     });
 
     socketInstance.on("disconnect", (reason) => {
