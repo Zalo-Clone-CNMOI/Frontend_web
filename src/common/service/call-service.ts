@@ -385,13 +385,33 @@ export function registerCallHandlers(myUserId: string): () => void {
       });
     }
 
-    feedSignal(payload.sender_id, {
-      type: payload.signal_type,
-      sdp: payload.sdp,
-      candidate: payload.candidate,
-      sdpMid: payload.sdp_mid,
-      sdpMLineIndex: payload.sdp_mline_index,
-    } as SimplePeer.SignalData);
+    let signalData: SimplePeer.SignalData;
+
+    if (payload.signal_type === "offer" || payload.signal_type === "answer") {
+      signalData = {
+        type: payload.signal_type,
+        sdp: payload.sdp,
+      };
+    } else if (payload.signal_type === "ice-candidate" && payload.candidate) {
+      try {
+        const candidate = typeof payload.candidate === "string" 
+          ? JSON.parse(payload.candidate) 
+          : payload.candidate;
+        
+        signalData = {
+          type: "candidate",
+          candidate: candidate,
+        };
+      } catch (error) {
+        console.error("[call:signal:received] Failed to parse ICE candidate:", error);
+        return;
+      }
+    } else {
+      console.warn("[call:signal:received] Unknown signal type:", payload.signal_type);
+      return;
+    }
+
+    feedSignal(payload.sender_id, signalData);
   };
 
   const handleCallRejected = (payload: CallRejectedPayload) => {
