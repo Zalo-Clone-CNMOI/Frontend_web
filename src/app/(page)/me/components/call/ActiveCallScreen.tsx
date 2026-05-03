@@ -137,6 +137,7 @@ function RemoteAudio({
   userId: string;
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
+  const hasAudio = stream.getAudioTracks().length > 0;
 
   useEffect(() => {
     const audio = audioRef.current;
@@ -155,6 +156,9 @@ function RemoteAudio({
     audio.addEventListener("canplay", handleCanPlay);
     audioTracks.forEach((track) => {
       track.addEventListener("unmute", handleTrackUnmute);
+      if (!track.muted) {
+        handleTrackUnmute();
+      }
     });
 
     return () => {
@@ -168,7 +172,9 @@ function RemoteAudio({
     };
   }, [stream, userId]);
 
-  return <audio ref={audioRef} autoPlay playsInline style={{ display: "none" }} />;
+  if (!hasAudio) return null;
+
+  return <audio ref={audioRef} autoPlay playsInline />;
 }
 
 function RemoteVideo({
@@ -181,6 +187,7 @@ function RemoteVideo({
   group?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
+  const hasVideo = stream.getVideoTracks().length > 0;
 
   useEffect(() => {
     const video = videoRef.current;
@@ -198,6 +205,9 @@ function RemoteVideo({
     video.addEventListener("canplay", handleCanPlay);
     videoTracks.forEach((track) => {
       track.addEventListener("unmute", handleTrackUnmute);
+      if (!track.muted) {
+        handleTrackUnmute();
+      }
     });
 
     return () => {
@@ -210,6 +220,8 @@ function RemoteVideo({
       video.srcObject = null;
     };
   }, [stream, userId]);
+
+  if (!hasVideo) return null;
 
   return (
     <VideoElement

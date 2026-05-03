@@ -1,9 +1,15 @@
 import SimplePeer from "simple-peer";
 
 const peers = new Map<string, SimplePeer.Instance>();
+const peerConnections = new WeakMap<SimplePeer.Instance, RTCPeerConnection>();
+
+type PeerWithConnection = SimplePeer.Instance & {
+  _pc?: RTCPeerConnection;
+};
 
 export function hasPeer(userId: string): boolean {
-  return peers.has(userId);
+  const peer = peers.get(userId);
+  return Boolean(peer && !peer.destroyed);
 }
 
 export function createPeer(params: {
@@ -24,7 +30,10 @@ export function createPeer(params: {
   });
 
   peer.on("signal", (signal) => {
-    console.log(`[peer:${params.userId}] signal:`, (signal as any).type);
+    console.log(
+      `[peer:${params.userId}] signal:`,
+      (signal as RTCSessionDescriptionInit).type
+    );
     params.onSignal(signal);
   });
   
@@ -58,8 +67,9 @@ export function createPeer(params: {
   });
   
   // Monitor ICE connection state
-  const pc = (peer as any)._pc as RTCPeerConnection;
+  const pc = (peer as PeerWithConnection)._pc;
   if (pc) {
+    peerConnections.set(peer, pc);
     pc.oniceconnectionstatechange = () => {
       console.log(`[peer:${params.userId}] ICE state:`, pc.iceConnectionState);
     };
@@ -76,8 +86,19 @@ export function createPeer(params: {
 
 export function feedSignal(userId: string, signal: SimplePeer.SignalData): void {
   const peer = peers.get(userId);
-  if (peer && !peer.destroyed) {
+  if (!peer || peer.destroyed) return;
+
+  const signalType = (signal as RTCSessionDescriptionInit).type;
+  const pc = peerConnections.get(peer);
+  if (signalType === "answer" && pc?.signalingState === "stable") {
+    console.log(`[peer:${userId}] ignored duplicate answer in stable state`);
+    return;
+  }
+
+  try {
     peer.signal(signal);
+  } catch (err) {
+    console.error(`[peer:${userId}] failed to apply signal:`, err);
   }
 }
 
