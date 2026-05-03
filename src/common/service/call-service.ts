@@ -247,17 +247,24 @@ function emitSignal(
     RTCSessionDescriptionInit & RTCIceCandidateInit
   >;
 
+  let signalType: "offer" | "answer" | "ice-candidate" | "renegotiate";
+  
+  if (signalPayload.type === "offer" || signalPayload.type === "answer") {
+    signalType = signalPayload.type;
+  } else {
+    signalType = "ice-candidate";
+  }
+
   socket.emit("call:signal", {
     call_id: activeCall.call_id,
     conversation_id: activeCall.conversation_id,
     target_user_id: targetUserId,
-    signal_type: signalPayload.type ?? "ice-candidate",
+    signal_type: signalType,
     sdp: signalPayload.sdp,
     candidate: signalPayload.candidate,
     sdp_mid: signalPayload.sdpMid ?? undefined,
     sdp_mline_index: signalPayload.sdpMLineIndex ?? undefined,
     sent_at: Date.now(),
-    state_version: useCallStore.getState().stateVersion,
   });
 }
 
