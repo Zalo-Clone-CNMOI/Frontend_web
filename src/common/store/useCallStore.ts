@@ -12,6 +12,7 @@ interface CallStore {
   isCameraOff: boolean;
   callDuration: number;
   durationInterval: ReturnType<typeof setInterval> | null;
+  stateVersion: number;
 
   setScreen: (s: CallScreen) => void;
   setActiveCall: (state: CallStateSnapshot | null) => void;
@@ -22,6 +23,7 @@ interface CallStore {
   setCameraOff: (off: boolean) => void;
   startDurationTimer: () => void;
   stopDurationTimer: () => void;
+  setStateVersion: (version: number) => void;
   reset: () => void;
 }
 
@@ -34,6 +36,7 @@ const initialState = {
   isCameraOff: false,
   callDuration: 0,
   durationInterval: null,
+  stateVersion: 0,
 };
 
 export const useCallStore = create<CallStore>((set, get) => ({
@@ -91,6 +94,8 @@ export const useCallStore = create<CallStore>((set, get) => ({
     }
     set({ durationInterval: null });
   },
+
+  setStateVersion: (stateVersion) => set({ stateVersion }),
 
   reset: () => {
     const { durationInterval, localStream } = get();

@@ -14,6 +14,7 @@ export interface CallStateSnapshot {
   participants: Record<string, CallParticipantStatus>;
   started_at: number;
   ended_at?: number;
+  version?: number;
 }
 
 export type CallScreen =
@@ -35,4 +36,5 @@ export interface CallSignalPayload {
   sdp_mid?: string;
   sdp_mline_index?: number;
   sent_at: number;
+  state_version?: number;
 }

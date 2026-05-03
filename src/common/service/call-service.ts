@@ -14,8 +14,11 @@ import type {
   CallConversationType,
   CallSignalPayload,
   CallType,
+  CallStatus,
+  CallParticipantStatus,
 } from "@/src/types/call";
 import type SimplePeer from "simple-peer";
+import { handleCallReconnect } from "./call-reconnect.service";
 
 const ringtoneAudio: HTMLAudioElement | null = null;
 
@@ -30,20 +33,46 @@ interface CallStartedPayload {
 }
 
 interface CallAcceptedPayload {
+  call_id: string;
+  conversation_id: string;
   user_id: string;
+  accepted_at: number;
+  participants: Record<string, CallParticipantStatus>;
+  status: CallStatus;
+  state_version: number;
 }
 
 interface CallLeftPayload {
+  call_id: string;
+  conversation_id: string;
   user_id: string;
+  reason: string;
+  left_at: number;
 }
 
 interface CallEndedPayload {
+  call_id: string;
+  conversation_id: string;
+  user_id: string;
+  reason: string;
   ended_at: number;
-  reason?: string;
+}
+
+interface CallRejectedPayload {
+  call_id: string;
+  conversation_id: string;
+  user_id: string;
+  reason: string;
+  rejected_at: number;
 }
 
 interface CallStateUpdatedPayload {
+  conversation_id: string;
   state: CallStateSnapshot | null;
+  requested_by?: string;
+  updated_at: number;
+  reason?: string;
+  details: Record<string, unknown>;
 }
 
 interface WsErrorPayload {
@@ -228,6 +257,7 @@ function emitSignal(
     sdp_mid: signalPayload.sdpMid ?? undefined,
     sdp_mline_index: signalPayload.sdpMLineIndex ?? undefined,
     sent_at: Date.now(),
+    state_version: useCallStore.getState().stateVersion,
   });
 }
 
@@ -240,6 +270,9 @@ export function cleanup(): void {
 export function registerCallHandlers(myUserId: string): () => void {
   const socket = getSocket();
   if (!socket) return () => {};
+
+  // Register reconnect handling
+  handleCallReconnect();
 
   const handleCallStarted = (payload: CallStartedPayload) => {
     if (payload.initiator_id === myUserId) return;
@@ -278,25 +311,31 @@ export function registerCallHandlers(myUserId: string): () => void {
       return;
     }
 
-    useCallStore.getState().setScreen("connecting");
+    // Update state version
+    useCallStore.getState().setStateVersion(payload.state_version);
 
-    const iceServers = await getIceServers();
-    console.log("[call:accepted] creating peer for:", payload.user_id, "initiator: true");
+    // Check if call is now ongoing
+    if (payload.status === "ongoing" && payload.participants[myUserId] === "accepted") {
+      useCallStore.getState().setScreen("connecting");
 
-    createPeer({
-      userId: payload.user_id,
-      initiator: true,
-      localStream,
-      iceServers,
-      onSignal: (signal) => emitSignal(activeCall, payload.user_id, signal),
-      onStream: (stream) => {
-        console.log("[call:accepted] onStream received from:", payload.user_id, "stream:", stream.id);
-        useCallStore.getState().setRemoteStream(payload.user_id, stream);
-        useCallStore.getState().setScreen("active");
-        useCallStore.getState().startDurationTimer();
-      },
-      onClose: () => useCallStore.getState().removeRemoteStream(payload.user_id),
-    });
+      const iceServers = await getIceServers();
+      console.log("[call:accepted] creating peer for:", payload.user_id, "initiator: true");
+
+      createPeer({
+        userId: payload.user_id,
+        initiator: true,
+        localStream,
+        iceServers,
+        onSignal: (signal) => emitSignal(activeCall, payload.user_id, signal),
+        onStream: (stream) => {
+          console.log("[call:accepted] onStream received from:", payload.user_id, "stream:", stream.id);
+          useCallStore.getState().setRemoteStream(payload.user_id, stream);
+          useCallStore.getState().setScreen("active");
+          useCallStore.getState().startDurationTimer();
+        },
+        onClose: () => useCallStore.getState().removeRemoteStream(payload.user_id),
+      });
+    }
   };
 
   const handleCallSignalReceived = async (payload: CallSignalPayload) => {
@@ -306,9 +345,15 @@ export function registerCallHandlers(myUserId: string): () => void {
       return;
     }
 
-    const { activeCall, localStream } = useCallStore.getState();
+    const { activeCall, localStream, stateVersion } = useCallStore.getState();
     if (!activeCall || !localStream) {
       console.log("[call:signal:received] skipped - no activeCall or localStream");
+      return;
+    }
+
+    // Drop stale signals
+    if (payload.state_version && payload.state_version < stateVersion) {
+      console.log("[call:signal:received] dropped stale signal:", payload.state_version, "<", stateVersion);
       return;
     }
 
@@ -342,17 +387,27 @@ export function registerCallHandlers(myUserId: string): () => void {
     } as SimplePeer.SignalData);
   };
 
-  const handleCallRejected = () => {
+  const handleCallRejected = (payload: CallRejectedPayload) => {
+    console.log("[call:rejected] payload:", payload);
     showToast("Người dùng đã từ chối cuộc gọi");
+    cleanup();
   };
 
   const handleCallLeft = (payload: CallLeftPayload) => {
+    console.log("[call:left] payload:", payload);
     destroyPeer(payload.user_id);
     useCallStore.getState().removeRemoteStream(payload.user_id);
-    showToast("Người dùng đã rời cuộc gọi");
+    
+    // Show appropriate message based on reason
+    if (payload.reason === "removed_from_conversation") {
+      showToast("Bạn đã bị loại khỏi cuộc trò chuyện");
+    } else {
+      showToast("Người dùng đã rời cuộc gọi");
+    }
   };
 
   const handleCallEnded = (payload: CallEndedPayload) => {
+    console.log("[call:ended] payload:", payload);
     const { activeCall } = useCallStore.getState();
     const duration = activeCall
       ? payload.ended_at - activeCall.started_at
@@ -360,15 +415,41 @@ export function registerCallHandlers(myUserId: string): () => void {
 
     cleanup();
     useCallStore.getState().setScreen("ended");
-    showCallSummary(duration, payload.reason);
-
+    
+    // Show appropriate message based on reason
+    let reasonMessage = "";
+    switch (payload.reason) {
+      case "rejected":
+        reasonMessage = "Cuộc gọi bị từ chối";
+        break;
+      case "timed_out":
+        reasonMessage = "Cuộc gọi hết thời gian chờ";
+        break;
+      case "all_left":
+        reasonMessage = "Tất cả người tham gia đã rời đi";
+        break;
+      case "hangup":
+        reasonMessage = "Cuộc gọi đã kết thúc";
+        break;
+      default:
+        reasonMessage = payload.reason || "Cuộc gọi đã kết thúc";
+    }
+    
+    showCallSummary(duration, reasonMessage);
     setTimeout(() => useCallStore.getState().setScreen("idle"), 3000);
   };
 
   const handleCallStateUpdated = (payload: CallStateUpdatedPayload) => {
+    console.log("[call:state:updated] payload:", payload);
+    
     if (!payload.state) {
       if (useCallStore.getState().screen !== "idle") cleanup();
       return;
+    }
+
+    // Update state version
+    if (payload.state.version !== undefined) {
+      useCallStore.getState().setStateVersion(payload.state.version);
     }
 
     useCallStore.getState().setActiveCall(payload.state);
@@ -384,13 +465,19 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleWsError = (payload: WsErrorPayload) => {
+    console.log("[ws:error] payload:", payload);
+    
     if (payload.code === "RATE_LIMITED") {
       showToast(
         `Quá nhiều yêu cầu. Thử lại sau ${payload.details?.retry_after ?? 30}s`
       );
     }
     if (payload.code === "FORBIDDEN") {
-      showToast("Không có quyền truy cập");
+      if (payload.details && "conversation_id" in payload.details) {
+        showToast("Bạn không phải là thành viên của cuộc trò chuyện này");
+      } else {
+        showToast("Không có quyền truy cập");
+      }
       cleanup();
     }
   };

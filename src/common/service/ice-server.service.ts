@@ -8,44 +8,57 @@ interface IceServerConfig {
 }
 
 interface IceServerResponse {
-  ice_servers: IceServerConfig[];
+  username: string;
+  credential: string;
   ttl: number;
+  expires_at: number;
+  ice_servers: IceServerConfig[];
 }
 
 let cachedIceServers: RTCIceServer[] = [];
 let cacheExpiry = 0;
+let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export async function getIceServers(): Promise<RTCIceServer[]> {
-  // Temporarily use only default ICE servers to avoid 404 error
-  // TODO: Fix backend ICE servers endpoint, then re-enable API call
-  console.log("[IceServer] Using default STUN servers (API endpoint returns 404)");
-  return getDefaultIceServers();
-  
-  // Original code (commented out until backend fixes ICE servers endpoint)
-  // if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
-  //   return cachedIceServers;
-  // }
+  // Check cache first
+  if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
+    return cachedIceServers;
+  }
 
-  // try {
-  //   const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
-  //   const data = res?.payload;
+  try {
+    const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
+    const data = res?.payload;
 
-  //   if (!data?.ice_servers) {
-  //     return getDefaultIceServers();
-  //   }
+    if (!data?.ice_servers) {
+      console.warn("[IceServer] Invalid response from backend, using defaults");
+      return getDefaultIceServers();
+    }
 
-  //   cachedIceServers = data.ice_servers.map((server) => ({
-  //     urls: server.urls,
-  //     username: server.username,
-  //     credential: server.credential,
-  //   }));
+    // Transform backend response to RTCIceServer format
+    cachedIceServers = data.ice_servers.map((server) => ({
+      urls: server.urls,
+      username: data.username,
+      credential: data.credential,
+    }));
 
-  //   cacheExpiry = Date.now() + (data.ttl || 86400) * 1000;
-  //   return cachedIceServers;
-  // } catch (error) {
-  //   console.error("[IceServer] Failed to fetch ICE servers:", error);
-  //   return getDefaultIceServers();
-  // }
+    cacheExpiry = data.expires_at;
+    
+    // Schedule refresh 5 minutes before expiry
+    if (refreshTimeout) clearTimeout(refreshTimeout);
+    const msUntilExpiry = data.expires_at - Date.now() - 5 * 60 * 1000;
+    if (msUntilExpiry > 0) {
+      refreshTimeout = setTimeout(() => {
+        console.log("[IceServer] Refreshing credentials before expiry");
+        clearIceServerCache();
+      }, msUntilExpiry);
+    }
+
+    console.log("[IceServer] Fetched", cachedIceServers.length, "servers from backend");
+    return cachedIceServers;
+  } catch (error) {
+    console.error("[IceServer] Failed to fetch ICE servers:", error);
+    return getDefaultIceServers();
+  }
 }
 
 function getDefaultIceServers(): RTCIceServer[] {
@@ -70,6 +83,10 @@ function getDefaultIceServers(): RTCIceServer[] {
 }
 
 export function clearIceServerCache(): void {
+  if (refreshTimeout) {
+    clearTimeout(refreshTimeout);
+    refreshTimeout = null;
+  }
   cachedIceServers = [];
   cacheExpiry = 0;
 }

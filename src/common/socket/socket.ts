@@ -25,7 +25,8 @@ export const connectSocket = (accessToken?: string) => {
     });
 
     socketInstance.on("disconnect", (reason) => {
-      // Socket disconnected
+      console.log("[Socket] Disconnected:", reason);
+      // Handle call state sync on reconnect
     });
   }
 
