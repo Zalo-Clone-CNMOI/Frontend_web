@@ -402,8 +402,12 @@ export function registerCallHandlers(myUserId: string): () => void {
           console.log("[call:signal:received] Using candidate as object");
           candidate = payload.candidate;
         } else if (typeof payload.candidate === "string") {
-          // Candidate is a JSON string, parse it
+          // Candidate is a JSON string, but might be "[object Object]" which is invalid JSON
           console.log("[call:signal:received] Parsing candidate as JSON string");
+          if (payload.candidate === "[object Object]") {
+            console.error("[call:signal:received] Backend sent stringified object instead of proper JSON");
+            return; // Skip this candidate as it's invalid
+          }
           candidate = JSON.parse(payload.candidate);
         } else {
           throw new Error(`Invalid candidate format: ${typeof payload.candidate}, isArray: ${Array.isArray(payload.candidate)}`);
