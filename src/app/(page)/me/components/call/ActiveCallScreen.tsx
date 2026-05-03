@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState, useMemo } from "react";
+import { useEffect, useRef, useMemo } from "react";
 import { Box, Typography, IconButton, Grid } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CallEndIcon from "@mui/icons-material/CallEnd";
@@ -107,6 +107,113 @@ const Timer = styled(Typography)({
   borderRadius: 16,
 });
 
+function playElement(
+  element: HTMLMediaElement | null,
+  label: string
+): void {
+  if (!element) return;
+
+  const playPromise = element.play();
+  if (playPromise) {
+    playPromise.catch((err) => {
+      console.warn(`[ActiveCallScreen] ${label} play blocked:`, err.message);
+    });
+  }
+}
+
+function RemoteAudio({
+  stream,
+  userId,
+}: {
+  stream: MediaStream;
+  userId: string;
+}) {
+  const audioRef = useRef<HTMLAudioElement>(null);
+
+  useEffect(() => {
+    const audio = audioRef.current;
+    if (!audio) return;
+
+    audio.srcObject = stream;
+    audio.muted = false;
+    audio.volume = 1;
+    playElement(audio, `remote audio ${userId}`);
+
+    const handleCanPlay = () => playElement(audio, `remote audio ${userId}`);
+    const handleTrackUnmute = () => playElement(audio, `remote audio ${userId}`);
+    const audioTracks = stream.getAudioTracks();
+
+    audio.addEventListener("loadedmetadata", handleCanPlay);
+    audio.addEventListener("canplay", handleCanPlay);
+    audioTracks.forEach((track) => {
+      track.addEventListener("unmute", handleTrackUnmute);
+    });
+
+    return () => {
+      audio.removeEventListener("loadedmetadata", handleCanPlay);
+      audio.removeEventListener("canplay", handleCanPlay);
+      audioTracks.forEach((track) => {
+        track.removeEventListener("unmute", handleTrackUnmute);
+      });
+      audio.pause();
+      audio.srcObject = null;
+    };
+  }, [stream, userId]);
+
+  return <audio ref={audioRef} autoPlay playsInline style={{ display: "none" }} />;
+}
+
+function RemoteVideo({
+  stream,
+  userId,
+  group,
+}: {
+  stream: MediaStream;
+  userId: string;
+  group?: boolean;
+}) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video) return;
+
+    video.srcObject = stream;
+    video.muted = true;
+    playElement(video, `remote video ${userId}`);
+
+    const handleCanPlay = () => playElement(video, `remote video ${userId}`);
+    const handleTrackUnmute = () => playElement(video, `remote video ${userId}`);
+    const videoTracks = stream.getVideoTracks();
+
+    video.addEventListener("loadedmetadata", handleCanPlay);
+    video.addEventListener("canplay", handleCanPlay);
+    videoTracks.forEach((track) => {
+      track.addEventListener("unmute", handleTrackUnmute);
+    });
+
+    return () => {
+      video.removeEventListener("loadedmetadata", handleCanPlay);
+      video.removeEventListener("canplay", handleCanPlay);
+      videoTracks.forEach((track) => {
+        track.removeEventListener("unmute", handleTrackUnmute);
+      });
+      video.pause();
+      video.srcObject = null;
+    };
+  }, [stream, userId]);
+
+  return (
+    <VideoElement
+      ref={videoRef}
+      autoPlay
+      playsInline
+      muted
+      style={group ? undefined : { maxHeight: "80%", maxWidth: "80%" }}
+    />
+  );
+}
+
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -125,48 +232,23 @@ export default function ActiveCallScreen() {
   const setCameraOff = useCallStore((s) => s.setCameraOff);
 
   const localVideoRef = useRef<HTMLVideoElement>(null);
-  const remoteVideoRefs = useRef<Map<string, HTMLVideoElement>>(new Map());
-  const [connecting, setConnecting] = useState(true);
 
   const isGroup = activeCall?.conversation_type === "group";
   const isVideo = activeCall?.call_type === "video";
   
   const remoteEntries = useMemo(() => Array.from(remoteStreams.entries()), [remoteStreams]);
+  const isConnecting = remoteEntries.length === 0;
 
   useEffect(() => {
     if (localVideoRef.current && localStream) {
       localVideoRef.current.srcObject = localStream;
+      playElement(localVideoRef.current, "local video");
     }
   }, [localStream]);
 
   useEffect(() => {
     console.log("[ActiveCallScreen] remoteStreams changed:", remoteStreams.size, "entries:", Array.from(remoteStreams.entries()).map(([k,v]) => [k, v.id, v.getTracks().length]));
-    
-    remoteStreams.forEach((stream, userId) => {
-      console.log("[ActiveCallScreen] setting stream for userId:", userId, "streamId:", stream.id);
-      const videoEl = remoteVideoRefs.current.get(userId);
-      if (videoEl) {
-        console.log("[ActiveCallScreen] videoEl found, setting srcObject");
-        videoEl.srcObject = stream;
-      } else {
-        console.log("[ActiveCallScreen] videoEl NOT found for userId:", userId);
-        // For direct calls, create video element if not exists
-        if (!isGroup) {
-          console.log("[ActiveCallScreen] Creating video element for direct call");
-          const newVideoEl = document.createElement('video');
-          newVideoEl.autoplay = true;
-          newVideoEl.playsInline = true;
-          newVideoEl.muted = false;
-          newVideoEl.srcObject = stream;
-          remoteVideoRefs.current.set(userId, newVideoEl);
-        }
-      }
-    });
-    
-    if (remoteStreams.size > 0) {
-      setConnecting(false);
-    }
-  }, [remoteStreams, isGroup]);
+  }, [remoteStreams]);
 
   const handleEndCall = () => {
     if (isGroup) {
@@ -184,7 +266,7 @@ export default function ActiveCallScreen() {
         <LocalVideo ref={localVideoRef} autoPlay muted playsInline />
       )}
 
-      {connecting && remoteStreams.size === 0 ? (
+      {isConnecting ? (
         <Box
           sx={{
             flex: 1,
@@ -204,23 +286,9 @@ export default function ActiveCallScreen() {
           {remoteEntries.map(([userId, stream]) => (
             <Grid size={{ xs: 12, sm: 6, md: 4 }} key={userId}>
               <VideoTile>
+                <RemoteAudio stream={stream} userId={userId} />
                 {isVideo ? (
-                  <VideoElement
-                    ref={(el) => {
-                      if (el && el.srcObject !== stream) {
-                        console.log("[ActiveCallScreen] group video ref set for userId:", userId);
-                        remoteVideoRefs.current.set(userId, el);
-                        el.srcObject = stream;
-                      }
-                    }}
-                    autoPlay
-                    playsInline
-                    muted={false}
-                    onLoadedMetadata={(e) => {
-                      console.log("[ActiveCallScreen] group video loadedmetadata");
-                      e.currentTarget.play().catch(err => console.log("[ActiveCallScreen] group play error:", err.message));
-                    }}
-                  />
+                  <RemoteVideo stream={stream} userId={userId} group />
                 ) : (
                   <Box
                     sx={{
@@ -252,29 +320,9 @@ export default function ActiveCallScreen() {
                 justifyContent: "center",
               }}
             >
+              <RemoteAudio stream={stream} userId={userId} />
               {isVideo ? (
-                <VideoElement
-                  ref={(el) => {
-                    if (el && el.srcObject !== stream) {
-                      console.log("[ActiveCallScreen] direct video ref set for userId:", userId);
-                      remoteVideoRefs.current.set(userId, el);
-                      el.srcObject = stream;
-                      console.log("[ActiveCallScreen] direct stream assigned, tracks:", stream.getTracks().map(t => ({kind: t.kind, enabled: t.enabled, muted: t.muted, readyState: t.readyState})));
-                    }
-                  }}
-                  autoPlay
-                  playsInline
-                  muted={false}
-                  style={{ maxHeight: "80%", maxWidth: "80%" }}
-                  onLoadedMetadata={(e) => {
-                    console.log("[ActiveCallScreen] video loadedmetadata, playing...");
-                    const video = e.currentTarget;
-                    video.play().catch(err => console.log("[ActiveCallScreen] play error:", err.message));
-                  }}
-                  onCanPlay={(e) => {
-                    console.log("[ActiveCallScreen] video canplay");
-                  }}
-                />
+                <RemoteVideo stream={stream} userId={userId} />
               ) : (
                 <Box sx={{ textAlign: "center" }}>
                   <AppAvatar name={userId} size={150} fontSize={60} />

@@ -1,5 +1,8 @@
 "use client";
 
+// Disable SSR to avoid hydration errors
+// TODO: Re-enable after fixing dynamic values causing hydration mismatch
+
 import React, { useState, useEffect } from "react";
 import { Box, Button, Grid, Tab } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -202,8 +205,9 @@ const Me = () => {
     // Close search sidebar when conversation changes
     useEffect(() => {
         setShowSearchSidebar(false);
-        
-        // Sync call state when opening a conversation
+    }, [activeConversationId]);
+
+    useEffect(() => {
         if (activeConversationId) {
             syncCallState(activeConversationId);
         }
