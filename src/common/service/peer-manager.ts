@@ -63,7 +63,7 @@ export function createPeer(params: {
   });
   
   peer.on("connect", () => {
-    console.log(`[peer:${params.userId}] connected`);
+    // Peer connected
   });
   
   // Monitor ICE connection state
@@ -71,14 +71,12 @@ export function createPeer(params: {
   if (pc) {
     peerConnections.set(peer, pc);
     pc.oniceconnectionstatechange = () => {
-      console.log(`[peer:${params.userId}] ICE state:`, pc.iceConnectionState);
+      // ICE connection state changed
     };
     pc.onconnectionstatechange = () => {
-      console.log(`[peer:${params.userId}] Connection state:`, pc.connectionState);
+      // Connection state changed
     };
   }
-  
-  console.log(`[peer:${params.userId}] created, initiator:`, params.initiator);
 
   peers.set(params.userId, peer);
   return peer;
@@ -91,7 +89,7 @@ export function feedSignal(userId: string, signal: SimplePeer.SignalData): void 
   const signalType = (signal as RTCSessionDescriptionInit).type;
   const pc = peerConnections.get(peer);
   if (signalType === "answer" && pc?.signalingState === "stable") {
-    console.log(`[peer:${userId}] ignored duplicate answer in stable state`);
+    // Duplicate answer in stable state - ignoring
     return;
   }
 
