@@ -16,30 +16,36 @@ let cachedIceServers: RTCIceServer[] = [];
 let cacheExpiry = 0;
 
 export async function getIceServers(): Promise<RTCIceServer[]> {
-  if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
-    return cachedIceServers;
-  }
+  // Temporarily use only default ICE servers to avoid 404 error
+  // TODO: Fix backend ICE servers endpoint, then re-enable API call
+  console.log("[IceServer] Using default STUN servers (API endpoint returns 404)");
+  return getDefaultIceServers();
+  
+  // Original code (commented out until backend fixes ICE servers endpoint)
+  // if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
+  //   return cachedIceServers;
+  // }
 
-  try {
-    const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
-    const data = res?.payload;
+  // try {
+  //   const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
+  //   const data = res?.payload;
 
-    if (!data?.ice_servers) {
-      return getDefaultIceServers();
-    }
+  //   if (!data?.ice_servers) {
+  //     return getDefaultIceServers();
+  //   }
 
-    cachedIceServers = data.ice_servers.map((server) => ({
-      urls: server.urls,
-      username: server.username,
-      credential: server.credential,
-    }));
+  //   cachedIceServers = data.ice_servers.map((server) => ({
+  //     urls: server.urls,
+  //     username: server.username,
+  //     credential: server.credential,
+  //   }));
 
-    cacheExpiry = Date.now() + (data.ttl || 86400) * 1000;
-    return cachedIceServers;
-  } catch (error) {
-    console.error("[IceServer] Failed to fetch ICE servers:", error);
-    return getDefaultIceServers();
-  }
+  //   cacheExpiry = Date.now() + (data.ttl || 86400) * 1000;
+  //   return cachedIceServers;
+  // } catch (error) {
+  //   console.error("[IceServer] Failed to fetch ICE servers:", error);
+  //   return getDefaultIceServers();
+  // }
 }
 
 function getDefaultIceServers(): RTCIceServer[] {
