@@ -391,6 +391,8 @@
   "CALL.AUDIO_INCOMING": "Incoming audio call",
   "CALL.CALLING": "Calling...",
   "CALL.WAITING_FOR_ANSWER": "Waiting for answer",
+  "CALL.RINGING": "Ringing",
+  "CALL.FROM": "Call from",
   "CALL.CONNECTING": "Connecting...",
   "CALL.CONNECTED": "Connected",
   "CALL.CALL_ENDED": "Call ended",

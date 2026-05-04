@@ -34,11 +34,11 @@ export default function LoginPage() {
     const [tab, setTab] = useState("loginQR");
     const [country, setCountry] = useState<Country>(COUNTRIES[0]);
 
-    const loadingAuth = useAuthStore((s) => s.loadingAuth);
-    const setLoadingAuth = useAuthStore((s) => s.setLoadingAuth);
-    const errorAuth = useAuthStore((s) => s.errorAuth);
-    const setErrorAuth = useAuthStore((s) => s.setErrorAuth);
-    const setAuthData = useAuthStore((s) => s.setAuthData);
+    const loadingAuth = useAuthStore((state) => state.loadingAuth);
+    const setLoadingAuth = useAuthStore((state) => state.setLoadingAuth);
+    const errorAuth = useAuthStore((state) => state.errorAuth);
+    const setErrorAuth = useAuthStore((state) => state.setErrorAuth);
+    const setAuthData = useAuthStore((state) => state.setAuthData);
 
     useEffect(() => {
         setMounted(true);
@@ -104,9 +104,9 @@ export default function LoginPage() {
         },
     });
 
-    const handleChangeTab = (_event: React.SyntheticEvent, newTab: string) => {
+    const handleChangeTab = React.useCallback((_event: React.SyntheticEvent, newTab: string) => {
         setTab(newTab);
-    };
+    }, []);
 
     if (!mounted) {
         return null;

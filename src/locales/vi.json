@@ -386,6 +386,8 @@
   "CALL.AUDIO_INCOMING": "Cuộc gọi thoại đến",
   "CALL.CALLING": "Đang gọi...",
   "CALL.WAITING_FOR_ANSWER": "Đang chờ trả lời",
+  "CALL.RINGING": "Đang đổ chuông",
+  "CALL.FROM": "Cuộc gọi từ",
   "CALL.CONNECTING": "Đang kết nối...",
   "CALL.CONNECTED": "Đã kết nối",
   "CALL.CALL_ENDED": "Cuộc gọi đã kết thúc",

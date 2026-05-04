@@ -48,16 +48,17 @@ const VideoElement = styled("video")({
 });
 
 const LocalVideo = styled("video")({
-  position: "absolute",
-  bottom: 100,
+  position: "fixed",
+  bottom: 120,
   right: 16,
-  width: 160,
-  height: 120,
+  width: 200,
+  height: 150,
   borderRadius: 12,
   objectFit: "cover",
-  zIndex: 10,
+  zIndex: 1000,
   border: "2px solid rgba(255,255,255,0.3)",
   transform: "scaleX(-1)",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
 });
 
 const Controls = styled(Box)({
@@ -189,11 +190,9 @@ function RemoteAudio({
 function RemoteVideo({
   stream,
   userId,
-  group,
 }: {
   stream: MediaStream;
   userId: string;
-  group?: boolean;
 }) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const hasVideo = stream.getVideoTracks().length > 0;
@@ -238,7 +237,12 @@ function RemoteVideo({
       autoPlay
       playsInline
       muted
-      style={group ? undefined : { width: "100%", height: "100%" }}
+      style={{ 
+        width: "100%", 
+        height: "100%", 
+        objectFit: "cover",
+        borderRadius: "8px"
+      }}
     />
   );
 }
@@ -376,7 +380,7 @@ export default function ActiveCallScreen() {
               <VideoTile>
                 <RemoteAudio stream={stream} userId={userId} />
                 {isVideo ? (
-                  <RemoteVideo stream={stream} userId={userId} group />
+                  <RemoteVideo stream={stream} userId={userId} />
                 ) : (
                   <Box
                     sx={{
@@ -399,9 +403,14 @@ export default function ActiveCallScreen() {
         <Box
           sx={{
             flex: 1,
-            position: "relative",
-            minHeight: 0,
-            overflow: "hidden",
+            p: 2,
+            pb: "112px",
+            overflow: "auto",
+            display: "grid",
+            gridTemplateColumns: "repeat(auto-fit, minmax(300px, 1fr))",
+            gap: 2,
+            alignItems: "center",
+            justifyItems: "center",
           }}
         >
           {remoteEntries.map(([userId, stream]) => (
@@ -409,25 +418,45 @@ export default function ActiveCallScreen() {
               key={userId}
               sx={{
                 width: "100%",
-                height: "100%",
+                maxWidth: 400,
+                aspectRatio: "16/9",
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
-                pb: "112px",
-                boxSizing: "border-box",
+                bgcolor: "#2f3136",
+                borderRadius: "8px",
+                overflow: "hidden",
+                position: "relative",
+                border: "1px solid rgba(255,255,255,0.1)",
               }}
             >
               <RemoteAudio stream={stream} userId={userId} />
               {isVideo ? (
                 <RemoteVideo stream={stream} userId={userId} />
               ) : (
-                <Box sx={{ textAlign: "center" }}>
-                  <AppAvatar name={getUserDisplayName(userId, members)} size={150} fontSize={60} />
-                  <Typography sx={{ color: "#fff", mt: 2, fontSize: 20 }}>
+                <Box sx={{ textAlign: "center", p: 2 }}>
+                  <AppAvatar name={getUserDisplayName(userId, members)} size={80} fontSize={32} />
+                  <Typography sx={{ color: "#fff", mt: 2, fontSize: 16 }}>
                     {getUserDisplayName(userId, members)}
                   </Typography>
                 </Box>
               )}
+              <Box
+                sx={{
+                  position: "absolute",
+                  bottom: 8,
+                  left: 8,
+                  bgcolor: "rgba(0,0,0,0.7)",
+                  borderRadius: "4px",
+                  px: 1,
+                  py: 0.5,
+                  color: "#fff",
+                  fontSize: 12,
+                  fontWeight: 500,
+                }}
+              >
+                {getUserDisplayName(userId, members)}
+              </Box>
             </Box>
           ))}
         </Box>
