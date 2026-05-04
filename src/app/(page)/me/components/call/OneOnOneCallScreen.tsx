@@ -1,25 +1,22 @@
 "use client";
 
 import { useEffect, useRef, useMemo } from "react";
-import { Box, Typography, IconButton, Avatar } from "@mui/material";
+import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CallEndIcon from "@mui/icons-material/CallEnd";
 import MicIcon from "@mui/icons-material/Mic";
 import MicOffIcon from "@mui/icons-material/MicOff";
 import VideocamIcon from "@mui/icons-material/Videocam";
 import VideocamOffIcon from "@mui/icons-material/VideocamOff";
-import VolumeUpIcon from "@mui/icons-material/VolumeUp";
-import VolumeOffIcon from "@mui/icons-material/VolumeOff";
 import SettingsIcon from "@mui/icons-material/Settings";
-import { useCallStore } from "@/src/common/store/useCallStore";
-import { useChatStore } from "@/src/common/store/useChatStore";
-import { endCall, leaveCall } from "@/src/common/service/call-service";
 import AppAvatar from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { getcurrentUserId } from "@/src/common/utilities/utils";
+import { useChatStore } from "@/src/common/store/useChatStore";
 import type { ConversationDto } from "@/src/common/interface/chat-interface";
+import type { CallStateSnapshot } from "@/src/types/call";
 
-const Container = styled(Box)(({ theme }) => ({
+const Container = styled(Box)({
   width: "100%",
   height: "100%",
   display: "flex",
@@ -27,27 +24,27 @@ const Container = styled(Box)(({ theme }) => ({
   background: "linear-gradient(135deg, #1e1e2e 0%, #2d2d44 100%)",
   position: "relative",
   overflow: "hidden",
-}));
+});
 
-const MainVideoArea = styled(Box)(({ theme }) => ({
+const MainVideoArea = styled(Box)({
   flex: 1,
   position: "relative",
   display: "flex",
   alignItems: "center",
   justifyContent: "center",
   minHeight: 0,
-}));
+});
 
-const RemoteVideo = styled("video")(({ theme }) => ({
+const RemoteVideoStyled = styled("video")({
   width: "100%",
   height: "100%",
   objectFit: "cover",
   position: "absolute",
   top: 0,
   left: 0,
-}));
+});
 
-const LocalVideo = styled("video")(({ theme }) => ({
+const LocalVideo = styled("video")({
   position: "absolute",
   bottom: 120,
   right: 24,
@@ -58,15 +55,15 @@ const LocalVideo = styled("video")(({ theme }) => ({
   zIndex: 1000,
   border: "3px solid rgba(255,255,255,0.2)",
   transform: "scaleX(-1)",
-  boxShadow: "0 8px 24px rgba(0,0,0,0.4)",
+  boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
   transition: "all 0.3s ease",
   "&:hover": {
     transform: "scaleX(-1) scale(1.05)",
     border: "3px solid rgba(255,255,255,0.4)",
   },
-}));
+});
 
-const AvatarContainer = styled(Box)(({ theme }) => ({
+const AvatarContainer = styled(Box)({
   display: "flex",
   flexDirection: "column",
   alignItems: "center",
@@ -74,9 +71,9 @@ const AvatarContainer = styled(Box)(({ theme }) => ({
   gap: 24,
   padding: 48,
   textAlign: "center",
-}));
+});
 
-const UserInfo = styled(Box)(({ theme }) => ({
+const UserInfo = styled(Box)({
   position: "absolute",
   top: 24,
   left: 24,
@@ -85,9 +82,9 @@ const UserInfo = styled(Box)(({ theme }) => ({
   display: "flex",
   alignItems: "center",
   justifyContent: "space-between",
-}));
+});
 
-const UserName = styled(Typography)(({ theme }) => ({
+const UserName = styled(Typography)({
   color: "#fff",
   fontSize: 20,
   fontWeight: 600,
@@ -95,9 +92,9 @@ const UserName = styled(Typography)(({ theme }) => ({
   padding: "8px 16px",
   borderRadius: 24,
   backdropFilter: "blur(10px)",
-}));
+});
 
-const CallTimer = styled(Typography)(({ theme }) => ({
+const CallTimer = styled(Typography)({
   color: "#fff",
   fontSize: 16,
   fontWeight: 500,
@@ -105,9 +102,9 @@ const CallTimer = styled(Typography)(({ theme }) => ({
   padding: "6px 12px",
   borderRadius: 20,
   backdropFilter: "blur(10px)",
-}));
+});
 
-const ControlsBar = styled(Box)(({ theme }) => ({
+const ControlsBar = styled(Box)({
   position: "absolute",
   left: 0,
   right: 0,
@@ -119,9 +116,9 @@ const ControlsBar = styled(Box)(({ theme }) => ({
   gap: 16,
   padding: "24px 0 32px",
   background: "linear-gradient(to top, rgba(0,0,0,0.8), transparent)",
-}));
+});
 
-const ControlButton = styled(IconButton)(({ theme }) => ({
+const ControlButton = styled(IconButton)({
   width: 56,
   height: 56,
   borderRadius: "50%",
@@ -137,9 +134,9 @@ const ControlButton = styled(IconButton)(({ theme }) => ({
   "&:active": {
     transform: "scale(0.95)",
   },
-}));
+});
 
-const EndCallButton = styled(IconButton)(({ theme }) => ({
+const EndCallButton = styled(IconButton)({
   width: 64,
   height: 64,
   borderRadius: "50%",
@@ -155,9 +152,9 @@ const EndCallButton = styled(IconButton)(({ theme }) => ({
   "&:active": {
     transform: "scale(0.95)",
   },
-}));
+});
 
-const StatusIndicator = styled(Box)(({ theme }) => ({
+const StatusIndicator = styled(Box)({
   display: "flex",
   alignItems: "center",
   gap: 8,
@@ -167,9 +164,9 @@ const StatusIndicator = styled(Box)(({ theme }) => ({
   padding: "6px 12px",
   borderRadius: 16,
   backdropFilter: "blur(10px)",
-}));
+});
 
-const StatusDot = styled(Box)(({ theme, online }) => ({
+const StatusDot = styled(Box)<{ online: boolean }>(({ online }) => ({
   width: 8,
   height: 8,
   borderRadius: "50%",
@@ -252,6 +249,7 @@ function RemoteAudio({
   return <audio ref={audioRef} autoPlay playsInline />;
 }
 
+
 function formatDuration(seconds: number): string {
   const mins = Math.floor(seconds / 60);
   const secs = seconds % 60;
@@ -278,7 +276,7 @@ function getConversationDisplayName(conversation: ConversationDto | null, member
 interface OneOnOneCallScreenProps {
   remoteStreams: Map<string, MediaStream>;
   localStream: MediaStream | null;
-  activeCall: any;
+  activeCall: CallStateSnapshot | null;
   callDuration: number;
   isMuted: boolean;
   isCameraOff: boolean;
@@ -348,8 +346,8 @@ export default function OneOnOneCallScreen({
           </AvatarContainer>
         ) : isVideo && remoteStream ? (
           <>
-            <RemoteVideo
-              ref={(ref) => {
+            <RemoteVideoStyled
+              ref={(ref: HTMLVideoElement | null) => {
                 if (ref && remoteStream) {
                   ref.srcObject = remoteStream;
                   playElement(ref, `remote video ${remoteUserId}`);
