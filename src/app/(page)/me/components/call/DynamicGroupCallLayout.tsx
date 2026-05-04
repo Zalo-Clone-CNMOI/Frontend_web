@@ -725,36 +725,16 @@ export default function DynamicGroupCallLayout({
   const isVideo = activeCall?.call_type === "video";
   const remoteEntries = useMemo(() => Array.from(remoteStreams.entries()), [remoteStreams]);
 
-  // Get all participants including those without streams
+  // Get only active participants (users with streams - actually joined the call)
   const allParticipants = useMemo(() => {
-    const participantMap = new Map();
-    
-    // Add members with streams
-    remoteEntries.forEach(([userId, stream]) => {
-      participantMap.set(userId, {
-        userId,
-        stream,
-        hasStream: true,
-        hasAudio: stream.getAudioTracks().length > 0,
-        hasVideo: stream.getVideoTracks().length > 0,
-      });
-    });
-    
-    // Add members without streams
-    members?.forEach((member) => {
-      if (!participantMap.has(member.userId) && member.userId !== currentUserId) {
-        participantMap.set(member.userId, {
-          userId: member.userId,
-          stream: null,
-          hasStream: false,
-          hasAudio: false,
-          hasVideo: false,
-        });
-      }
-    });
-    
-    return Array.from(participantMap.values());
-  }, [remoteEntries, members, currentUserId]);
+    return remoteEntries.map(([userId, stream]) => ({
+      userId,
+      stream,
+      hasStream: true,
+      hasAudio: stream.getAudioTracks().length > 0,
+      hasVideo: stream.getVideoTracks().length > 0,
+    }));
+  }, [remoteEntries]);
 
   const totalParticipants = allParticipants.length + 1; // +1 for current user
   const groupName = currentConversation?.name ?? t("CHAT.GROUP_CALL");
@@ -945,7 +925,7 @@ export default function DynamicGroupCallLayout({
             <GroupName>{groupName}</GroupName>
             <MemberCount>
               <GroupIcon sx={{ fontSize: 14 }} />
-              {totalParticipants} {t("CHAT.MEMBERS")}
+              {totalParticipants} in call
             </MemberCount>
           </GroupDetails>
         </GroupInfo>
@@ -1037,8 +1017,7 @@ export default function DynamicGroupCallLayout({
                   {getUserDisplayName(participant.userId, members)}
                 </ParticipantListName>
                 <ParticipantListStatus>
-                  {participant.hasStream ? "Connected" : "Connecting..."} • 
-                  {participant.hasAudio ? " Speaking" : " Muted"}
+                  In call • {participant.hasAudio ? " Speaking" : " Muted"}
                 </ParticipantListStatus>
               </ParticipantListInfo>
             </ParticipantListItem>
