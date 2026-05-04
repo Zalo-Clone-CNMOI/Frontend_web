@@ -119,10 +119,8 @@ const StableVideoPlayer = forwardRef<StableVideoPlayerRef, StableVideoPlayerProp
         
         // Clean up old stream
         if (currentStreamRef.current && currentStreamRef.current !== stream) {
-          const oldTracks = currentStreamRef.current.getTracks();
-          oldTracks.forEach(track => {
-            track.stop?.();
-          });
+          // Don't stop tracks to prevent camera flickering
+          // Just clear the video element and update reference
           video.srcObject = null;
         }
 
@@ -212,6 +210,8 @@ const StableVideoPlayer = forwardRef<StableVideoPlayerRef, StableVideoPlayerProp
         if (playTimeoutRef.current) {
           clearTimeout(playTimeoutRef.current);
         }
+        // Only stop tracks when component is actually unmounting
+        // This prevents camera flickering during stream changes
         if (currentStreamRef.current) {
           currentStreamRef.current.getTracks().forEach(track => {
             track.stop?.();

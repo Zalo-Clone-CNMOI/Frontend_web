@@ -410,5 +410,8 @@
   "CALL.RATE_LIMITED": "Quá nhiều yêu cầu. Thử lại sau {{retry_after}}s",
   "CALL.FORBIDDEN_MEMBER": "Bạn không phải là thành viên của cuộc trò chuyện này",
   "CALL.FORBIDDEN_ACCESS": "Không có quyền truy cập",
-  "CALL.CALL_ENDED_WITH_DURATION": "Cuộc gọi kết thúc · {{duration}}{{reason}}"
+  "CALL.CALL_ENDED_WITH_DURATION": "Cuộc gọi kết thúc · {{duration}}{{reason}}",
+  "CALL.SPEAKING": "Đang nói",
+  "CALL.MUTED": "Tắt mic",
+  "CHAT.IN_CALL": "Trong cuộc gọi"
 }

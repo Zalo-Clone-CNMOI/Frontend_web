@@ -65,9 +65,8 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
         
         // Remove old stream tracks
         if (currentStreamRef.current && currentStreamRef.current !== stream) {
-          currentStreamRef.current.getTracks().forEach(track => {
-            track.stop();
-          });
+          // Don't stop tracks to prevent camera flickering
+          // Just clear the video element
           video.srcObject = null;
         }
 

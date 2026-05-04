@@ -622,6 +622,7 @@ const ParticipantCard = memo(function ParticipantCard({
   showAudioVisualizer = false,
   size = "medium"
 }: ParticipantCardProps) {
+  const t = useTrans();
   const userName = getUserDisplayName(participant.userId, members);
 
   return (
@@ -657,7 +658,7 @@ const ParticipantCard = memo(function ParticipantCard({
       )}
       
       {isCurrentUser && (
-        <CurrentUserBadge>Bạn</CurrentUserBadge>
+        <CurrentUserBadge>{t("CHAT.YOU")}</CurrentUserBadge>
       )}
       
       {showAudioVisualizer && isSpeaking && (
@@ -956,12 +957,15 @@ export default function DynamicGroupCallLayout({
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
           }}
         >
-          <VideoPlayer
-            stream={localStream}
-            muted={true}
-            autoPlay={true}
-            playsInline={true}
-            playerId="local-video"
+          <video
+            ref={(el) => {
+              if (el && el.srcObject !== localStream) {
+                el.srcObject = localStream;
+                el.muted = true;
+                el.autoplay = true;
+                el.playsInline = true;
+              }
+            }}
             style={{
               width: "100%",
               height: "100%",
@@ -998,9 +1002,9 @@ export default function DynamicGroupCallLayout({
               />
             </ParticipantListAvatar>
             <ParticipantListInfo>
-              <ParticipantListName>Bạn</ParticipantListName>
+              <ParticipantListName>{t("CHAT.YOU")}</ParticipantListName>
               <ParticipantListStatus>
-                {isMuted ? "Mic off" : "Speaking"} • {isCameraOff ? "Camera off" : "Camera on"}
+                {isMuted ? t("CALL.MUTE") : t("CALL.UNMUTE")} • {isCameraOff ? t("CALL.TURN_OFF_CAMERA") : t("CALL.TURN_ON_CAMERA")}
               </ParticipantListStatus>
             </ParticipantListInfo>
           </ParticipantListItem>
@@ -1020,7 +1024,7 @@ export default function DynamicGroupCallLayout({
                   {getUserDisplayName(participant.userId, members)}
                 </ParticipantListName>
                 <ParticipantListStatus>
-                  In call • {participant.hasAudio ? " Speaking" : " Muted"}
+                  {t("CHAT.IN_CALL")} • {participant.hasAudio ? t("CALL.SPEAKING") : t("CALL.MUTED")}
                 </ParticipantListStatus>
               </ParticipantListInfo>
             </ParticipantListItem>
