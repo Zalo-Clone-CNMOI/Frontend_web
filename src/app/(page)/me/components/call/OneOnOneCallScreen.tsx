@@ -13,6 +13,7 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { getcurrentUserId } from "@/src/common/utilities/utils";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import VideoPlayer from "./VideoPlayer";
 import type { ConversationDto } from "@/src/common/interface/chat-interface";
 import type { CallStateSnapshot } from "@/src/types/call";
 
@@ -210,43 +211,173 @@ function RemoteAudio({
 }) {
   const audioRef = useRef<HTMLAudioElement>(null);
   const hasAudio = stream.getAudioTracks().length > 0;
+  const playAttemptsRef = useRef(0);
+  const maxPlayAttempts = 3;
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio) return;
+    if (!audio || !hasAudio) return;
 
+    // Reset play attempts
+    playAttemptsRef.current = 0;
+
+    // Set audio properties
     audio.srcObject = stream;
     audio.muted = false;
     audio.volume = 1;
-    playElement(audio, `remote audio ${userId}`);
 
-    const handleCanPlay = () => playElement(audio, `remote audio ${userId}`);
-    const handleTrackUnmute = () => playElement(audio, `remote audio ${userId}`);
+    // Improved play function with better error handling
+    const playAudio = (forceRetry = false) => {
+      if (!audio || playAttemptsRef.current >= maxPlayAttempts && !forceRetry) {
+        return;
+      }
+
+      // Check if audio is already playing
+      if (!audio.paused && audio.currentTime > 0) {
+        return;
+      }
+
+      playAttemptsRef.current++;
+      
+      const playPromise = audio.play();
+      if (playPromise) {
+        playPromise.catch((err) => {
+          const message = err instanceof Error ? err.message : String(err);
+          
+          // Handle AbortError specifically - this is expected when stream changes
+          if (err instanceof DOMException && err.name === 'AbortError') {
+            console.log(`[OneOnOneCallScreen] Audio play aborted (expected) for ${userId}, attempt ${playAttemptsRef.current}`);
+            // Don't retry AbortError immediately, wait for next event
+            return;
+          }
+          
+          // Handle NotAllowedError (user didn't allow audio)
+          if (err instanceof DOMException && err.name === 'NotAllowedError') {
+            console.warn(`[OneOnOneCallScreen] Audio play not allowed for ${userId}:`, message);
+            return;
+          }
+          
+          // For other errors, try retry
+          console.warn(`[OneOnOneCallScreen] Audio play failed for ${userId} (attempt ${playAttemptsRef.current}):`, message);
+          
+          if (playAttemptsRef.current < maxPlayAttempts) {
+            setTimeout(() => playAudio(), 200 * playAttemptsRef.current);
+          } else {
+            console.error(`[OneOnOneCallScreen] Max play attempts reached for ${userId}`);
+          }
+        });
+      }
+    };
+
+    // Debounced play function to prevent multiple rapid calls
+    let playTimeout: NodeJS.Timeout;
+    const debouncedPlay = () => {
+      clearTimeout(playTimeout);
+      playTimeout = setTimeout(() => playAudio(), 50);
+    };
+
+    // Set up event listeners with debouncing
+    const handleCanPlay = () => {
+      console.log(`[OneOnOneCallScreen] Audio can play for ${userId}`);
+      debouncedPlay();
+    };
+    
+    const handleLoadStart = () => {
+      console.log(`[OneOnOneCallScreen] Audio load start for ${userId}`);
+      playAttemptsRef.current = 0; // Reset attempts on new load
+    };
+    
+    const handleLoadedData = () => {
+      console.log(`[OneOnOneCallScreen] Audio loaded data for ${userId}`);
+      debouncedPlay();
+    };
+
+    const handlePlay = () => {
+      console.log(`[OneOnOneCallScreen] Audio started playing for ${userId}`);
+      playAttemptsRef.current = 0; // Reset on successful play
+    };
+
+    const handlePause = () => {
+      console.log(`[OneOnOneCallScreen] Audio paused for ${userId}`);
+    };
+
+    const handleEnded = () => {
+      console.log(`[OneOnOneCallScreen] Audio ended for ${userId}`);
+    };
+
     const audioTracks = stream.getAudioTracks();
+    console.log(`[OneOnOneCallScreen] Audio tracks for ${userId}:`, audioTracks.length);
 
-    audio.addEventListener("loadedmetadata", handleCanPlay);
+    // Add event listeners to audio element
     audio.addEventListener("canplay", handleCanPlay);
-    audioTracks.forEach((track) => {
+    audio.addEventListener("loadstart", handleLoadStart);
+    audio.addEventListener("loadeddata", handleLoadedData);
+    audio.addEventListener("play", handlePlay);
+    audio.addEventListener("pause", handlePause);
+    audio.addEventListener("ended", handleEnded);
+    
+    // Add event listeners to audio tracks
+    audioTracks.forEach((track, index) => {
+      console.log(`[OneOnOneCallScreen] Track ${index} state:`, track.enabled, track.readyState, track.muted);
+      
+      const handleTrackUnmute = () => {
+        console.log(`[OneOnOneCallScreen] Track ${index} unmuted for ${userId}`);
+        debouncedPlay();
+      };
+      
+      const handleTrackMute = () => {
+        console.log(`[OneOnOneCallScreen] Track ${index} muted for ${userId}`);
+      };
+
       track.addEventListener("unmute", handleTrackUnmute);
-      if (!track.muted) {
-        handleTrackUnmute();
+      track.addEventListener("mute", handleTrackMute);
+      
+      // Try to play if track is already enabled and not muted
+      if (!track.muted && track.enabled) {
+        debouncedPlay();
       }
     });
 
+    // Initial play attempt
+    debouncedPlay();
+
     return () => {
-      audio.removeEventListener("loadedmetadata", handleCanPlay);
+      // Clear timeout
+      clearTimeout(playTimeout);
+      
+      // Remove event listeners
       audio.removeEventListener("canplay", handleCanPlay);
+      audio.removeEventListener("loadstart", handleLoadStart);
+      audio.removeEventListener("loadeddata", handleLoadedData);
+      audio.removeEventListener("play", handlePlay);
+      audio.removeEventListener("pause", handlePause);
+      audio.removeEventListener("ended", handleEnded);
+      
       audioTracks.forEach((track) => {
-        track.removeEventListener("unmute", handleTrackUnmute);
+        track.removeEventListener("unmute", () => {});
+        track.removeEventListener("mute", () => {});
       });
-      audio.pause();
-      audio.srcObject = null;
+      
+      // Clean up audio element
+      try {
+        audio.pause();
+        audio.srcObject = null;
+      } catch (err) {
+        console.warn(`[OneOnOneCallScreen] Error cleaning up audio for ${userId}:`, err);
+      }
     };
-  }, [stream, userId]);
+  }, [stream, userId, hasAudio]);
 
   if (!hasAudio) return null;
 
-  return <audio ref={audioRef} autoPlay playsInline />;
+  return (
+    <audio 
+      ref={audioRef} 
+      autoPlay 
+      playsInline
+      style={{ display: 'none' }}
+    />
+  );
 }
 
 
@@ -315,9 +446,22 @@ export default function OneOnOneCallScreen({
   const isConnecting = remoteEntries.length === 0;
 
   useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      playElement(localVideoRef.current, "local video");
+    const video = localVideoRef.current;
+    if (!video) return;
+
+    // Only update srcObject if it actually changed
+    if (video.srcObject !== localStream) {
+      video.srcObject = localStream;
+      
+      if (localStream) {
+        // Set video properties for smooth playback
+        video.playsInline = true;
+        video.muted = true;
+        video.autoplay = true;
+        
+        // Try to play the video
+        playElement(video, "local video");
+      }
     }
   }, [localStream]);
 
@@ -337,34 +481,54 @@ export default function OneOnOneCallScreen({
       {/* Main video area */}
       <MainVideoArea>
         {isConnecting ? (
-          <AvatarContainer>
-            <AppAvatar name={userName} size={200} fontSize={80} />
-            <StatusIndicator>
-              <StatusDot online={false} />
-              {t("CALL.CONNECTING")}
-            </StatusIndicator>
-          </AvatarContainer>
-        ) : isVideo && remoteStream ? (
           <>
-            <RemoteVideoStyled
-              ref={(ref: HTMLVideoElement | null) => {
-                if (ref && remoteStream) {
-                  ref.srcObject = remoteStream;
-                  playElement(ref, `remote video ${remoteUserId}`);
-                }
-              }}
-              autoPlay
-              playsInline
-              muted
-            />
+            <AvatarContainer>
+              <AppAvatar name={userName} size={200} fontSize={80} />
+              <StatusIndicator>
+                <StatusDot online={false} />
+                {t("CALL.CONNECTING")}
+              </StatusIndicator>
+            </AvatarContainer>
+          </>
+        ) : remoteStream ? (
+          <>
+            {isVideo && (
+              <VideoPlayer
+                stream={remoteStream}
+                muted={true}
+                autoPlay={true}
+                playsInline={true}
+                style={{
+                  width: "100%",
+                  height: "100%",
+                  objectFit: "cover",
+                  borderRadius: "8px"
+                }}
+                onVideoLoad={() => {
+                  console.log(`[OneOnOneCallScreen] Remote video loaded for ${remoteUserId}`);
+                }}
+                onVideoError={(error) => {
+                  console.error(`[OneOnOneCallScreen] Remote video error for ${remoteUserId}:`, error);
+                }}
+              />
+            )}
             <RemoteAudio stream={remoteStream} userId={remoteUserId} />
+            {!isVideo && (
+              <AvatarContainer>
+                <AppAvatar name={userName} size={200} fontSize={80} />
+                <StatusIndicator>
+                  <StatusDot online={true} />
+                  {t("CALL.AUDIO_CALL")}
+                </StatusIndicator>
+              </AvatarContainer>
+            )}
           </>
         ) : (
           <AvatarContainer>
             <AppAvatar name={userName} size={200} fontSize={80} />
             <StatusIndicator>
-              <StatusDot online={true} />
-              {isVideo ? t("CALL.VIDEO_DISABLED") : t("CALL.AUDIO_CALL")}
+              <StatusDot online={false} />
+              {t("CALL.WAITING")}
             </StatusIndicator>
           </AvatarContainer>
         )}
@@ -372,7 +536,34 @@ export default function OneOnOneCallScreen({
 
       {/* Local video preview */}
       {isVideo && localStream && (
-        <LocalVideo ref={localVideoRef} autoPlay muted playsInline />
+        <Box
+          sx={{
+            position: "fixed",
+            bottom: 120,
+            right: 24,
+            width: 160,
+            height: 120,
+            borderRadius: 12,
+            overflow: "hidden",
+            zIndex: 1000,
+            border: "3px solid rgba(255,255,255,0.3)",
+            transform: "scaleX(-1)",
+            boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
+          }}
+        >
+          <VideoPlayer
+            stream={localStream}
+            muted={true}
+            autoPlay={true}
+            playsInline={true}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: "scaleX(-1)",
+            }}
+          />
+        </Box>
       )}
 
       {/* Controls */}
