@@ -75,14 +75,14 @@ export function createPeer(params: {
     pc.oniceconnectionstatechange = () => {
       // Handle ICE connection failure
       if (pc.iceConnectionState === 'failed' || pc.iceConnectionState === 'disconnected') {
-        setTimeout(triggerCleanup, 1000);
+        setTimeout(triggerCleanup, 5000);
       }
     };
     
     pc.onconnectionstatechange = () => {
       // Handle connection failure
       if (pc.connectionState === 'failed' || pc.connectionState === 'disconnected') {
-        setTimeout(triggerCleanup, 1000);
+        setTimeout(triggerCleanup, 5000);
       }
     };
   }
@@ -97,8 +97,10 @@ export function feedSignal(userId: string, signal: SimplePeer.SignalData): void 
 
   const signalType = (signal as RTCSessionDescriptionInit).type;
   const pc = peerConnections.get(peer);
-  if (signalType === "answer" && pc?.signalingState === "stable") {
-    // Duplicate answer in stable state - ignoring
+  
+  // Only ignore duplicate answers if we're in stable state AND already have a remote description
+  if (signalType === "answer" && pc?.signalingState === "stable" && pc.remoteDescription) {
+    console.log(`[peer:${userId}] Ignoring duplicate answer in stable state`);
     return;
   }
 

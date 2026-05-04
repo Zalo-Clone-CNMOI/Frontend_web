@@ -13,6 +13,8 @@ import GroupIcon from "@mui/icons-material/Group";
 import PersonAddIcon from "@mui/icons-material/PersonAdd";
 import ScreenShareIcon from "@mui/icons-material/ScreenShare";
 import StopScreenShareIcon from "@mui/icons-material/StopScreenShare";
+import PictureInPictureIcon from "@mui/icons-material/PictureInPicture";
+import PictureInPictureAltIcon from "@mui/icons-material/PictureInPictureAlt";
 import AppAvatar from "@/src/shared/component/Avatar";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { useChatStore } from "@/src/common/store/useChatStore";
@@ -710,6 +712,7 @@ export default function DynamicGroupCallLayout({
   const [showParticipantList, setShowParticipantList] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [currentSpeakerId, setCurrentSpeakerId] = useState<string | null>(null);
+  const [showLocalVideo, setShowLocalVideo] = useState(true);
   
   // Get conversation and user data
   const listConversation = useChatStore((s) => s.listConversation);
@@ -937,7 +940,7 @@ export default function DynamicGroupCallLayout({
       {renderLayout()}
 
       {/* Local video preview for video calls */}
-      {isVideo && localStream && totalParticipants > 1 && (
+      {isVideo && localStream && showLocalVideo && (
         <Box
           sx={{
             position: "fixed",
@@ -1040,6 +1043,12 @@ export default function DynamicGroupCallLayout({
         <ControlButton onClick={handleScreenShare}>
           {isScreenSharing ? <StopScreenShareIcon /> : <ScreenShareIcon />}
         </ControlButton>
+
+        {isVideo && (
+          <ControlButton onClick={() => setShowLocalVideo(!showLocalVideo)}>
+            {showLocalVideo ? <PictureInPictureIcon /> : <PictureInPictureAltIcon />}
+          </ControlButton>
+        )}
 
         <ControlButton onClick={() => setShowParticipantList(!showParticipantList)}>
           <GroupIcon />
