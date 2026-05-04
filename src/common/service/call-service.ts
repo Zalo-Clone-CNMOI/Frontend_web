@@ -191,8 +191,8 @@ export async function startCall(
     const callId = uuidv4();
     const currentUserId = getcurrentUserId() || "";
     
-    // Add small delay to ensure previous cleanup is complete
-    await new Promise(resolve => setTimeout(resolve, 100));
+    // Add delay to ensure previous cleanup is complete and connection stability
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     localStream = await navigator.mediaDevices.getUserMedia({
       audio: true,
