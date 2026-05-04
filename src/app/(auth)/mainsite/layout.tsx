@@ -67,7 +67,7 @@ const GridMenuItem = styled(Grid)({
 });
 
 const AuthLayout = ({ children }: { children: ReactNode }) => {
-    const { authData } = useAuthStore();
+    const authData = useAuthStore((state) => state.authData);
     const mounted = useMounted();
     const Trans = useTrans();
 
