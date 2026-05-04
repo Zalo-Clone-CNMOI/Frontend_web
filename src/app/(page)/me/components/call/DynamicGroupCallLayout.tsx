@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useMemo, useState } from "react";
+import { useEffect, useRef, useMemo, useState, memo } from "react";
 import { Box, Typography, IconButton, Avatar } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import CallEndIcon from "@mui/icons-material/CallEnd";
@@ -612,7 +612,7 @@ interface ParticipantCardProps {
   size?: "small" | "medium" | "large";
 }
 
-function ParticipantCard({ 
+const ParticipantCard = memo(function ParticipantCard({ 
   participant, 
   members, 
   isCurrentUser = false, 
@@ -621,36 +621,29 @@ function ParticipantCard({
   size = "medium"
 }: ParticipantCardProps) {
   const userName = getUserDisplayName(participant.userId, members);
-  const videoRef = useRef<HTMLVideoElement>(null);
-
-  useEffect(() => {
-    if (videoRef.current && participant.stream) {
-      videoRef.current.srcObject = participant.stream;
-      playElement(videoRef.current, `participant video ${participant.userId}`);
-    }
-  }, [participant.stream, participant.userId]);
 
   return (
     <>
       <RemoteAudio stream={participant.stream} userId={participant.userId} />
       {participant.hasVideo && participant.stream ? (
         <VideoPlayer
-          stream={participant.stream}
-          muted={true}
-          autoPlay={true}
-          playsInline={true}
-          style={{
-            width: "100%",
-            height: "100%",
-            objectFit: "cover",
-          }}
-          onVideoLoad={() => {
-            console.log(`[DynamicGroupCallLayout] Video loaded for ${participant.userId}`);
-          }}
-          onVideoError={(error) => {
-            console.error(`[DynamicGroupCallLayout] Video error for ${participant.userId}:`, error);
-          }}
-        />
+            stream={participant.stream}
+            muted={true}
+            autoPlay={true}
+            playsInline={true}
+            playerId={`participant-${participant.userId}`}
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+            }}
+            onVideoLoad={() => {
+              console.log(`[DynamicGroupCallLayout] Video loaded for ${participant.userId}`);
+            }}
+            onVideoError={(error: Error) => {
+              console.error(`[DynamicGroupCallLayout] Video error for ${participant.userId}:`, error);
+            }}
+          />
       ) : (
         <ParticipantAvatar>
           <AppAvatar 
@@ -686,7 +679,9 @@ function ParticipantCard({
       </ParticipantLabel>
     </>
   );
-}
+});
+
+ParticipantCard.displayName = 'ParticipantCard';
 
 interface DynamicGroupCallLayoutProps {
   remoteStreams: Map<string, MediaStream>;
@@ -712,7 +707,6 @@ export default function DynamicGroupCallLayout({
   onEndCall,
 }: DynamicGroupCallLayoutProps) {
   const t = useTrans();
-  const localVideoRef = useRef<HTMLVideoElement>(null);
   const [showParticipantList, setShowParticipantList] = useState(false);
   const [isScreenSharing, setIsScreenSharing] = useState(false);
   const [currentSpeakerId, setCurrentSpeakerId] = useState<string | null>(null);
@@ -765,13 +759,7 @@ export default function DynamicGroupCallLayout({
   const totalParticipants = allParticipants.length + 1; // +1 for current user
   const groupName = currentConversation?.name ?? t("CHAT.GROUP_CALL");
 
-  useEffect(() => {
-    if (localVideoRef.current && localStream) {
-      localVideoRef.current.srcObject = localStream;
-      playElement(localVideoRef.current, "local video");
-    }
-  }, [localStream]);
-
+  
   const handleScreenShare = () => {
     setIsScreenSharing(!isScreenSharing);
   };
@@ -985,7 +973,19 @@ export default function DynamicGroupCallLayout({
             boxShadow: "0 4px 12px rgba(0,0,0,0.3)",
           }}
         >
-          <VideoElement ref={localVideoRef} autoPlay muted playsInline />
+          <VideoPlayer
+            stream={localStream}
+            muted={true}
+            autoPlay={true}
+            playsInline={true}
+            playerId="local-video"
+            style={{
+              width: "100%",
+              height: "100%",
+              objectFit: "cover",
+              transform: "scaleX(-1)",
+            }}
+          />
         </Box>
       )}
 

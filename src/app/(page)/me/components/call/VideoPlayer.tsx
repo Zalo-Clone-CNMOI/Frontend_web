@@ -19,6 +19,7 @@ interface VideoPlayerProps {
   style?: React.CSSProperties;
   onVideoLoad?: () => void;
   onVideoError?: (error: Error) => void;
+  playerId?: string;
 }
 
 export interface VideoPlayerRef {
@@ -36,7 +37,8 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
     className,
     style,
     onVideoLoad,
-    onVideoError 
+    onVideoError,
+    playerId = "default"
   }, ref) => {
     const videoRef = useRef<HTMLVideoElement>(null);
     const currentStreamRef = useRef<MediaStream | null>(null);
@@ -59,11 +61,14 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
 
       // Only update stream if it actually changed
       if (video.srcObject !== stream) {
+        console.log(`[VideoPlayer-${playerId}] Stream changed, updating from ${currentStreamRef.current?.id || 'null'} to ${stream?.id || 'null'}`);
+        
         // Remove old stream tracks
-        if (currentStreamRef.current) {
+        if (currentStreamRef.current && currentStreamRef.current !== stream) {
           currentStreamRef.current.getTracks().forEach(track => {
-            video.srcObject = null;
+            track.stop();
           });
+          video.srcObject = null;
         }
 
         // Set new stream
@@ -76,59 +81,59 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           if (videoTracks.length > 0) {
             console.log(`[VideoPlayer] Setting video stream with ${videoTracks.length} tracks`);
             
-            // Set up video track event listeners
-            videoTracks.forEach((_, index) => {
-              const track = videoTracks[index];
-              console.log(`[VideoPlayer] Video track ${index}:`, track.enabled, track.readyState, track.muted);
-              
-              track.addEventListener('ended', () => {
+            // Minimal event listeners for video tracks
+            videoTracks.forEach((track, index) => {
+              const handleTrackEnd = () => {
                 console.log(`[VideoPlayer] Video track ${index} ended`);
-              });
+              };
               
-              track.addEventListener('mute', () => {
-                console.log(`[VideoPlayer] Video track ${index} muted`);
-              });
-              
-              track.addEventListener('unmute', () => {
-                console.log(`[VideoPlayer] Video track ${index} unmuted`);
-              });
+              track.addEventListener('ended', handleTrackEnd);
             });
 
-            // Try to play the video
-            const playVideo = async () => {
-              try {
-                await video.play();
-                console.log(`[VideoPlayer] Video started playing successfully`);
-                onVideoLoad?.();
-              } catch (error) {
-                console.warn(`[VideoPlayer] Video play failed:`, error);
-                onVideoError?.(error instanceof Error ? error : new Error('Video play failed'));
-              }
+            // Debounced play function to prevent multiple rapid calls
+            let playTimeout: NodeJS.Timeout;
+            const debouncedPlay = () => {
+              clearTimeout(playTimeout);
+              playTimeout = setTimeout(async () => {
+                try {
+                  if (video.paused && video.readyState >= 2) { // HAVE_CURRENT_DATA
+                    await video.play();
+                    console.log(`[VideoPlayer] Video play successful`);
+                    onVideoLoad?.();
+                  }
+                } catch (error) {
+                  const err = error instanceof Error ? error : new Error('Video play failed');
+                  console.warn(`[VideoPlayer] Video play failed:`, err);
+                  
+                  // Only retry for specific errors
+                  if (err.name !== 'NotAllowedError') {
+                    setTimeout(() => {
+                      video.play().catch(e => {
+                        console.error(`[VideoPlayer] Retry failed:`, e);
+                        onVideoError?.(e instanceof Error ? e : new Error('Video retry failed'));
+                      });
+                    }, 500);
+                  } else {
+                    onVideoError?.(err);
+                  }
+                }
+              }, 50);
             };
 
             // Set up video element event listeners
             const handleLoadedMetadata = () => {
               console.log(`[VideoPlayer] Video metadata loaded`);
-              playVideo();
+              debouncedPlay();
             };
 
             const handleCanPlay = () => {
               console.log(`[VideoPlayer] Video can play`);
-              if (video.paused) {
-                playVideo();
-              }
+              debouncedPlay();
             };
 
             const handlePlay = () => {
               console.log(`[VideoPlayer] Video is playing`);
-            };
-
-            const handlePause = () => {
-              console.log(`[VideoPlayer] Video is paused`);
-            };
-
-            const handleEnded = () => {
-              console.log(`[VideoPlayer] Video ended`);
+              onVideoLoad?.();
             };
 
             const handleError = (e: Event) => {
@@ -142,23 +147,21 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
             video.addEventListener('loadedmetadata', handleLoadedMetadata);
             video.addEventListener('canplay', handleCanPlay);
             video.addEventListener('play', handlePlay);
-            video.addEventListener('pause', handlePause);
-            video.addEventListener('ended', handleEnded);
             video.addEventListener('error', handleError);
+
+            // Initial play attempt
+            debouncedPlay();
 
             // Clean up function
             return () => {
+              clearTimeout(playTimeout);
               video.removeEventListener('loadedmetadata', handleLoadedMetadata);
               video.removeEventListener('canplay', handleCanPlay);
               video.removeEventListener('play', handlePlay);
-              video.removeEventListener('pause', handlePause);
-              video.removeEventListener('ended', handleEnded);
               video.removeEventListener('error', handleError);
               
               videoTracks.forEach((track) => {
                 track.removeEventListener('ended', () => {});
-                track.removeEventListener('mute', () => {});
-                track.removeEventListener('unmute', () => {});
               });
             };
           } else {
@@ -171,7 +174,7 @@ const VideoPlayer = forwardRef<VideoPlayerRef, VideoPlayerProps>(
           currentStreamRef.current = null;
         }
       }
-    }, [stream, muted, autoPlay, playsInline, onVideoLoad, onVideoError]);
+    }, [stream, muted, autoPlay, playsInline, onVideoLoad, onVideoError, playerId]);
 
     return (
       <VideoElement
