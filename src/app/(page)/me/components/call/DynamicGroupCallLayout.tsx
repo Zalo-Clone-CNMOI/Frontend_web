@@ -413,15 +413,15 @@ function playElement(element: HTMLMediaElement | null, label: string): void {
   }
 }
 
-function RemoteAudio({ stream, userId }: { stream: MediaStream; userId: string }) {
+function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefined; userId: string }) {
   const audioRef = useRef<HTMLAudioElement>(null);
-  const hasAudio = stream.getAudioTracks().length > 0;
+  const hasAudio = stream ? stream.getAudioTracks().length > 0 : false;
   const playAttemptsRef = useRef(0);
   const maxPlayAttempts = 3;
 
   useEffect(() => {
     const audio = audioRef.current;
-    if (!audio || !hasAudio) return;
+    if (!audio || !hasAudio || !stream) return;
 
     // Reset play attempts
     playAttemptsRef.current = 0;
@@ -632,7 +632,7 @@ function ParticipantCard({
 
   return (
     <>
-      <RemoteAudio stream={participant.stream!} userId={participant.userId} />
+      <RemoteAudio stream={participant.stream} userId={participant.userId} />
       {participant.hasVideo && participant.stream ? (
         <VideoPlayer
           stream={participant.stream}
