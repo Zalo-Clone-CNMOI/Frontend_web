@@ -198,7 +198,6 @@ const Me = () => {
     const [selectedCategories, setSelectedCategories] = useState<FilterCategoryKey[]>([]);
     const [showSearchSidebar, setShowSearchSidebar] = useState(false);
     const authData = useAuthStore((s) => s.authData);
-    // console.log("SenderId", authData?.data?.user?.id)
     const setActiveConversationId = useChatStore((s)=> s.setActiveConversationId)
     const activeConversationId = useChatStore((s) => s.activeConversationId);
 

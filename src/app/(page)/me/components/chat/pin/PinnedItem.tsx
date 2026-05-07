@@ -6,6 +6,7 @@ import PushPinIcon from "@mui/icons-material/PushPin";
 import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { useChatStore } from "@/src/common/store/useChatStore";
 
 interface PinnedItemProps {
   message: UiMessage;
@@ -111,12 +112,21 @@ export default function PinnedItem({
   const truncatedText =
     previewText.length > 50 ? previewText.substring(0, 50) + "..." : previewText;
 
-  // Get sender name from members
-  const sender = members?.find((m) => m.userId === message.senderId);
-  const senderName = message.senderId === currentUserId
-    ? t("CHAT.YOU")
-    : (sender?.nickname || sender?.fullName || t("CHAT.USER"));
+  const conversationDetail = useChatStore((s) =>
+    message.conversationId
+      ? s.conversationDetailById[message.conversationId]
+      : null
+  );
 
+  const member =
+    conversationDetail?.members?.find((m) => m.userId === message.senderId) ??
+    null;
+
+  const senderName =
+    member?.nickname ||
+    member?.fullName ||
+    // message.senderName ||
+    "Người dùng";
   return (
     <Container onClick={onPress}>
       <LeftSection>

@@ -114,7 +114,6 @@ export default function RegisterPage() {
                 otpRefs.current[0]?.focus();
             }, 100);
         } catch (error: any) {
-            console.error("Send OTP failed:", error);
             setOtpMsg(error?.message || "Gửi OTP thất bại!");
             setOtpSent(false);
         }

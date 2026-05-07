@@ -64,30 +64,60 @@ export const API = {
 
 
     API_MESSAGES: (conversationId: string) =>
-      `/api/messages/${conversationId}`,
+        `/api/messages/${conversationId}`,
 
     API_MESSAGE_DETAIL: (
-      conversationId: string,
-      createdAt: number | string,
-      messageId: string
+        conversationId: string,
+        createdAt: number | string,
+        messageId: string
     ) => `/api/messages/${conversationId}/${createdAt}/${messageId}`,
 
     API_MESSAGE_REACTIONS: (messageId: string) =>
-      `/api/messages/${messageId}/reactions`,
+        `/api/messages/${messageId}/reactions`,
 
     API_MESSAGES_FORWARD: "/api/messages/forward",
 
     API_MESSAGE_PIN: (
-      conversationId: string,
-      createdAt: number,
-      messageId: string
+        conversationId: string,
+        createdAt: number,
+        messageId: string
     ) => `/api/messages/${conversationId}/${createdAt}/${messageId}/pin`,
 
     API_MESSAGES_PINNED: (conversationId: string) =>
-      `/api/messages/${conversationId}/pins`,
+        `/api/messages/${conversationId}/pins`,
 
     API_MESSAGES_SEARCH: (conversationId: string) =>
-      `/api/messages/${conversationId}/search`,
+        `/api/messages/${conversationId}/search`,
+    /* ================= POLLS ================= */
+    API_POLLS_CREATE: (conversationId: string) =>
+        `/api/conversations/${conversationId}/polls`,
+
+    API_POLLS_LIST: (conversationId: string) =>
+        `/api/conversations/${conversationId}/polls`,
+
+    API_POLLS_DETAIL: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}`,
+
+    API_POLLS_UPDATE: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}`,
+
+    API_POLLS_VOTE: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}/vote`,
+
+    API_POLLS_RETRACT_VOTE: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}/vote`,
+
+    API_POLLS_ADD_OPTION: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}/options`,
+
+    API_POLLS_REMOVE_OPTION: (
+        conversationId: string,
+        pollId: string,
+        optionId: string
+    ) => `/api/conversations/${conversationId}/polls/${pollId}/options/${optionId}`,
+
+    API_POLLS_CLOSE: (conversationId: string, pollId: string) =>
+        `/api/conversations/${conversationId}/polls/${pollId}/close`,
 
     /* ================= CALL ================= */
     API_ICE_SERVERS: "/api/calls/ice-servers",

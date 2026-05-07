@@ -7,7 +7,7 @@ import type {
 import { moveConversationToTopWithLastMessage } from "../helpers/conversationHelpers";
 import { chatService } from "../service/chat-service";
 import { sortConversations } from "../helpers/sortConservation";
-
+import { IPollDto } from "@/src/common/interface/poll-interface";
 type PaginationState = {
   nextCursor: string | null;
   hasMore: boolean;
@@ -70,7 +70,15 @@ export interface ChatSetters {
   ) => void;
   prependMessages: (conversationId: string, messages: UiMessage[]) => void;
   appendRealtimeMessage: (conversationId: string, message: UiMessage) => void;
-
+  upsertPollMessage: (
+    conversationId: string,
+    poll: IPollDto,
+    options?: {
+      messageId?: string;
+      createdAt?: number;
+      creatorId?: string;
+    }
+  ) => void;
   setPagination: (
     conversationId: string,
     value: Partial<PaginationState>
@@ -242,7 +250,81 @@ export const useChatStore = create<ChatStore>((set, get) => ({
         ),
       };
     }),
+  upsertPollMessage: (conversationId, poll, options) =>
+    set((state) => {
+      const currentMessages = state.messagesByConversation[conversationId] || [];
 
+      const pollId = poll.id;
+      if (!pollId) return state;
+
+      const pollMessageId = options?.messageId ?? `poll-${pollId}`;
+
+      const pollMessage: UiMessage = {
+        messageId: pollMessageId,
+        conversationId,
+        senderId:
+          options?.creatorId ??
+          poll.created_by?.id ??
+          poll.creator_id ??
+          "SYSTEM",
+        body: poll.question ?? "Bình chọn",
+        createdAt:
+          options?.createdAt ??
+          (poll.created_at ? new Date(poll.created_at).getTime() : Date.now()),
+        attachments: [],
+        type: "poll",
+        message_type: "poll",
+        poll_id: pollId,
+        pollId,
+        poll,
+        replyTo: null,
+        replyToMessageId: null,
+        isDeleted: false,
+        pending: false,
+        failed: false,
+      };
+
+      const existed = currentMessages.some(
+        (message) =>
+          message.messageId === pollMessageId ||
+          message.poll_id === pollId ||
+          message.pollId === pollId
+      );
+
+      const nextMessages: UiMessage[] = existed
+        ? currentMessages.map((message): UiMessage => {
+          const isSamePoll =
+            message.messageId === pollMessageId ||
+            message.poll_id === pollId ||
+            message.pollId === pollId;
+
+          if (!isSamePoll) return message;
+
+          return {
+            ...message,
+            messageId: options?.messageId ?? message.messageId ?? pollMessageId,
+            body: poll.question ?? message.body,
+            poll_id: pollId,
+            pollId,
+            poll,
+            type: "poll",
+            message_type: "poll",
+          };
+        })
+        : [...currentMessages, pollMessage];
+
+      return {
+        messagesByConversation: {
+          ...state.messagesByConversation,
+          [conversationId]: nextMessages,
+        },
+        listConversation: moveConversationToTopWithLastMessage(
+          state.listConversation,
+          conversationId,
+          pollMessage
+        ),
+      };
+    }),
   prependMessages: (conversationId: string, messages: UiMessage[]) =>
     set((state) => {
       const prevMessages = state.messagesByConversation[conversationId] || [];
@@ -355,7 +437,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
   deleteMessage: (conversationId: string, messageId: string, createdAt: number) => {
     const state = get();
     const messages = state.messagesByConversation[conversationId] || [];
-    
+
     const applyDeletedMessage = (
       messages: UiMessage[],
       messageId: string,
@@ -372,25 +454,25 @@ export const useChatStore = create<ChatStore>((set, get) => ({
           ...msg,
           ...(isTargetMessage
             ? {
-                body: "",
-                isDeleted: true,
-                deletedAt,
-                attachments: [],
-                pending: false,
-                failed: false,
-              }
+              body: "",
+              isDeleted: true,
+              deletedAt,
+              attachments: [],
+              pending: false,
+              failed: false,
+            }
             : {}),
           ...(replyTo && isReplyToTarget
             ? {
-                replyTo: {
-                  ...replyTo,
-                  messageId: replyTo.messageId,
-                  senderId: replyTo.senderId,
-                  body: "",
-                  attachments: [],
-                  isDeleted: true,
-                },
-              }
+              replyTo: {
+                ...replyTo,
+                messageId: replyTo.messageId,
+                senderId: replyTo.senderId,
+                body: "",
+                attachments: [],
+                isDeleted: true,
+              },
+            }
             : {}),
         };
       });
@@ -504,7 +586,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const pinnedSet = state.pinnedMessagesByConversation[conversationId] || new Set();
       const newPinnedSet = new Set(pinnedSet);
       newPinnedSet.add(messageId);
-      
+
       return {
         pinnedMessagesByConversation: {
           ...state.pinnedMessagesByConversation,
@@ -518,7 +600,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const pinnedSet = state.pinnedMessagesByConversation[conversationId] || new Set();
       const newPinnedSet = new Set(pinnedSet);
       newPinnedSet.delete(messageId);
-      
+
       return {
         pinnedMessagesByConversation: {
           ...state.pinnedMessagesByConversation,
@@ -538,7 +620,7 @@ export const useChatStore = create<ChatStore>((set, get) => ({
       const updatedMessages = messages.map((msg) =>
         msg.messageId === messageId ? { ...msg, ...updates } : msg
       );
-      
+
       return {
         messagesByConversation: {
           ...state.messagesByConversation,

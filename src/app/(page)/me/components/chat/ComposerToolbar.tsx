@@ -1,5 +1,5 @@
 "use client";
-
+import PollOutlinedIcon from "@mui/icons-material/PollOutlined";
 import type { ChangeEventHandler, RefObject } from "react";
 import { Box, CircularProgress, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -13,6 +13,7 @@ interface ComposerToolbarProps {
   fileInputRef: RefObject<HTMLInputElement | null>;
   onImageChange: ChangeEventHandler<HTMLInputElement>;
   onFileChange: ChangeEventHandler<HTMLInputElement>;
+  onOpenPoll?: () => void;
 }
 
 const ToolbarRow = styled(Box)({
@@ -43,6 +44,7 @@ export default function ComposerToolbar({
   fileInputRef,
   onImageChange,
   onFileChange,
+  onOpenPoll
 }: ComposerToolbarProps) {
   return (
     <ToolbarRow data-testid="toolbar-input-chat">
@@ -60,6 +62,13 @@ export default function ComposerToolbar({
         aria-label="send-file"
       >
         <AttachFileRoundedIcon fontSize="small" />
+      </StyledIconButton>
+      <StyledIconButton
+        onClick={onOpenPoll}
+        disabled={disabled || uploading}
+        aria-label="create-poll"
+      >
+        <PollOutlinedIcon fontSize="small" />
       </StyledIconButton>
 
       {uploading && <CircularProgress size={16} />}

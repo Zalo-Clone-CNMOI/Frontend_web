@@ -90,7 +90,6 @@ export default function ForwardModal({
       const response = await chatService.fetchListConversations({ limit: 50 });
       setAllConversations(response.payload?.data || []);
     } catch (error) {
-      console.error("Failed to load conversations:", error);
     } finally {
       setLoading(false);
     }

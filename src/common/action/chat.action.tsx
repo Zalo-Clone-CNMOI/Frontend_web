@@ -7,7 +7,16 @@ import { ChatAttachmentPayload, IUploadedMedia } from "../interface/media-interf
 import { chatService } from "../service/chat-service";
 import { connectSocket, getSocket } from "../socket/socket";
 import { useChatStore } from "../store/useChatStore";
-
+import { usePollStore } from "../store/usePollStore";
+import { IPollDto } from "../interface/poll-interface";
+type MessagePreviewType =
+  | "poll"
+  | "video"
+  | "image"
+  | "file"
+  | "voice"
+  | "text"
+  | "deleted";
 export const rebuildConversationDerivedData = (conversationId: string) => {
   const state = useChatStore.getState();
   const messages = state.messagesByConversation[conversationId] || [];
@@ -202,6 +211,12 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("conversation:created");
   socket.off("conversation:disbanded");
   socket.off("chat:system-message");
+  socket.off("group:poll:created");
+  socket.off("group:poll:edited");
+  socket.off("group:poll:vote:updated");
+  socket.off("group:poll:option:added");
+  socket.off("group:poll:option:removed");
+  socket.off("group:poll:closed");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -270,7 +285,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     if (!messageId || !conversationId) return;
 
     const state = useChatStore.getState();
-    
+
     // Auto unpin when message is deleted/revoked
     if (state.isMessagePinned(conversationId, messageId)) {
       state.removePinnedMessage(conversationId, messageId);
@@ -333,14 +348,10 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   };
 
   const handleSystemMessage = (raw: any) => {
-    console.log("[chat:system-message raw full]", raw);
-    console.log("[chat:system-message raw json]", JSON.stringify(raw, null, 2));
-
     const conversationId = raw?.conversation_id ?? raw?.conversationId;
     const messageId = raw?.message_id ?? raw?.messageId;
 
     if (!conversationId || !messageId) {
-      console.log("[chat:system-message] missing ids", raw);
       return;
     }
 
@@ -366,18 +377,12 @@ export const initChat = (accessToken: string, currentUserId: string) => {
       failed: false,
     };
 
-    console.log("[chat:system-message mapped]", systemMessage);
 
     useChatStore.setState((state) => {
       const currentMessages =
         state.messagesByConversation[conversationId] || [];
 
       const nextMessages = upsertIncomingMessage(currentMessages, systemMessage);
-      console.log("[systemMessage before upsert]", systemMessage);
-      console.log(
-        "[systemMessage after upsert]",
-        nextMessages.find((m) => m.messageId === systemMessage.messageId)
-      );
       const nextConversations = state.listConversation.some(
         (cvs) => cvs.id === conversationId
       )
@@ -397,7 +402,213 @@ export const initChat = (accessToken: string, currentUserId: string) => {
       };
     });
   };
+  const normalizePollMessage = (raw: any): UiMessage | null => {
+    const poll = normalizePollFromRealtime(raw);
 
+    const conversationId =
+      raw?.conversation_id ??
+      raw?.conversationId ??
+      poll?.conversation_id;
+
+    const pollId =
+      raw?.poll_id ??
+      raw?.pollId ??
+      poll?.id;
+
+    const messageId =
+      raw?.message_id ??
+      raw?.messageId ??
+      raw?.id ??
+      `poll-${pollId}`;
+
+    if (!conversationId || !pollId || !messageId) return null;
+
+    return {
+      messageId,
+      conversationId,
+      senderId:
+        raw?.sender_id ??
+        raw?.senderId ??
+        raw?.creator_id ??
+        poll?.creator_id ??
+        poll?.created_by?.id ??
+        "SYSTEM",
+      body: raw?.body ?? poll?.question ?? "Bình chọn",
+      createdAt:
+        raw?.created_at ??
+        raw?.createdAt ??
+        raw?.sent_at ??
+        poll?.created_at ??
+        Date.now(),
+      attachments: [],
+      type: "poll",
+      message_type: "poll",
+      poll_id: pollId,
+      pollId,
+      poll,
+      metadata: raw?.metadata ?? undefined,
+      replyTo: null,
+      replyToMessageId: null,
+      isDeleted: false,
+      pending: false,
+      failed: false,
+    };
+  };
+  const normalizePollFromRealtime = (raw: any): IPollDto | null => {
+    const source = raw?.poll ?? raw?.data?.poll ?? raw?.payload?.poll ?? raw?.data ?? raw;
+
+    const pollId = source?.id ?? source?.poll_id ?? raw?.poll_id ?? raw?.pollId;
+    const conversationId =
+      source?.conversation_id ??
+      raw?.conversation_id ??
+      raw?.conversationId;
+
+    if (!pollId || !conversationId) return null;
+
+    return {
+      id: pollId,
+      conversation_id: conversationId,
+      question: source?.question ?? raw?.question ?? "",
+      options: (source?.options ?? raw?.options ?? []).map((option: any) => ({
+        id: option?.id ?? option?.option_id,
+        label: option?.label ?? "",
+        order_index: option?.order_index,
+        vote_count: Number(option?.vote_count ?? 0),
+        voter_ids: option?.voter_ids,
+        voters: option?.voters,
+      })),
+      allow_multiple: Boolean(source?.allow_multiple ?? raw?.allow_multiple),
+      allow_add_option: Boolean(source?.allow_add_option ?? raw?.allow_add_option),
+      is_anonymous: Boolean(source?.is_anonymous),
+      status: source?.status ?? raw?.status ?? "active",
+      expires_at: source?.expires_at ?? raw?.expires_at ?? null,
+      closed_at: source?.closed_at ?? raw?.closed_at ?? null,
+      closed_reason: source?.closed_reason ?? raw?.reason ?? null,
+      created_at: source?.created_at ?? raw?.created_at ?? Date.now(),
+      creator_id: source?.creator_id ?? raw?.creator_id,
+      created_by: source?.created_by ?? (
+        source?.creator_id || raw?.creator_id
+          ? { id: source?.creator_id ?? raw?.creator_id }
+          : undefined
+      ),
+      my_option_ids: source?.my_option_ids ?? source?.my_vote ?? [],
+      total_votes: Number(source?.total_votes ?? raw?.total_votes ?? 0),
+      total_voters: Number(source?.total_voters ?? raw?.total_voters ?? 0),
+    };
+  };
+  const normalizePollCreatedEvent = (raw: any): IPollDto | null => {
+    const pollId = raw?.poll_id ?? raw?.id;
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+
+    if (!pollId || !conversationId) return null;
+
+    return {
+      id: pollId,
+      conversation_id: conversationId,
+      question: raw?.question ?? "",
+      options: (raw?.options ?? []).map((option: any) => ({
+        id: option?.option_id ?? option?.id,
+        label: option?.label ?? "",
+        order_index: option?.order_index,
+        vote_count: Number(option?.vote_count ?? 0),
+      })),
+      creator_id: raw?.creator_id,
+      created_by: raw?.creator_id
+        ? {
+          id: raw.creator_id,
+        }
+        : undefined,
+      allow_multiple: Boolean(raw?.allow_multiple),
+      allow_add_option: Boolean(raw?.allow_add_option),
+      is_anonymous: Boolean(raw?.is_anonymous),
+      status: raw?.status ?? "active",
+      expires_at: raw?.expires_at ?? null,
+      closed_at: raw?.closed_at ?? null,
+      closed_reason: raw?.closed_reason ?? null,
+      created_at: raw?.created_at ?? Date.now(),
+      my_option_ids: raw?.my_vote ?? raw?.my_option_ids ?? [],
+      total_votes: Number(raw?.total_votes ?? 0),
+      total_voters: Number(raw?.total_voters ?? 0),
+    };
+  };
+  const findExistingPollMessageId = (
+    conversationId: string,
+    pollId: string
+  ) => {
+    const messages =
+      useChatStore.getState().messagesByConversation[conversationId] || [];
+
+    return messages.find(
+      (msg) =>
+        msg.poll_id === pollId ||
+        msg.pollId === pollId ||
+        msg.poll?.id === pollId
+    )?.messageId;
+  };
+  const handlePollRealtime = async (raw: any) => {
+
+    const conversationId = raw?.conversation_id ?? raw?.conversationId;
+    const pollId = raw?.poll_id ?? raw?.pollId ?? raw?.id;
+
+    if (!conversationId || !pollId) return;
+
+    const eventMessageId = raw?.message_id ?? raw?.messageId;
+    const existingMessageId = findExistingPollMessageId(conversationId, pollId);
+    const messageId = eventMessageId ?? existingMessageId;
+
+    const isNeedFetchDetailEvent =
+      raw?.tally !== undefined ||
+      raw?.final_tally !== undefined ||
+      raw?.changes !== undefined ||
+      raw?.option_id !== undefined;
+
+    /**
+     * group:poll:vote:updated / edited / option / closed
+     * không dùng raw payload để update poll vì payload có thể thiếu options/vote_count.
+     * Luôn fetch detail rồi update lại poll card hiện có.
+     */
+    if (isNeedFetchDetailEvent) {
+      const detailPoll = await usePollStore
+        .getState()
+        .fetchPollDetail(conversationId, pollId, true);
+
+      if (!detailPoll?.id) {
+        return;
+      }
+
+      usePollStore.getState().upsertPoll(conversationId, detailPoll);
+
+      useChatStore.getState().upsertPollMessage(conversationId, detailPoll, {
+        messageId,
+        createdAt: Number(detailPoll.created_at ?? raw?.updated_at ?? Date.now()),
+        creatorId:
+          detailPoll.creator_id ??
+          detailPoll.created_by?.id ??
+          raw?.creator_id,
+      });
+
+      return;
+    }
+
+    /**
+     * Chỉ event created mới dùng raw payload vì nó có message_id, question, options.
+     */
+    const poll = normalizePollCreatedEvent(raw);
+
+    if (!poll?.id) {
+      return;
+    }
+
+    usePollStore.getState().upsertPoll(conversationId, poll);
+
+    useChatStore.getState().upsertPollMessage(conversationId, poll, {
+      messageId: eventMessageId,
+      createdAt: Number(raw?.created_at ?? Date.now()),
+      creatorId: raw?.creator_id ?? poll.creator_id,
+    });
+
+   
+  };
   const handlePinnedMessage = (raw: any) => {
     const conversationId = raw?.conversation_id ?? raw?.conversationId;
     const messageId = raw?.message_id ?? raw?.messageId;
@@ -406,14 +617,14 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     if (!conversationId || !messageId) return;
 
     const state = useChatStore.getState();
-    
+
     // Add to pinned set
     state.addPinnedMessage(conversationId, messageId);
-    
+
     // Update message if it exists in local state
     const messages = state.messagesByConversation[conversationId] || [];
     const messageExists = messages.some((msg) => msg.messageId === messageId);
-    
+
     if (messageExists) {
       state.updateMessage(conversationId, messageId, {
         isPinned: true,
@@ -472,6 +683,12 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("conversation:created", handleConversationCreated);
   socket.on("conversation:disbanded", handleConversationDisbanded);
   socket.on("conversation:member:removed", handleConversationMemberRemoved);
+  socket.on("group:poll:created", handlePollRealtime);
+  socket.on("group:poll:edited", handlePollRealtime);
+  socket.on("group:poll:vote:updated", handlePollRealtime);
+  socket.on("group:poll:option:added", handlePollRealtime);
+  socket.on("group:poll:option:removed", handlePollRealtime);
+  socket.on("group:poll:closed", handlePollRealtime);
   socket.on("chat:system-message", handleSystemMessage);
   socket.on("chat:typing:update", (payload: any) => {
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
@@ -482,7 +699,7 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   });
 
   socket.onAny((event, ...args) => {
-    // Socket event received
+
   });
 
   const heartbeatId = setInterval(() => {
@@ -519,6 +736,23 @@ export const openConversation = async (conversationId: string) => {
     const page = res?.payload?.data;
     const rawItems = Array.isArray(page?.items) ? page.items : [];
     const normalizedItems = dedupeByMessageId(rawItems.map(normalizeMessage));
+
+    normalizedItems.forEach((message) => {
+      if (
+        message.type === "poll" ||
+        message.message_type === "poll" ||
+        message.poll_id ||
+        message.pollId ||
+        message.poll
+      ) {
+        if (message.poll?.id) {
+          usePollStore
+            .getState()
+            .upsertPoll(message.conversationId, message.poll);
+        }
+      }
+    });
+
     const hydratedItems = hydrateReplyMessages(normalizedItems);
 
     const oldItems =
@@ -573,7 +807,21 @@ export const loadMoreMessages = async (conversationId: string) => {
     const fetchedMessages = Array.isArray(payload?.items)
       ? payload.items.map(normalizeMessage)
       : [];
-
+    fetchedMessages.forEach((message) => {
+      if (
+        message.type === "poll" ||
+        message.message_type === "poll" ||
+        message.poll_id ||
+        message.pollId ||
+        message.poll
+      ) {
+        if (message.poll?.id) {
+          usePollStore
+            .getState()
+            .upsertPoll(message.conversationId, message.poll);
+        }
+      }
+    });
     const oldMessages = hydrateReplyMessages(
       dedupeByMessageId(fetchedMessages)
     );
@@ -815,7 +1063,6 @@ export const deleteMessage = (
   });
 };
 function handleConversationDisbanded(payload: any) {
-  console.log("[conversation:disbanded]", payload);
 
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
@@ -826,7 +1073,6 @@ function handleConversationDisbanded(payload: any) {
   current.removeConversationLocally(conversationId);
 };
 async function handleConversationCreated(payload: any) {
-  console.log("[conversation:created]", payload);
 
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
@@ -843,7 +1089,6 @@ async function handleConversationCreated(payload: any) {
 };
 
 async function handleConversationMemberAdded(payload: any) {
-  console.log("[conversation:member:added]", payload);
 
   const conversationId =
     payload?.conversation_id ?? payload?.conversationId;
@@ -913,6 +1158,12 @@ export const cleanupChat = () => {
   socket?.off("conversation:created");
   socket?.off("conversation:disbanded");
   socket?.off("chat:system-message");
+  socket?.off("group:poll:created");
+  socket?.off("group:poll:edited");
+  socket?.off("group:poll:vote:updated");
+  socket?.off("group:poll:option:added");
+  socket?.off("group:poll:option:removed");
+  socket?.off("group:poll:closed");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();
@@ -920,7 +1171,19 @@ export const cleanupChat = () => {
   state.resetChatState();
 };
 
-const detectPreviewTypeFromMessage = (message: UiMessage) => {
+const detectPreviewTypeFromMessage = (
+  message: UiMessage
+): MessagePreviewType => {
+  if (
+    message.type === "poll" ||
+    message.message_type === "poll" ||
+    message.poll_id ||
+    message.pollId ||
+    message.poll
+  ) {
+    return "poll";
+  }
+
   const cleanBody = (message.body ?? "").replace(/\u200B/g, "").trim();
   const lowerContent = cleanBody.toLowerCase();
 
@@ -949,6 +1212,9 @@ export const moveConversationToTopWithLastMessage = (
   let previewContent = cleanBody;
 
   switch (previewType) {
+    case "poll":
+      previewContent = "Đã tạo 1 bình chọn";
+      break;
     case "image":
       previewContent = "Đã gửi 1 ảnh";
       break;
@@ -986,5 +1252,6 @@ export const moveConversationToTopWithLastMessage = (
       }
       : cvs
   );
+
   return sortConversations(updatedList);
 };

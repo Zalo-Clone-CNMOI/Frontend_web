@@ -1,3 +1,5 @@
+import { IPollDto } from "./poll-interface";
+
 export type AttachmentType = "image" | "document" | "audio" | "video";
 export type ReactionType = "like" | "love" | "haha" | "sad" | "angry";
 
@@ -155,8 +157,8 @@ export interface UiMessage {
   body: string;
   createdAt: number;
   attachments: any[];
-  type?: "text" | "system";
-  message_type?: "user" | "system";
+  type?: "text" | "system" | "poll";
+  message_type?: "user" | "system" | "poll";
   systemAction?: SystemEventType;
   system_event_type?: SystemEventType;
   metadata?: SystemMessageMetadata;
@@ -171,6 +173,9 @@ export interface UiMessage {
 
   isPinned?: boolean;
   pinnedAt?: number | null;
+  poll_id?: string | null;
+  pollId?: string | null;
+  poll?: IPollDto | null;
 }
 
 export interface MessagePageDto {

@@ -66,7 +66,6 @@ export default function DangerZone() {
       setActiveConversationId(null);
       setOpenLeaveGroupModal(false);
     } catch (error) {
-      console.error(t("CONVO.LEAVE_FAILED"), error);
     } finally {
       setLeaving(false);
     }
@@ -83,7 +82,6 @@ export default function DangerZone() {
       setActiveConversationId(null);
       setOpenDisbandGroupModal(false);
     } catch (error) {
-      console.error(t("CONVO.DISBAND_FAILED"), error);
     } finally {
       setDisbanding(false);
     }

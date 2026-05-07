@@ -91,7 +91,6 @@ export default function SentFriendRequestList() {
       setActionKey(requestId);
       await cancelFriendRequest(requestId);
     } catch (error) {
-      console.error(error);
     } finally {
       setActionKey(null);
     }

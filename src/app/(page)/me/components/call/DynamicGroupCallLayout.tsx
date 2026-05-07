@@ -410,7 +410,6 @@ function playElement(element: HTMLMediaElement | null, label: string): void {
         err.name === "AbortError" &&
         (message.includes("pause") || message.includes("new load request"));
       if (isExpectedInterruption) return;
-      console.warn(`[DynamicGroupCallLayout] ${label} play blocked:`, message);
     });
   }
 }
@@ -453,24 +452,20 @@ function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefine
           
           // Handle AbortError specifically - this is expected when stream changes
           if (err instanceof DOMException && err.name === 'AbortError') {
-            console.log(`[DynamicGroupCallLayout] Audio play aborted (expected) for ${userId}, attempt ${playAttemptsRef.current}`);
             // Don't retry AbortError immediately, wait for next event
             return;
           }
           
           // Handle NotAllowedError (user didn't allow audio)
           if (err instanceof DOMException && err.name === 'NotAllowedError') {
-            console.warn(`[DynamicGroupCallLayout] Audio play not allowed for ${userId}:`, message);
             return;
           }
           
           // For other errors, try retry
-          console.warn(`[DynamicGroupCallLayout] Audio play failed for ${userId} (attempt ${playAttemptsRef.current}):`, message);
           
           if (playAttemptsRef.current < maxPlayAttempts) {
             setTimeout(() => playAudio(), 200 * playAttemptsRef.current);
           } else {
-            console.error(`[DynamicGroupCallLayout] Max play attempts reached for ${userId}`);
           }
         });
       }
@@ -490,30 +485,24 @@ function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefine
     };
     
     const handleLoadStart = () => {
-      console.log(`[DynamicGroupCallLayout] Audio load start for ${userId}`);
       playAttemptsRef.current = 0; // Reset attempts on new load
     };
     
     const handleLoadedData = () => {
-      console.log(`[DynamicGroupCallLayout] Audio loaded data for ${userId}`);
       debouncedPlay();
     };
 
     const handlePlay = () => {
-      console.log(`[DynamicGroupCallLayout] Audio started playing for ${userId}`);
       playAttemptsRef.current = 0; // Reset on successful play
     };
 
     const handlePause = () => {
-      console.log(`[DynamicGroupCallLayout] Audio paused for ${userId}`);
     };
 
     const handleEnded = () => {
-      console.log(`[DynamicGroupCallLayout] Audio ended for ${userId}`);
     };
 
     const audioTracks = stream.getAudioTracks();
-    console.log(`[DynamicGroupCallLayout] Audio tracks for ${userId}:`, audioTracks.length);
 
     // Add event listeners to audio element
     audio.addEventListener("canplay", handleCanPlay);

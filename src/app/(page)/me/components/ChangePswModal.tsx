@@ -115,7 +115,6 @@ export default function ChangePasswordModal({
               handleClose();
               setOpenSuccessAlert(true);
             } catch (error: any) {
-              console.error("change password error:", error);
 
               const code = error?.code || "";
               const message =

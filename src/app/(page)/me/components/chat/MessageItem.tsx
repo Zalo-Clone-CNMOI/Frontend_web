@@ -13,7 +13,7 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
-
+import PollMessageCard from "@/src/shared/component/PollMessageCard";
 interface MessageItemProps {
   message: UiMessage;
   currentUserId: string;
@@ -150,7 +150,9 @@ export default function MessageItem({
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
   const canForward = !message.isDeleted;
-
+  const isPollMessage =
+    message.type === "poll" ||
+    Boolean(message.poll_id || message.pollId || message.poll);
   // Get conversation detail to check role for pin permission
   const conversationDetail = useChatStore((s) =>
     message.conversationId
@@ -211,7 +213,43 @@ export default function MessageItem({
   const avatarSrc = member?.avatarUrl
     ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
     : "";
+  if (isPollMessage) {
+    return (
+      <MessageRow
+        id={`message-${message.messageId}`}
+        data-testid="message-row"
+        data-message-id={String(message.messageId)}
+        mine={mine}
+        isHighlighted={isHighlighted}
+      >
+        {!mine ? (
+          <LeftMessageWrap>
+            <AppAvatar
+              name={member?.fullName ?? ""}
+              src={avatarSrc}
+              alt={member?.nickname || member?.fullName || "User"}
+            />
 
+            <MessageContent mine={mine}>
+              <PollMessageCard
+                messageId={message.messageId}
+                conversationId={message.conversationId}
+              />
+              <MetaText>{timeText}</MetaText>
+            </MessageContent>
+          </LeftMessageWrap>
+        ) : (
+          <MessageContent mine={mine}>
+            <PollMessageCard
+              messageId={message.messageId}
+              conversationId={message.conversationId}
+            />
+            <MetaText>{timeText}</MetaText>
+          </MessageContent>
+        )}
+      </MessageRow>
+    );
+  }
   return (
     <MessageRow
       id={`message-${message.messageId}`}
