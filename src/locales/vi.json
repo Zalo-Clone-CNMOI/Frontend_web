@@ -139,6 +139,7 @@
   "CHAT.EDITING_MESSAGE": "Đang chỉnh sửa tin nhắn",
   "CHAT.REPLYING": "Đang trả lời",
   "CHAT.PLACEHOLDER": "Nhập tin nhắn...",
+  "CHAT.SEND_DISABLED": "Chỉ quản trị viên được gửi tin nhắn trong nhóm này.",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Tạo nhóm",
@@ -263,6 +264,40 @@
   "CONVO.ALREADY_JOINED": "Đã tham gia",
   "CONVO.CHANGE_NICKNAME": "Đổi biệt danh",
   "CONVO.REMOVE_MEMBER_CONFIRM": "Bạn có chắc muốn xóa {name} khỏi nhóm không?",
+  "CONVO.TRANSFER_OWNERSHIP": "Chuyển quyền sở hữu",
+  "GROUP_SETTINGS_READ_ONLY": "Chỉ quản trị viên mới có thể thay đổi cài đặt nhóm",
+
+  "PERMISSIONS": "Quyền hạn",
+  "POLICIES": "Chính sách",
+  "FEATURES": "Tính năng",
+
+  "CHANGE_INFO": "Đổi thông tin nhóm",
+  "CHANGE_INFO_DESC": "Thành viên có thể sửa tên và ảnh nhóm",
+  "PIN_MESSAGE": "Ghim tin nhắn",
+  "PIN_MESSAGE_DESC": "Thành viên có thể ghim tin nhắn",
+  "CREATE_NOTE": "Tạo ghi chú",
+  "CREATE_NOTE_DESC": "Thành viên có thể tạo ghi chú",
+  "CREATE_POLL": "Tạo bình chọn",
+  "CREATE_POLL_DESC": "Thành viên có thể tạo bình chọn",
+  "SEND_MESSAGE": "Gửi tin nhắn",
+  "SEND_MESSAGE_DESC": "Thành viên có thể gửi tin nhắn",
+
+  "JOIN_APPROVAL": "Yêu cầu phê duyệt khi tham gia",
+  "JOIN_APPROVAL_DESC": "Người được mời phải chấp nhận lời mời",
+  "ALLOW_READ_HISTORY": "Thành viên mới xem được lịch sử",
+  "ALLOW_READ_HISTORY_DESC": "Cho phép thành viên mới xem tin nhắn cũ",
+  "ALLOW_JOIN_LINK": "Cho phép tham gia qua liên kết",
+  "ALLOW_JOIN_LINK_DESC": "Bật luồng tham gia qua liên kết",
+
+  "ADMIN_TAGGING": "Nhắc @admin",
+  "ADMIN_TAGGING_DESC": "Bật đề cập @admin",
+
+  "TRANSFER_OWNERSHIP": "Chuyển quyền sở hữu",
+  "TRANSFER_OWNERSHIP_DESC": "Chọn thành viên để chuyển quyền sở hữu nhóm",
+  "TRANSFERRING": "Đang chuyển...",
+  "TRANSFER": "Chuyển",
+  "NO_ELIGIBLE_MEMBERS": "Không có thành viên nào phù hợp để chuyển quyền",
+  "CANCEL": "Hủy",
 
   "// ============================== PROFILE ==============================": "",
   "PROFILE.TITLE": "Thông tin cá nhân",

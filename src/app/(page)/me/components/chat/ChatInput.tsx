@@ -13,16 +13,18 @@ import { getCurrentUserId } from "@/src/common/utilities/utils";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useAuthStore } from "@/src/common/store/useAuthStore";
 import { uploadManyChatMedia } from "@/src/common/service/chat-media-service";
-import { UiMessage } from "@/src/common/interface/chat-interface";
+import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import { useTypingIndicator } from "@/src/common/hooks/useTypingIndicator";
 import { getSocket } from "@/src/common/socket/socket";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { normalizeGroupSettings } from "@/src/common/interface/group-settings-interface";
 
 import ComposerToolbar from "./ComposerToolbar";
 import { buildChatAttachmentPayload, sanitizeInputText } from "@/src/common/helpers/chatInput.helpers";
 import PendingAttachmentList from "./PendingAttachmentsList";
 import ComposerActionPreview from "./ComposerActionPreview";
-import CreatePollDialog from "./modal/CreatePollModal";
+import AdminMentionPopover from "./AdminMentionPopover";
+import MentionSuggestions from "./MentionSuggestions";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -135,11 +137,16 @@ export default function ChatInput({
   const t = useTrans();
   const [value, setValue] = useState("");
   const [openEmoji, setOpenEmoji] = useState(false);
-  const [openPollDialog, setOpenPollDialog] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<
     ChatAttachmentPayload[]
   >([]);
   const [uploading, setUploading] = useState(false);
+  const [showAdminMention, setShowAdminMention] = useState(false);
+
+  const [mentionOpen, setMentionOpen] = useState(false);
+  const [mentionQuery, setMentionQuery] = useState("");
+  const [mentionStart, setMentionStart] = useState(-1);
+  const [selectedMentionIdx, setSelectedMentionIdx] = useState(0);
 
   const textInputRef = useRef<HTMLInputElement | HTMLTextAreaElement | null>(null);
   const imageInputRef = useRef<HTMLInputElement | null>(null);
@@ -149,6 +156,19 @@ export default function ChatInput({
   const conversationId = useChatStore((s) => s.activeConversationId);
   const socket = getSocket();
   const currentUser = useAuthStore((s) => s.authData?.data?.user);
+
+  const conversationDetail = useChatStore(
+    (s) => s.conversationDetailById?.[conversationId ?? ""] ?? null
+  );
+  const isGroup = conversationDetail?.type === "group";
+  const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const settings = normalizeGroupSettings(conversationDetail?.settings);
+  const adminTaggingEnabled = settings.features.admin_tagging;
+  const isPrivileged = myRole === 'owner' || myRole === 'admin';
+  const canUseAtAdmin = isPrivileged || adminTaggingEnabled;
+  const adminMembers: ConversationMemberDto[] = (conversationDetail?.members ?? []).filter(
+    (m) => m.role === "owner" || m.role === "admin"
+  );
 
   const { emitTyping } = useTypingIndicator({
     socket,
@@ -192,6 +212,7 @@ export default function ChatInput({
 
       setPendingAttachments((prev) => [...prev, ...nextAttachments]);
     } catch (error) {
+      console.error("upload attachment error:", error);
     } finally {
       setUploading(false);
     }
@@ -211,8 +232,18 @@ export default function ChatInput({
     setPendingAttachments((prev) => prev.filter((item) => item.key !== key));
   };
 
+  const replaceAtAdminWithNames = (input: string): string => {
+    if (!isGroup || !canUseAtAdmin || adminMembers.length === 0) return input;
+    const names = adminMembers.map((m) => `@${m.fullName}`);
+    const mentionText = names.join(" ");
+    return input.replace(/(?:^|\s)@admin\b/gi, (match) =>
+      match.startsWith(" ") ? ` ${mentionText}` : mentionText
+    );
+  };
+
   const handleSend = async () => {
-    const text = sanitizeInputText(value);
+    const rawText = value;
+    const text = sanitizeInputText(rawText);
 
     if (editMessage) {
       if (!text || disabled || uploading) return;
@@ -220,6 +251,7 @@ export default function ChatInput({
       await onEdit?.(editMessage.messageId, text);
       setValue("");
       setOpenEmoji(false);
+      setShowAdminMention(false);
       onCancelEdit?.();
       return;
     }
@@ -228,15 +260,77 @@ export default function ChatInput({
       return;
     }
 
-    await onSend(text, pendingAttachments);
+    const finalText = replaceAtAdminWithNames(text);
+    await onSend(finalText, pendingAttachments);
 
     setValue("");
     setPendingAttachments([]);
     setOpenEmoji(false);
+    setShowAdminMention(false);
     onCancelReply?.();
   };
 
+  const allMembers: ConversationMemberDto[] = conversationDetail?.members ?? [];
+
+  const getFilteredMembers = (query: string) => {
+    const lower = query
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+    return allMembers.filter((m) => {
+      const name = m.fullName
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      const nick = (m.nickname ?? "")
+        .normalize("NFD")
+        .replace(/[\u0300-\u036f]/g, "")
+        .toLowerCase();
+      return name.includes(lower) || nick.includes(lower);
+    });
+  };
+
+  const handleSelectMention = (member: ConversationMemberDto) => {
+    const before = value.slice(0, mentionStart);
+    const after = value.slice(mentionStart + mentionQuery.length + 1);
+    const inserted = `@${member.fullName} `;
+    const nextValue = before + inserted + after;
+    setValue(nextValue);
+    setMentionOpen(false);
+    requestAnimationFrame(() => {
+      const pos = before.length + inserted.length;
+      textInputRef.current?.setSelectionRange(pos, pos);
+      textInputRef.current?.focus();
+    });
+  };
+
   const handleKeyDown: React.KeyboardEventHandler<HTMLDivElement> = (e) => {
+    if (mentionOpen) {
+      const filtered = getFilteredMembers(mentionQuery);
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        setSelectedMentionIdx((prev) => (prev + 1) % Math.max(filtered.length, 1));
+        return;
+      }
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        setSelectedMentionIdx((prev) => (prev - 1 + Math.max(filtered.length, 1)) % Math.max(filtered.length, 1));
+        return;
+      }
+      if (e.key === "Enter" || e.key === "Tab") {
+        e.preventDefault();
+        if (filtered.length > 0 && filtered[selectedMentionIdx]) {
+          handleSelectMention(filtered[selectedMentionIdx]);
+        }
+        return;
+      }
+      if (e.key === "Escape") {
+        e.preventDefault();
+        setMentionOpen(false);
+        return;
+      }
+    }
+
     if (e.key === "Enter" && !e.shiftKey) {
       e.preventDefault();
       void handleSend();
@@ -244,10 +338,41 @@ export default function ChatInput({
   };
 
   const handleInputChange: React.ChangeEventHandler<HTMLInputElement | HTMLTextAreaElement> = (e) => {
-    setValue(e.target.value);
-    if (e.target.value.trim() && conversationId) {
+    const newValue = e.target.value;
+    setValue(newValue);
+
+    if (newValue.trim() && conversationId) {
       const username = currentUser?.fullName || 'Bạn';
       emitTyping(username);
+    }
+
+    const input = textInputRef.current;
+    const cursorPos = input?.selectionStart ?? newValue.length;
+    const textBeforeCursor = newValue.slice(0, cursorPos);
+
+    if (isGroup && canUseAtAdmin && adminMembers.length > 0) {
+      const hasAtAdmin = /(?:^|\s)@admin$/i.test(textBeforeCursor);
+      setShowAdminMention(hasAtAdmin);
+    } else {
+      setShowAdminMention(false);
+    }
+
+    if (isGroup) {
+      const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
+      if (mentionMatch) {
+        const rawQuery = mentionMatch[1];
+        const atIndex = mentionMatch.index! + (textBeforeCursor[mentionMatch.index!] === "@" ? 0 : 1);
+        setMentionQuery(rawQuery);
+        setMentionStart(atIndex);
+        setMentionOpen(true);
+        setSelectedMentionIdx(0);
+      } else {
+        setMentionOpen(false);
+        setMentionQuery("");
+        setMentionStart(-1);
+      }
+    } else {
+      setMentionOpen(false);
     }
   };
 
@@ -290,7 +415,6 @@ export default function ChatInput({
         fileInputRef={fileInputRef}
         onImageChange={handleImageChange}
         onFileChange={handleFileChange}
-        onOpenPoll={() => setOpenPollDialog(true)}
       />
 
       <PendingAttachmentList
@@ -305,7 +429,18 @@ export default function ChatInput({
         onCancelEdit={onCancelEdit}
       />
 
-      <ComposerWrap>
+      <ComposerWrap sx={{ position: "relative" }}>
+        {showAdminMention && (
+          <AdminMentionPopover admins={adminMembers} />
+        )}
+        {mentionOpen && !showAdminMention && (
+          <MentionSuggestions
+            members={allMembers}
+            query={mentionQuery}
+            selectedIndex={selectedMentionIdx}
+            onSelect={handleSelectMention}
+          />
+        )}
         <ComposerRow>
           <StyledTextField
             fullWidth
@@ -352,13 +487,6 @@ export default function ChatInput({
           </StyledIconButton>
         </ComposerRow>
       </ComposerWrap>
-      {conversationId && (
-        <CreatePollDialog
-          open={openPollDialog}
-          conversationId={conversationId}
-          onClose={() => setOpenPollDialog(false)}
-        />
-      )}
     </ComposerContainer>
   );
 }

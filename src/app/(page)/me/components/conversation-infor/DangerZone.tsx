@@ -7,6 +7,7 @@ import ReportGmailerrorredRoundedIcon from "@mui/icons-material/ReportGmailerror
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
 import LogoutOutlinedIcon from "@mui/icons-material/LogoutOutlined";
 import CancelPresentationOutlinedIcon from "@mui/icons-material/CancelPresentationOutlined";
+import TrendingFlatRoundedIcon from "@mui/icons-material/TrendingFlatRounded";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { groupService } from "@/src/common/service/group-service";
 import AppModal from "@/src/shared/component/AppModal";
@@ -32,7 +33,11 @@ const DangerRow = styled(Box, {
   },
 }));
 
-export default function DangerZone() {
+interface DangerZoneProps {
+  onTransferOwnership?: () => void;
+}
+
+export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
   const t = useTrans();
   const conversationId = useChatStore((s) => s.activeConversationId);
   const currentUserId = useChatStore((s) => s.currentUserId);
@@ -45,6 +50,7 @@ export default function DangerZone() {
   const isGroup = conversationDetail?.type === "group";
 
   const myRole = useMemo(() => {
+    if (!currentUserId) return undefined;
     const members = conversationDetail?.members ?? [];
     return members.find((member) => member.userId === currentUserId)?.role;
   }, [conversationDetail?.members, currentUserId]);
@@ -110,10 +116,16 @@ export default function DangerZone() {
             </DangerRow>
 
             {isOwner && (
-              <DangerRow danger onClick={() => setOpenDisbandGroupModal(true)}>
-                <CancelPresentationOutlinedIcon />
-                <Typography fontSize={15}>{t("CONVO.DISBAND")}</Typography>
-              </DangerRow>
+              <>
+                <DangerRow danger onClick={onTransferOwnership}>
+                  <TrendingFlatRoundedIcon />
+                  <Typography fontSize={15}>{t("CONVO.TRANSFER_OWNERSHIP")}</Typography>
+                </DangerRow>
+                <DangerRow danger onClick={() => setOpenDisbandGroupModal(true)}>
+                  <CancelPresentationOutlinedIcon />
+                  <Typography fontSize={15}>{t("CONVO.DISBAND")}</Typography>
+                </DangerRow>
+              </>
             )}
           </Stack>
         )}

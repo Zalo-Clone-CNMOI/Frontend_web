@@ -2,6 +2,7 @@ import http from "../api/http";
 import { API } from "../api/path";
 import { IApiResponse } from "../interface/auth-interface";
 import { ConversationDto } from "../interface/chat-interface";
+import type { UpdateGroupSettingsDto } from "../interface/group-settings-interface";
 
 export const groupService = {
     createGroupConversation(
@@ -56,5 +57,17 @@ export const groupService = {
             `/api/conversations/${conversationId}/settings`,
             { nickname }
         );
-    }
+    },
+    updateGroupSettings(conversationId: string, dto: UpdateGroupSettingsDto) {
+        return http.patch<IApiResponse<ConversationDto>>(
+            API.API_CONVERSATIONS_GROUP_SETTINGS(conversationId),
+            dto
+        );
+    },
+    transferOwnership(conversationId: string, targetUserId: string) {
+        return http.post<IApiResponse<void>>(
+            `/api/conversations/${conversationId}/transfer-ownership`,
+            { targetUserId }
+        );
+    },
 };

@@ -144,6 +144,7 @@
   "CHAT.EDITING_MESSAGE": "Editing message",
   "CHAT.REPLYING": "Replying",
   "CHAT.PLACEHOLDER": "Type a message...",
+  "CHAT.SEND_DISABLED": "Only admins can send messages in this group.",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Create group",
@@ -268,6 +269,40 @@
   "CONVO.ALREADY_JOINED": "Already joined",
   "CONVO.CHANGE_NICKNAME": "Change nickname",
   "CONVO.REMOVE_MEMBER_CONFIRM": "Are you sure you want to remove {name} from the group?",
+  "CONVO.TRANSFER_OWNERSHIP": "Transfer ownership",
+  "GROUP_SETTINGS_READ_ONLY": "Only admins can change group settings",
+
+  "PERMISSIONS": "Permissions",
+  "POLICIES": "Policies",
+  "FEATURES": "Features",
+
+  "CHANGE_INFO": "Change group info",
+  "CHANGE_INFO_DESC": "Members can change group name and avatar",
+  "PIN_MESSAGE": "Pin message",
+  "PIN_MESSAGE_DESC": "Members can pin messages",
+  "CREATE_NOTE": "Create note",
+  "CREATE_NOTE_DESC": "Members can create notes",
+  "CREATE_POLL": "Create poll",
+  "CREATE_POLL_DESC": "Members can create polls",
+  "SEND_MESSAGE": "Send message",
+  "SEND_MESSAGE_DESC": "Members can send messages",
+
+  "JOIN_APPROVAL": "Require approval to join",
+  "JOIN_APPROVAL_DESC": "Invited members must accept to join",
+  "ALLOW_READ_HISTORY": "New members can read history",
+  "ALLOW_READ_HISTORY_DESC": "Allow new members to view old messages",
+  "ALLOW_JOIN_LINK": "Allow join via link",
+  "ALLOW_JOIN_LINK_DESC": "Enable join-by-link flow",
+
+  "ADMIN_TAGGING": "@admin mentions",
+  "ADMIN_TAGGING_DESC": "Enable @admin mentions",
+
+  "TRANSFER_OWNERSHIP": "Transfer ownership",
+  "TRANSFER_OWNERSHIP_DESC": "Choose a member to transfer group ownership to",
+  "TRANSFERRING": "Transferring...",
+  "TRANSFER": "Transfer",
+  "NO_ELIGIBLE_MEMBERS": "No eligible members to transfer ownership",
+  "CANCEL": "Cancel",
 
   "// ============================== PROFILE ==============================": "",
   "PROFILE.TITLE": "Personal information",

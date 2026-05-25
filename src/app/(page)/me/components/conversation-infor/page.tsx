@@ -17,10 +17,13 @@ import ProfileCard from "./ProfileCard";
 import SecuritySection from "./SecuritySection";
 import GroupMemberBlock from "./GroupMemberBlock";
 import GroupMemberListView from "./GroupMemberListView";
+import GroupSettingsSection from "./GroupSettingsSection";
+import TransferOwnershipModal from "./TransferOwnershipModal";
 import { groupService } from "@/src/common/service/group-service";
 import AddMemberGroupDialog from "./AddMemberGroupDialog";
 import AppModal from "@/src/shared/component/AppModal";
 import MediaPreviewModal, { MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
+import type { MemberRole } from "@/src/common/interface/group-settings-interface";
 
 interface InfConvColumnProps {
   conversationId: string;
@@ -67,6 +70,7 @@ export default function InfConvColumn({
   const [openConfirmRemove, setOpenConfirmRemove] = useState(false);
   const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
+  const [openTransferOwnership, setOpenTransferOwnership] = useState(false);
   const currentUserId = useChatStore((s) => s.currentUserId);
 
   const handleOpenRemoveMember = (member: ConversationMemberDto) => {
@@ -112,7 +116,8 @@ export default function InfConvColumn({
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? [];
   const myMember = members.find((member) => member.userId === currentUserId);
-  const myRole = myMember?.role;
+  const myRole = !currentUserId ? 'member' : (myMember?.role ?? conversationDetail?.mySettings?.role ?? 'member');
+  const isPrivileged = myRole === 'owner' || myRole === 'admin';
 
   const handleBackToOverview = () => {
     setView("overview");
@@ -162,7 +167,13 @@ export default function InfConvColumn({
           <FileSection items={fileItems} />
           <LinkSection items={links} />
           <SecuritySection />
-          <DangerZone />
+          {isGroup && isPrivileged && (
+            <GroupSettingsSection
+              conversationId={conversationId}
+              myRole={(myRole as MemberRole) || 'member'}
+            />
+          )}
+          <DangerZone onTransferOwnership={() => setOpenTransferOwnership(true)} />
         </>
       ) : (
         <GroupMemberListView
@@ -217,6 +228,12 @@ export default function InfConvColumn({
           setPreviewOpen(false);
           setPreviewMedia(null);
         }}
+      />
+
+      <TransferOwnershipModal
+        open={openTransferOwnership}
+        onClose={() => setOpenTransferOwnership(false)}
+        conversationId={conversationId}
       />
     </Root>
   );

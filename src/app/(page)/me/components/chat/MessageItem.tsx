@@ -13,7 +13,8 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
-import PollMessageCard from "@/src/shared/component/PollMessageCard";
+import { canMemberDo, normalizeGroupSettings } from "@/src/common/interface/group-settings-interface";
+
 interface MessageItemProps {
   message: UiMessage;
   currentUserId: string;
@@ -150,9 +151,7 @@ export default function MessageItem({
   const canDelete = mine && !message.isDeleted;
   const canReply = !message.isDeleted;
   const canForward = !message.isDeleted;
-  const isPollMessage =
-    message.type === "poll" ||
-    Boolean(message.poll_id || message.pollId || message.poll);
+
   // Get conversation detail to check role for pin permission
   const conversationDetail = useChatStore((s) =>
     message.conversationId
@@ -160,9 +159,11 @@ export default function MessageItem({
       : null
   );
   const isGroup = conversationDetail?.type === 'group';
-  const myRole = conversationDetail?.mySettings?.role;
-  // Only owner/admin can pin in group conversations, anyone can pin in direct
-  const canPin = !message.isDeleted && (!isGroup || myRole === 'owner' || myRole === 'admin');
+  const myRole = (conversationDetail?.mySettings?.role ?? 'member') as 'owner' | 'admin' | 'member';
+  const settingsLoaded = conversationDetail?.settings != null;
+  const rawSettings = settingsLoaded ? conversationDetail.settings : null;
+  const settings = normalizeGroupSettings(rawSettings);
+  const canPin = !message.isDeleted && !!conversationDetail && (!isGroup || (settingsLoaded ? canMemberDo('pin_message', myRole, settings) : false));
 
   const { togglePin } = useMessagePin();
   const isPinned = useChatStore((s) => s.isMessagePinned(message.conversationId, message.messageId));
@@ -213,43 +214,7 @@ export default function MessageItem({
   const avatarSrc = member?.avatarUrl
     ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
     : "";
-  if (isPollMessage) {
-    return (
-      <MessageRow
-        id={`message-${message.messageId}`}
-        data-testid="message-row"
-        data-message-id={String(message.messageId)}
-        mine={mine}
-        isHighlighted={isHighlighted}
-      >
-        {!mine ? (
-          <LeftMessageWrap>
-            <AppAvatar
-              name={member?.fullName ?? ""}
-              src={avatarSrc}
-              alt={member?.nickname || member?.fullName || "User"}
-            />
 
-            <MessageContent mine={mine}>
-              <PollMessageCard
-                messageId={message.messageId}
-                conversationId={message.conversationId}
-              />
-              <MetaText>{timeText}</MetaText>
-            </MessageContent>
-          </LeftMessageWrap>
-        ) : (
-          <MessageContent mine={mine}>
-            <PollMessageCard
-              messageId={message.messageId}
-              conversationId={message.conversationId}
-            />
-            <MetaText>{timeText}</MetaText>
-          </MessageContent>
-        )}
-      </MessageRow>
-    );
-  }
   return (
     <MessageRow
       id={`message-${message.messageId}`}

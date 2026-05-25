@@ -117,6 +117,7 @@ export interface ConversationDto {
     pinnedAt: string | null;
     lastReadAt: string | null;
   };
+  settings?: import('./group-settings-interface').GroupSettings | null;
   createdAt: string;
 }
 export interface ConversationListMeta {
