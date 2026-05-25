@@ -160,6 +160,8 @@ function showCallSummary(duration: number, reason?: string): void {
 
 let isCleaningUp = false;
 let cleanupPromise: Promise<void> | null = null;
+let pendingCallSignals: CallSignalPayload[] = [];
+let _myUserIdForSignals = "";
 
 export async function startCall(
   conversationId: string,
@@ -267,6 +269,14 @@ export async function acceptCall(): Promise<void> {
       conversation_id: activeCall.conversation_id,
       accepted_at: Date.now(),
     });
+
+    // Process any offers that arrived before localStream was ready
+    const queued = pendingCallSignals.splice(0);
+    for (const p of queued) {
+      if (p.call_id === activeCall.call_id) {
+        await processCallSignal(p);
+      }
+    }
   } catch (err) {
     showToast(i18n.t("CALL.MEDIA_ERROR"));
     rejectCall("media_error");
@@ -369,35 +379,95 @@ function emitSignal(
   });
 }
 
-export function cleanup(): Promise<void> {
+export async function cleanup(): Promise<void> {
   if (isCleaningUp) {
     return cleanupPromise || Promise.resolve();
   }
-
   isCleaningUp = true;
-  
-  cleanupPromise = new Promise((resolve) => {
-    // Perform cleanup asynchronously to avoid blocking
-    setTimeout(() => {
-      try {
-        stopRingtone();
-        destroyAllPeers();
-        useCallStore.getState().reset();
-      } catch (error) {
-        // Log error but don't reject the promise
-      } finally {
-        isCleaningUp = false;
-        cleanupPromise = null;
-        resolve();
-      }
-    }, 50);
-  });
-
+  cleanupPromise = (async () => {
+    try {
+      stopRingtone();
+      destroyAllPeers();
+      pendingCallSignals = [];
+      useCallStore.getState().reset();
+    } catch {
+      // ignore
+    } finally {
+      isCleaningUp = false;
+      cleanupPromise = null;
+    }
+  })();
   return cleanupPromise;
+}
+
+async function processCallSignal(payload: CallSignalPayload): Promise<void> {
+  const myUserId = _myUserIdForSignals;
+  if (payload.sender_id === myUserId) {
+    return;
+  }
+  if (payload.target_user_id && payload.target_user_id !== myUserId) {
+    return;
+  }
+
+  const { activeCall, localStream, stateVersion } = useCallStore.getState();
+  if (!activeCall) {
+    return;
+  }
+  if (!localStream) {
+    if (payload.signal_type === "offer") {
+      pendingCallSignals.push(payload);
+    }
+    return;
+  }
+  if (payload.call_id !== activeCall.call_id) {
+    return;
+  }
+
+  // Drop stale signals
+  if (payload.state_version && payload.state_version < stateVersion) {
+    return;
+  }
+
+  const iceServers = await getIceServers();
+
+  if (!hasPeer(payload.sender_id)) {
+    createPeer({
+      userId: payload.sender_id,
+      initiator: false,
+      localStream,
+      iceServers,
+      onSignal: (signal) => emitSignal(activeCall, payload.sender_id, signal),
+      onStream: (stream) => {
+        useCallStore.getState().setRemoteStream(payload.sender_id, stream);
+        useCallStore.getState().setScreen("active");
+        useCallStore.getState().startDurationTimer();
+      },
+      onClose: () =>
+        useCallStore.getState().removeRemoteStream(payload.sender_id),
+    });
+  }
+
+  let signalData: SimplePeer.SignalData;
+
+  if (payload.signal_type === "offer" || payload.signal_type === "answer") {
+    signalData = {
+      type: payload.signal_type,
+      sdp: payload.sdp,
+    };
+  } else if (payload.signal_type === "ice-candidate") {
+    const candidateSignal = fromBackendCandidate(payload);
+    if (!candidateSignal) return;
+    signalData = candidateSignal;
+  } else {
+    return;
+  }
+
+  feedSignal(payload.sender_id, signalData);
 }
 
 export function registerCallHandlers(myUserId: string): () => void {
   const socket = getSocket();
+  _myUserIdForSignals = myUserId;
   if (!socket) return () => {};
 
   // Register reconnect handling
@@ -455,8 +525,7 @@ export function registerCallHandlers(myUserId: string): () => void {
       return;
     }
 
-    // Check if call is now ongoing
-    if (payload.status === "ongoing" && payload.participants[myUserId] === "accepted") {
+    if (payload.participants[myUserId] === "accepted") {
       useCallStore.getState().setScreen("connecting");
 
       const iceServers = await getIceServers();
@@ -478,61 +547,7 @@ export function registerCallHandlers(myUserId: string): () => void {
   };
 
   const handleCallSignalReceived = async (payload: CallSignalPayload) => {
-    if (payload.sender_id === myUserId) {
-      return;
-    }
-    if (payload.target_user_id && payload.target_user_id !== myUserId) {
-      return;
-    }
-
-    const { activeCall, localStream, stateVersion } = useCallStore.getState();
-    if (!activeCall || !localStream) {
-      return;
-    }
-    if (payload.call_id !== activeCall.call_id) {
-      return;
-    }
-
-    // Drop stale signals
-    if (payload.state_version && payload.state_version < stateVersion) {
-      return;
-    }
-
-    const iceServers = await getIceServers();
-
-    if (!hasPeer(payload.sender_id)) {
-      createPeer({
-        userId: payload.sender_id,
-        initiator: false,
-        localStream,
-        iceServers,
-        onSignal: (signal) => emitSignal(activeCall, payload.sender_id, signal),
-        onStream: (stream) => {
-          useCallStore.getState().setRemoteStream(payload.sender_id, stream);
-          useCallStore.getState().setScreen("active");
-          useCallStore.getState().startDurationTimer();
-        },
-        onClose: () =>
-          useCallStore.getState().removeRemoteStream(payload.sender_id),
-      });
-    }
-
-    let signalData: SimplePeer.SignalData;
-
-    if (payload.signal_type === "offer" || payload.signal_type === "answer") {
-      signalData = {
-        type: payload.signal_type,
-        sdp: payload.sdp,
-      };
-    } else if (payload.signal_type === "ice-candidate") {
-      const candidateSignal = fromBackendCandidate(payload);
-      if (!candidateSignal) return;
-      signalData = candidateSignal;
-    } else {
-      return;
-    }
-
-    feedSignal(payload.sender_id, signalData);
+    await processCallSignal(payload);
   };
 
   const handleCallRejected = (_payload: CallRejectedPayload) => {
@@ -558,10 +573,9 @@ export function registerCallHandlers(myUserId: string): () => void {
       ? payload.ended_at - activeCall.started_at
       : 0;
 
-    cleanup();
+    stopRingtone();
     useCallStore.getState().setScreen("ended");
     
-    // Show appropriate message based on reason
     let reasonMessage = "";
     switch (payload.reason) {
       case "rejected":
@@ -581,7 +595,10 @@ export function registerCallHandlers(myUserId: string): () => void {
     }
     
     showCallSummary(duration, reasonMessage);
-    setTimeout(() => useCallStore.getState().setScreen("idle"), 3000);
+    setTimeout(async () => {
+      await cleanup();
+      useCallStore.getState().setScreen("idle");
+    }, 3000);
   };
 
   const handleCallStateUpdated = (payload: CallStateUpdatedPayload) => {
