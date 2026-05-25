@@ -4,6 +4,7 @@ import type {
   ConversationDto,
   UiMessage,
 } from "@/src/common/interface/chat-interface";
+import type { GroupSettings } from "@/src/common/interface/group-settings-interface";
 import { moveConversationToTopWithLastMessage } from "../helpers/conversationHelpers";
 import { chatService } from "../service/chat-service";
 import { sortConversations } from "../helpers/sortConservation";
@@ -97,6 +98,10 @@ export interface ChatSetters {
   updateConversationPinStatus: (
     conversationId: string,
     isPinned: boolean
+  ) => void;
+  updateConversationSettings: (
+    conversationId: string,
+    settings: GroupSettings
   ) => void;
   addPinnedMessage: (conversationId: string, messageId: string) => void;
   removePinnedMessage: (conversationId: string, messageId: string) => void;
@@ -489,6 +494,17 @@ export const useChatStore = create<ChatStore>((set, get) => ({
 
       return {
         listConversation: sortConversations(nextList),
+      };
+    }),
+  updateConversationSettings: (conversationId, settings) =>
+    set((state) => {
+      const existing = state.conversationDetailById[conversationId];
+      if (!existing) return state;
+      return {
+        conversationDetailById: {
+          ...state.conversationDetailById,
+          [conversationId]: { ...existing, settings },
+        },
       };
     }),
   updateTypingUsers: (conversationId: string, users: any[]) =>

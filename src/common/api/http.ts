@@ -212,9 +212,9 @@ export const request = async <T = any>(
     // Add timeout for the request
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.error(`[HTTP] Request timeout after 10s: ${method} ${url}`);
+      console.error(`[HTTP] Request timeout after 20s: ${method} ${url}`);
       controller.abort();
-    }, 10000);
+    }, 20000);
     
     const res = await fetch(fullUrl, {
       ...options,

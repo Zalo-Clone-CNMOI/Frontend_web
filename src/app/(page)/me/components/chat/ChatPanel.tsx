@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useLayoutEffect, useMemo, useRef, useState } from "react";
-import { Box } from "@mui/material";
+import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import ChatHeader from "./ChatHeader";
@@ -15,6 +15,7 @@ import MenuPopover, { PopoverMenuItem } from "@/src/shared/component/MenuPopover
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
 import { usePresenceHeartbeat } from "@/src/common/hooks/usePresenceHeartbeat";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 import { chatService } from "@/src/common/service/chat-service";
 import {
   loadMoreMessages,
@@ -65,6 +66,16 @@ const InputWrap = styled(Box)({
   minHeight: 50,
   flexShrink: 0,
   backgroundColor: "red",
+});
+
+const ReadOnlyBanner = styled(Box)({
+  minHeight: 50,
+  display: "flex",
+  alignItems: "center",
+  justifyContent: "center",
+  padding: "10px 16px",
+  borderTop: "1px solid #EEF1F4",
+  background: "#fff",
 });
 
 export default function ChatPanel({
@@ -136,6 +147,7 @@ export default function ChatPanel({
 
   const { pinnedMessages, refetch: refetchPinnedMessages } = usePinnedMessages(conversationId);
   const { togglePin } = useMessagePin();
+  const t = useTrans();
 
   const pinnedMessagesByConversation = useChatStore((s) => s.pinnedMessagesByConversation[conversationId]);
   const realtimePinnedMessages = useMemo(() => {
@@ -210,8 +222,21 @@ export default function ChatPanel({
   };
 
   const conversationDetail = useChatStore((s) => s.conversationDetailById?.[conversationId || ""] ?? null);
-  const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const members = conversationDetail?.members ?? [];
+  const myMember = members.find((member) => member.userId === currentUserId);
+  const myRole = myMember?.role ?? conversationDetail?.mySettings?.role ?? 'member';
   const isGroup = conversationDetail?.type === "group";
+  const isPrivileged = myRole === 'owner' || myRole === 'admin';
+  const settingsLoaded = conversationDetail?.settings != null;
+  const canSendMessages = !conversationDetail
+    ? false
+    : !isGroup
+      ? true
+      : isPrivileged
+        ? true
+        : settingsLoaded
+          ? (conversationDetail?.settings?.permissions?.send_message ?? false)
+          : false;
   const canUnpin = !isGroup || myRole === 'owner' || myRole === 'admin';
 
   const pinnedMenuItems: PopoverMenuItem[] = [
@@ -518,16 +543,26 @@ onOpenMedia={handleOpenMediaPreview}
 </MessageListWrap>
 
 <InputWrap>
-<ChatInput
-disabled={false}
-replyMessage={replyMessage}
-editMessage={editMessage}
-onCancelReply={handleCancelReply}
-onCancelEdit={handleCancelEdit}
-onSend={(text, attachments = []) =>
-sendMessage(conversationId, text, attachments, replyMessage)
-}
-/>
+{canSendMessages ? (
+  <ChatInput
+    disabled={false}
+    replyMessage={replyMessage}
+    editMessage={editMessage}
+    onCancelReply={handleCancelReply}
+    onCancelEdit={handleCancelEdit}
+    onSend={(text, attachments = []) =>
+      sendMessage(conversationId, text, attachments, replyMessage)
+    }
+  />
+) : (
+  <ReadOnlyBanner>
+    <Typography
+      sx={{ fontSize: 14, color: "#94A3B8", textAlign: "center" }}
+    >
+      {t("CHAT.SEND_DISABLED")}
+    </Typography>
+  </ReadOnlyBanner>
+)}
 </InputWrap>
 
 <ForwardModal

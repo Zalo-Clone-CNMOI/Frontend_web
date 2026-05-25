@@ -25,6 +25,7 @@ import { chatService } from "@/src/common/service/chat-service";
 import AppModal from "@/src/shared/component/AppModal";
 import { fetchListConversation } from "@/src/common/action/chat.action";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { canMemberDo } from "@/src/common/interface/group-settings-interface";
 
 const Card = styled(Box)({
   background: "#fff",
@@ -164,9 +165,11 @@ export default function ProfileCard() {
   const [updatingNickname, setUpdatingNickname] = useState(false);
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? currentConversation?.members ?? [];
-  const myRole = conversationDetail?.mySettings?.role ?? 'member';
+  const myMember = members.find((member) => member.userId === currentUserId);
+  const myRole = myMember?.role ?? conversationDetail?.mySettings?.role ?? 'member';
   const myNickname = conversationDetail?.mySettings?.nickname ?? "";
-  const canEditGroup = isGroup && (myRole === 'owner' || myRole === 'admin');
+  const settings = conversationDetail?.settings ?? null;
+  const canEditGroup = isGroup && canMemberDo('change_info', myRole, settings);
 
   const otherMember = !isGroup
     ? members.find((m) => m.userId !== currentUserId)

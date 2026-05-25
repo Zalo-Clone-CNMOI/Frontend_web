@@ -60,6 +60,8 @@ export const API = {
         `/api/conversations/${conversationId}/disband`,
     API_CONVERSATIONS_PIN: (conversationId: string) =>
         `/api/conversations/${conversationId}/pin`,
+    API_CONVERSATIONS_GROUP_SETTINGS: (conversationId: string) =>
+        `/api/conversations/${conversationId}/group-settings`,
     /* ================= MESSAGES ================= */
 
 

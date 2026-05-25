@@ -13,6 +13,7 @@ import AppAvatar from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { canMemberDo, normalizeGroupSettings } from "@/src/common/interface/group-settings-interface";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -158,9 +159,11 @@ export default function MessageItem({
       : null
   );
   const isGroup = conversationDetail?.type === 'group';
-  const myRole = conversationDetail?.mySettings?.role;
-  // Only owner/admin can pin in group conversations, anyone can pin in direct
-  const canPin = !message.isDeleted && (!isGroup || myRole === 'owner' || myRole === 'admin');
+  const myRole = (conversationDetail?.mySettings?.role ?? 'member') as 'owner' | 'admin' | 'member';
+  const settingsLoaded = conversationDetail?.settings != null;
+  const rawSettings = settingsLoaded ? conversationDetail.settings : null;
+  const settings = normalizeGroupSettings(rawSettings);
+  const canPin = !message.isDeleted && !!conversationDetail && (!isGroup || (settingsLoaded ? canMemberDo('pin_message', myRole, settings) : false));
 
   const { togglePin } = useMessagePin();
   const isPinned = useChatStore((s) => s.isMessagePinned(message.conversationId, message.messageId));
