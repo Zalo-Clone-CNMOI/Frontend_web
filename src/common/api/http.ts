@@ -168,7 +168,6 @@ const refreshAccessToken = async (
       return newAccessToken as string;
     })()
       .catch((err) => {
-        console.error("Refresh token error:", err);
         handleAuthExpired();
         return null;
       })
@@ -187,10 +186,8 @@ export const request = async <T = any>(
 ): Promise<IHttpresponse<T>> => {
   const baseUrl = options?.baseUrl ?? process.env.NEXT_PUBLIC_API_BASE_URL;
 
-  console.log(`[HTTP] ${method} ${url}`, { body: options?.body });
 
   if (!baseUrl) {
-    console.error('[HTTP] Missing baseUrl');
     return {
       statusCode: 500,
       ok: false,
@@ -201,18 +198,15 @@ export const request = async <T = any>(
   const apiPath = normalizeApiPath(baseUrl, url);
   const fullUrl = joinUrl(baseUrl, apiPath);
 
-  console.log(`[HTTP] Full URL: ${fullUrl}`);
 
   const { body, headers } = buildBodyAndHeaders(options);
   const optionHeaders = toHeaderRecord(options?.headers);
 
   try {
-    console.log(`[HTTP] Sending request...`);
     
     // Add timeout for the request
     const controller = new AbortController();
     const timeoutId = setTimeout(() => {
-      console.error(`[HTTP] Request timeout after 10s: ${method} ${url}`);
       controller.abort();
     }, 10000);
     
@@ -226,10 +220,8 @@ export const request = async <T = any>(
     
     clearTimeout(timeoutId);
 
-    console.log(`[HTTP] Response status: ${res.status}`);
 
     const payload = await getResponsePayload(res);
-    console.log(`[HTTP] Response payload:`, payload);
 
     if (res.ok) {
       return { statusCode: res.status, ok: true, payload: payload as T };
@@ -262,8 +254,6 @@ export const request = async <T = any>(
 
     return { statusCode: res.status, ok: false, payload: payload as T };
   } catch (err: any) {
-    console.error("[HTTP] Request error:", err);
-    console.error("[HTTP] Error details:", err?.message, err?.stack);
 
     return {
       statusCode: 500,

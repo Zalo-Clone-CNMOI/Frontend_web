@@ -36,7 +36,6 @@ export const fetchAuthData = async () => {
             });
         }
     } catch (error: any) {
-        console.error("Failed to fetch auth data:", error);
         useAuthStore
             .getState()
             .setErrorAuth(error?.message || "Lỗi khi tải thông tin người dùng");
@@ -62,7 +61,6 @@ export const fetchConversations = async (params = { page: 1, limit: 20 }) => {
             useChatStore.getState().setActiveConversationId(listConversation[0]?.id || null);
         }
     } catch (error: any) {
-        console.error("Failed to fetch conversations:", error);
         useChatStore.getState().setError(error?.message || "Không thể tải danh sách cuộc trò chuyện");
     }
 };
@@ -79,6 +77,5 @@ export const fetchAllData = async () => {
         // Sau đó fetch conversations
         await fetchConversations();
     } catch (error) {
-        console.error("Failed to fetch all data:", error);
     }
 };

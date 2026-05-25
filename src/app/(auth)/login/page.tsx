@@ -70,12 +70,6 @@ export default function LoginPage() {
                 });
 
                 const payload = result?.payload;
-                
-                console.log("[LOGIN] result.ok:", result?.ok);
-                console.log("[LOGIN] payload.success:", payload?.success);
-                console.log("[LOGIN] payload.data:", payload?.data);
-                console.log("[LOGIN] payload.data.tokens:", payload?.data?.tokens);
-                console.log("[LOGIN] accessToken:", payload?.data?.tokens?.accessToken);
 
                 if (result?.ok && payload?.success && payload?.data?.tokens?.accessToken) {
                     if (typeof window !== "undefined") {

@@ -235,7 +235,6 @@ export default function MediaPreviewModal({
       link.remove();
       window.URL.revokeObjectURL(blobUrl);
     } catch (error) {
-      console.error("Download media failed:", error);
       window.open(mediaUrl, "_blank");
     }
   };

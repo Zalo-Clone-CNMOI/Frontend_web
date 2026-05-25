@@ -20,7 +20,7 @@ import { useChatStore } from "@/src/common/store/useChatStore";
 import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import AddMemberGroupDialog from "./AddMemberGroupDialog";
 import { groupService } from "@/src/common/service/group-service";
-import CreateGroupModal from "../chat/CreateGroupModal";
+import CreateGroupModal from "../chat/modal/CreateGroupModal";
 import { chatService } from "@/src/common/service/chat-service";
 import AppModal from "@/src/shared/component/AppModal";
 import { fetchListConversation } from "@/src/common/action/chat.action";
@@ -199,7 +199,6 @@ export default function ProfileCard() {
         updateConversationPinStatus(activeConversationId, true);
       }
     } catch (error) {
-      console.error("Pin/unpin conversation failed", error);
     }
   };
   const handleOpenEditName = () => {

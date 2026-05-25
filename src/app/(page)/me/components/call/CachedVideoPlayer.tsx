@@ -76,7 +76,6 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
 
       // Only update if stream actually changed
       if (currentStreamId !== newStreamId) {
-        console.log(`[CachedVideoPlayer-${playerId}] Stream ID changed from ${currentStreamId} to ${newStreamId}`);
         
         // Clean up old stream
         if (currentStreamRef.current && currentStreamRef.current !== stream) {
@@ -96,12 +95,10 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
 
           const videoTracks = stream.getVideoTracks();
           if (videoTracks.length > 0) {
-            console.log(`[CachedVideoPlayer-${playerId}] Setting video stream with ${videoTracks.length} tracks`);
             
             // Minimal event listeners
             videoTracks.forEach((track, index) => {
               const handleTrackEnd = () => {
-                console.log(`[CachedVideoPlayer-${playerId}] Video track ${index} ended`);
               };
               track.addEventListener('ended', handleTrackEnd);
             });
@@ -109,29 +106,24 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
             // Initialize video element only once
             if (!isInitializedRef.current) {
               const handleLoadedMetadata = () => {
-                console.log(`[CachedVideoPlayer-${playerId}] Metadata loaded`);
                 attemptPlay();
               };
 
               const handleCanPlay = () => {
-                console.log(`[CachedVideoPlayer-${playerId}] Can play`);
                 attemptPlay();
               };
 
               const handlePlay = () => {
-                console.log(`[CachedVideoPlayer-${playerId}] Playing`);
                 isPlayingRef.current = true;
                 onVideoLoad?.();
               };
 
               const handlePause = () => {
-                console.log(`[CachedVideoPlayer-${playerId}] Paused`);
                 isPlayingRef.current = false;
               };
 
               const handleError = (e: Event) => {
                 const error = (e.target as HTMLVideoElement).error;
-                console.error(`[CachedVideoPlayer-${playerId}] Video error:`, error);
                 const errorObj = error ? new Error(error.message) : new Error('Video playback error');
                 onVideoError?.(errorObj);
                 isPlayingRef.current = false;
@@ -159,7 +151,6 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
             // Attempt to play
             attemptPlay();
           } else {
-            console.warn(`[CachedVideoPlayer-${playerId}] No video tracks found`);
             currentStreamRef.current = null;
             streamIdRef.current = "";
           }
@@ -179,7 +170,6 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
         // Check if video is ready to play
         if (video.readyState >= 2) { // HAVE_CURRENT_DATA
           video.play().then(() => {
-            console.log(`[CachedVideoPlayer-${playerId}] Play successful`);
           }).catch(error => {
             const err = error instanceof Error ? error : new Error('Video play failed');
             console.warn(`[CachedVideoPlayer-${playerId}] Play failed:`, err);
@@ -189,7 +179,6 @@ const CachedVideoPlayer = forwardRef<CachedVideoPlayerRef, CachedVideoPlayerProp
               setTimeout(() => {
                 if (video && video.readyState >= 2 && !isPlayingRef.current) {
                   video.play().catch(e => {
-                    console.error(`[CachedVideoPlayer-${playerId}] Retry failed:`, e);
                     onVideoError?.(e instanceof Error ? e : new Error('Video retry failed'));
                   });
                 }

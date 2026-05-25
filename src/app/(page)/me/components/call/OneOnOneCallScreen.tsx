@@ -199,7 +199,6 @@ function playElement(
 
       if (isExpectedInterruption) return;
 
-      console.warn(`[OneOnOneCallScreen] ${label} play blocked:`, message);
     });
   }
 }

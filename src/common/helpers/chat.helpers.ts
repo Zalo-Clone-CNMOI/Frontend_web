@@ -1,5 +1,6 @@
 import type { ConversationDto, UiMessage } from "@/src/common/interface/chat-interface";
 import { cleanMessageBody } from "./cleanBodyMedia";
+import { normalizePollFromMessage } from "./normalize-poll";
 
 const LINK_REGEX = /(https?:\/\/[^\s]+)/g;
 
@@ -125,14 +126,39 @@ export const normalizeMessage = (raw: any): UiMessage & {
     normalizedReply?.messageId ??
     null;
 
+  const rawType =
+    raw?.type ??
+    raw?.message_type ??
+    raw?.messageType ??
+    "user";
+
+  const rawMessageType =
+    raw?.message_type ??
+    raw?.messageType ??
+    raw?.type ??
+    "user";
+
+  const isPollMessage =
+    rawType === "poll" ||
+    rawMessageType === "poll" ||
+    Boolean(
+      raw?.poll_id ||
+      raw?.pollId ||
+      raw?.poll
+    );
+
+  const poll = isPollMessage ? normalizePollFromMessage(raw) : null;
+
   return {
     messageId: String(messageId),
     clientMessageId:
       raw?.clientMessageId ??
       raw?.client_message_id ??
       null,
+
     conversationId: String(conversationId),
     senderId: String(senderId),
+
     body: cleanMessageBody(
       raw?.body ??
       raw?.content ??
@@ -140,6 +166,7 @@ export const normalizeMessage = (raw: any): UiMessage & {
       raw?.text ??
       ""
     ),
+
     createdAt: Number(
       raw?.createdAt ??
       raw?.created_at ??
@@ -147,21 +174,36 @@ export const normalizeMessage = (raw: any): UiMessage & {
       raw?.timestamp ??
       Date.now()
     ),
+
     attachments: Array.isArray(raw?.attachments) ? raw.attachments : [],
+
     replyTo: normalizedReply,
     replyToMessageId: replyToMessageId ? String(replyToMessageId) : null,
+
     editedAt: raw?.editedAt ?? raw?.edited_at ?? null,
     deletedAt: raw?.deletedAt ?? raw?.deleted_at ?? null,
     isDeleted: Boolean(raw?.isDeleted ?? raw?.is_deleted ?? false),
+
     pending: Boolean(raw?.pending ?? false),
     failed: Boolean(raw?.failed ?? false),
     errorMessage: raw?.errorMessage ?? raw?.error_message ?? null,
-    type: raw?.type ?? raw?.message_type ?? raw?.messageType ?? "user",
-    message_type: raw?.message_type ?? raw?.messageType ?? "user",
-    system_event_type: raw?.system_event_type ?? raw?.systemEventType ?? undefined,
+
+    type: isPollMessage ? "poll" : rawType,
+    message_type: isPollMessage ? "poll" : rawMessageType,
+
+    system_event_type:
+      raw?.system_event_type ??
+      raw?.systemEventType ??
+      undefined,
+
     metadata: raw?.metadata ?? undefined,
+
     isPinned: Boolean(raw?.isPinned ?? raw?.is_pinned ?? false),
     pinnedAt: raw?.pinnedAt ?? raw?.pinned_at ?? null,
+
+    poll_id: poll?.id ?? raw?.poll_id ?? raw?.pollId ?? null,
+    pollId: poll?.id ?? raw?.poll_id ?? raw?.pollId ?? null,
+    poll,
   };
 };
 export const sortMessages = (items: UiMessage[]) =>

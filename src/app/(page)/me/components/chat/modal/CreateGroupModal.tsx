@@ -23,9 +23,9 @@ import { groupService } from "@/src/common/service/group-service";
 import { openConversation } from "@/src/common/action/chat.action";
 import IconButton from "@mui/material/IconButton";
 import CloseIcon from "@mui/icons-material/Close";
-import { CheckedIcon, RemoveSelectedButton, StyledCheckbox, StyledCheckIcon, UncheckedIcon } from "../conversation-infor/AddMemberGroupDialog";
+import { CheckedIcon, RemoveSelectedButton, StyledCheckbox, StyledCheckIcon, UncheckedIcon } from "../../conversation-infor/AddMemberGroupDialog";
 import { useFormik } from "formik";
-import { createGroupValidationSchema, initialValues } from "./validation/validateCreateGroup";
+import { createGroupValidationSchema, initialValues } from "../validation/validateCreateGroup";
 import { uploadMedia } from "@/src/common/service/media-service";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 
@@ -233,7 +233,6 @@ export default function CreateGroupModal({ open, onClose }: CreateGroupModalProp
       setSubmitting(false);
     }
   };
-  console.log("selectedFriends:", selectedFriends);
   return (
     <AppModal
       open={open}

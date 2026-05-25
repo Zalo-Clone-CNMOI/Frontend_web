@@ -26,7 +26,7 @@ import { useDebounce } from "@/src/common/utilities/hook/debounce";
 import AddFriendDialog from "./friend/ModalAddFriend";
 import { friendService } from "@/src/common/service/friend-service";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
-import CreateGroupModal from "./chat/CreateGroupModal";
+import CreateGroupModal from "./chat/modal/CreateGroupModal";
 
 const BoxSearchBar = styled(Box)({
     height: 32,
@@ -195,7 +195,6 @@ const SearchBar = () => {
                 const users = response?.payload?.data || [];
                 setUserResults(Array.isArray(users) ? users : []);
             } catch (error: any) {
-                console.error("search user error:", error);
                 setSearchError(error?.message || "Không thể tìm kiếm người dùng");
                 setUserResults([]);
             } finally {

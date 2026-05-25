@@ -22,6 +22,7 @@ import ComposerToolbar from "./ComposerToolbar";
 import { buildChatAttachmentPayload, sanitizeInputText } from "@/src/common/helpers/chatInput.helpers";
 import PendingAttachmentList from "./PendingAttachmentsList";
 import ComposerActionPreview from "./ComposerActionPreview";
+import CreatePollDialog from "./modal/CreatePollModal";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -134,6 +135,7 @@ export default function ChatInput({
   const t = useTrans();
   const [value, setValue] = useState("");
   const [openEmoji, setOpenEmoji] = useState(false);
+  const [openPollDialog, setOpenPollDialog] = useState(false);
   const [pendingAttachments, setPendingAttachments] = useState<
     ChatAttachmentPayload[]
   >([]);
@@ -190,7 +192,6 @@ export default function ChatInput({
 
       setPendingAttachments((prev) => [...prev, ...nextAttachments]);
     } catch (error) {
-      console.error("upload attachment error:", error);
     } finally {
       setUploading(false);
     }
@@ -289,6 +290,7 @@ export default function ChatInput({
         fileInputRef={fileInputRef}
         onImageChange={handleImageChange}
         onFileChange={handleFileChange}
+        onOpenPoll={() => setOpenPollDialog(true)}
       />
 
       <PendingAttachmentList
@@ -350,6 +352,13 @@ export default function ChatInput({
           </StyledIconButton>
         </ComposerRow>
       </ComposerWrap>
+      {conversationId && (
+        <CreatePollDialog
+          open={openPollDialog}
+          conversationId={conversationId}
+          onClose={() => setOpenPollDialog(false)}
+        />
+      )}
     </ComposerContainer>
   );
 }

@@ -123,7 +123,6 @@ function ConversationListItem({
 
       handleCloseMenuConversationPopover();
     } catch (error) {
-      console.error("Pin/unpin conversation failed", error);
     }
   };
   const isGroup = item.type === "group";
