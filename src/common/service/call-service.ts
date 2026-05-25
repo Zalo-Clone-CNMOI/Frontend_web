@@ -369,30 +369,23 @@ function emitSignal(
   });
 }
 
-export function cleanup(): Promise<void> {
+export async function cleanup(): Promise<void> {
   if (isCleaningUp) {
     return cleanupPromise || Promise.resolve();
   }
-
   isCleaningUp = true;
-  
-  cleanupPromise = new Promise((resolve) => {
-    // Perform cleanup asynchronously to avoid blocking
-    setTimeout(() => {
-      try {
-        stopRingtone();
-        destroyAllPeers();
-        useCallStore.getState().reset();
-      } catch (error) {
-        // Log error but don't reject the promise
-      } finally {
-        isCleaningUp = false;
-        cleanupPromise = null;
-        resolve();
-      }
-    }, 50);
-  });
-
+  cleanupPromise = (async () => {
+    try {
+      stopRingtone();
+      destroyAllPeers();
+      useCallStore.getState().reset();
+    } catch {
+      // ignore
+    } finally {
+      isCleaningUp = false;
+      cleanupPromise = null;
+    }
+  })();
   return cleanupPromise;
 }
 
@@ -558,10 +551,9 @@ export function registerCallHandlers(myUserId: string): () => void {
       ? payload.ended_at - activeCall.started_at
       : 0;
 
-    cleanup();
+    stopRingtone();
     useCallStore.getState().setScreen("ended");
     
-    // Show appropriate message based on reason
     let reasonMessage = "";
     switch (payload.reason) {
       case "rejected":
@@ -581,7 +573,10 @@ export function registerCallHandlers(myUserId: string): () => void {
     }
     
     showCallSummary(duration, reasonMessage);
-    setTimeout(() => useCallStore.getState().setScreen("idle"), 3000);
+    setTimeout(async () => {
+      await cleanup();
+      useCallStore.getState().setScreen("idle");
+    }, 3000);
   };
 
   const handleCallStateUpdated = (payload: CallStateUpdatedPayload) => {

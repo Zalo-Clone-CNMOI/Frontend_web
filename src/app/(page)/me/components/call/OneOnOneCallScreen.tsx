@@ -319,6 +319,7 @@ function RemoteAudio({
     audio.addEventListener("ended", handleEnded);
     
     // Add event listeners to audio tracks
+    const trackHandlers: Array<{ track: MediaStreamTrack; unmute: () => void; mute: () => void }> = [];
     audioTracks.forEach((track, index) => {
       console.log(`[OneOnOneCallScreen] Track ${index} state:`, track.enabled, track.readyState, track.muted);
       
@@ -333,8 +334,8 @@ function RemoteAudio({
 
       track.addEventListener("unmute", handleTrackUnmute);
       track.addEventListener("mute", handleTrackMute);
+      trackHandlers.push({ track, unmute: handleTrackUnmute, mute: handleTrackMute });
       
-      // Try to play if track is already enabled and not muted
       if (!track.muted && track.enabled) {
         debouncedPlay();
       }
@@ -344,10 +345,8 @@ function RemoteAudio({
     debouncedPlay();
 
     return () => {
-      // Clear timeout
       clearTimeout(playTimeout);
       
-      // Remove event listeners
       audio.removeEventListener("canplay", handleCanPlay);
       audio.removeEventListener("loadstart", handleLoadStart);
       audio.removeEventListener("loadeddata", handleLoadedData);
@@ -355,12 +354,11 @@ function RemoteAudio({
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       
-      audioTracks.forEach((track) => {
-        track.removeEventListener("unmute", () => {});
-        track.removeEventListener("mute", () => {});
+      trackHandlers.forEach(({ track, unmute, mute }) => {
+        track.removeEventListener("unmute", unmute);
+        track.removeEventListener("mute", mute);
       });
       
-      // Clean up audio element
       try {
         audio.pause();
         audio.srcObject = null;
