@@ -37,7 +37,7 @@ export const usePinnedMessages = (conversationId: string) => {
       // Sync pinned message IDs to Zustand store for persistence across components
       // Clear existing pinned set for this conversation
       const pinnedSet = new Set<string>();
-      normalized.forEach((msg) => {
+      normalized.forEach((msg: UiMessage) => {
         if (msg.messageId) {
           pinnedSet.add(msg.messageId);
         }
