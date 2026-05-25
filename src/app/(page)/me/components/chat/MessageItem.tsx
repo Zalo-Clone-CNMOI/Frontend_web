@@ -14,6 +14,7 @@ import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { canMemberDo, normalizeGroupSettings } from "@/src/common/interface/group-settings-interface";
+import PollMessageCard from "@/src/shared/component/PollMessageCard";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -173,6 +174,7 @@ export default function MessageItem({
 
   const textContent = getMessageTextContent(message.body);
   const hasText = !message.isDeleted && !!textContent;
+  const isPoll = !message.isDeleted && (message.type === "poll" || message.message_type === "poll");
 
   const showBubble = shouldShowMessageBubble({
     isDeleted: message.isDeleted,
@@ -267,6 +269,12 @@ export default function MessageItem({
 
                 {message.isDeleted ? (
                   <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
+                ) : isPoll && message.poll ? (
+                  <PollMessageCard
+                    messageId={message.messageId}
+                    conversationId={message.conversationId}
+                    pollFromMessage={message.poll}
+                  />
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>
                 ) : null}
@@ -353,6 +361,12 @@ export default function MessageItem({
 
                 {message.isDeleted ? (
                   <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
+                ) : isPoll && message.poll ? (
+                  <PollMessageCard
+                    messageId={message.messageId}
+                    conversationId={message.conversationId}
+                    pollFromMessage={message.poll}
+                  />
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>
                 ) : null}
