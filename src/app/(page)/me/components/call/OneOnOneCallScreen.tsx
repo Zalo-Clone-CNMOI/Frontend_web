@@ -167,7 +167,9 @@ const StatusIndicator = styled(Box)({
   backdropFilter: "blur(10px)",
 });
 
-const StatusDot = styled(Box)<{ online: boolean }>(({ online }) => ({
+const StatusDot = styled(Box, {
+  shouldForwardProp: (prop) => prop !== "online",
+})<{ online: boolean }>(({ online }) => ({
   width: 8,
   height: 8,
   borderRadius: "50%",
