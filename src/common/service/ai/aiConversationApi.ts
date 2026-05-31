@@ -27,6 +27,10 @@ export const aiConversationApi = {
       API.API_AI_CATCH_UP(conversationId),
       { timeout: 30000 }
     );
+    if (!res.ok) {
+      const msg = (res.payload as unknown as { message?: string })?.message;
+      throw new Error(msg ?? `catch-up failed (${res.statusCode})`);
+    }
     return res.payload.data;
   },
 };
