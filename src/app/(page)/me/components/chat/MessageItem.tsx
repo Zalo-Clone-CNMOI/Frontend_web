@@ -150,9 +150,13 @@ export default function MessageItem({
   const t = useTrans();
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
-  const canDelete = mine && !message.isDeleted;
-  const canReply = !message.isDeleted;
-  const canForward = !message.isDeleted;
+  const isRemoved = !!message.removed;
+  // A removed message is rendered as a tombstone, hiding the same content a
+  // recalled/deleted message hides. Removal takes precedence over isDeleted.
+  const isHidden = message.isDeleted || isRemoved;
+  const canDelete = mine && !isHidden;
+  const canReply = !isHidden;
+  const canForward = !isHidden;
 
   // Get conversation detail to check role for pin permission
   const conversationDetail = useChatStore((s) =>
@@ -165,7 +169,7 @@ export default function MessageItem({
   const settingsLoaded = conversationDetail?.settings != null;
   const rawSettings = settingsLoaded ? conversationDetail.settings : null;
   const settings = normalizeGroupSettings(rawSettings);
-  const canPin = !message.isDeleted && !!conversationDetail && (!isGroup || (settingsLoaded ? canMemberDo('pin_message', myRole, settings) : false));
+  const canPin = !isHidden && !!conversationDetail && (!isGroup || (settingsLoaded ? canMemberDo('pin_message', myRole, settings) : false));
 
   const { togglePin } = useMessagePin();
   const isPinned = useChatStore((s) => s.isMessagePinned(message.conversationId, message.messageId));
@@ -174,22 +178,22 @@ export default function MessageItem({
     splitMessageAttachments(message.attachments);
 
   const textContent = getMessageTextContent(message.body);
-  const hasText = !message.isDeleted && !!textContent;
-  const isPoll = !message.isDeleted && (message.type === "poll" || message.message_type === "poll");
-  const isInvite = !message.isDeleted && (message.type === "invite" || message.message_type === "invite");
+  const hasText = !isHidden && !!textContent;
+  const isPoll = !isHidden && (message.type === "poll" || message.message_type === "poll");
+  const isInvite = !isHidden && (message.type === "invite" || message.message_type === "invite");
   const inviteMetadata = isInvite && message.metadata
     ? (message.metadata as unknown as import("@/src/common/interface/invite-interface").InviteMessageMetadata)
     : null;
 
   const showBubble = shouldShowMessageBubble({
-    isDeleted: message.isDeleted,
+    isDeleted: isHidden,
     hasText,
     otherAttachmentCount: otherAttachments.length,
     hasReply: !!message.replyTo,
   });
 
   const hasOnlyMedia =
-    !message.isDeleted &&
+    !isHidden &&
     (imageAttachments.length > 0 || videoAttachments.length > 0) &&
     !hasText &&
     otherAttachments.length === 0;
@@ -208,13 +212,17 @@ export default function MessageItem({
     ? messagesInConversation.find((m) => m.messageId === message.replyTo?.messageId)
     : null;
 
+  const repliedHidden = repliedMessage
+    ? repliedMessage.isDeleted || repliedMessage.removed
+    : false;
   const displayReplyTo =
     message.replyTo && repliedMessage
       ? {
         ...message.replyTo,
-        body: repliedMessage.isDeleted ? "" : repliedMessage.body,
-        attachments: repliedMessage.isDeleted ? [] : repliedMessage.attachments ?? [],
+        body: repliedHidden ? "" : repliedMessage.body,
+        attachments: repliedHidden ? [] : repliedMessage.attachments ?? [],
         isDeleted: Boolean(repliedMessage.isDeleted),
+        removed: Boolean(repliedMessage.removed),
       }
       : message.replyTo;
 
@@ -239,7 +247,7 @@ export default function MessageItem({
           />
 
           <MessageContent mine={mine}>
-            {!message.isDeleted && (
+            {!isHidden && (
               <>
                 <MessageMediaGroup
                   attachments={imageAttachments}
@@ -263,7 +271,7 @@ export default function MessageItem({
 
             {showBubble && (
               <Bubble mine={mine}>
-                {!message.isDeleted && (
+                {!isHidden && (
                   <MessageReplyPreview
                     senderId={senderId}
                     replyTo={displayReplyTo}
@@ -272,7 +280,9 @@ export default function MessageItem({
                   />
                 )}
 
-                {message.isDeleted ? (
+                {isRemoved ? (
+                  <MessageText isDeleted>{t("CHAT.MESSAGE_REMOVED_BY_AI")}</MessageText>
+                ) : message.isDeleted ? (
                   <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
                 ) : isPoll && message.poll ? (
                   <PollMessageCard
@@ -289,7 +299,7 @@ export default function MessageItem({
                   <MessageText>{textContent}</MessageText>
                 ) : null}
 
-                {!message.isDeleted && otherAttachments.length > 0 && (
+                {!isHidden && otherAttachments.length > 0 && (
                   <AttachmentList>
                     {otherAttachments.map((file) => (
                       <AttachmentItem
@@ -336,7 +346,7 @@ export default function MessageItem({
       ) : (
         <>
           <MessageContent mine={mine}>
-            {!message.isDeleted && (
+            {!isHidden && (
               <>
                 <MessageMediaGroup
                   attachments={imageAttachments}
@@ -360,7 +370,7 @@ export default function MessageItem({
 
             {showBubble && (
               <Bubble mine={mine}>
-                {!message.isDeleted && (
+                {!isHidden && (
                   <MessageReplyPreview
                     senderId={senderId}
                     replyTo={displayReplyTo}
@@ -369,7 +379,9 @@ export default function MessageItem({
                   />
                 )}
 
-                {message.isDeleted ? (
+                {isRemoved ? (
+                  <MessageText isDeleted>{t("CHAT.MESSAGE_REMOVED_BY_AI")}</MessageText>
+                ) : message.isDeleted ? (
                   <MessageText isDeleted>{t("CHAT.MESSAGE_DELETED")}</MessageText>
                 ) : isPoll && message.poll ? (
                   <PollMessageCard
@@ -386,7 +398,7 @@ export default function MessageItem({
                   <MessageText>{textContent}</MessageText>
                 ) : null}
 
-                {!message.isDeleted && otherAttachments.length > 0 && (
+                {!isHidden && otherAttachments.length > 0 && (
                   <AttachmentList>
                     {otherAttachments.map((file) => (
                       <AttachmentItem

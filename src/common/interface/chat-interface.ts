@@ -150,6 +150,7 @@ export interface IMessageReplyPreview {
   body: string;
   attachments?: any[];
   isDeleted?: boolean;
+  removed?: boolean;
 }
 export interface UiMessage {
   messageId: string;
