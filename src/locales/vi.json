@@ -143,6 +143,10 @@
   "CHAT.REPLYING": "Đang trả lời",
   "CHAT.PLACEHOLDER": "Nhập tin nhắn...",
   "CHAT.SEND_DISABLED": "Chỉ quản trị viên được gửi tin nhắn trong nhóm này.",
+  "CHAT.SMART_REPLY_LABEL": "Gợi ý trả lời",
+  "CHAT.SMART_REPLY_LOADING": "Đang tạo gợi ý…",
+  "CHAT.SMART_REPLY_ERROR": "Không tải được gợi ý",
+  "CHAT.SMART_REPLY_RETRY": "Thử lại",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Tạo nhóm",

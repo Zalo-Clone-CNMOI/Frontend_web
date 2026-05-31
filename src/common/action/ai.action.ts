@@ -3,8 +3,10 @@ import {
   AiWsEvents,
   WsAiModerationEnforcementPayload,
   WsAiModerationResultPayload,
+  WsAiSmartReplyResultPayload,
 } from "../socket/aiEvents";
 import { useChatStore } from "../store/useChatStore";
+import { useAISmartReplyStore } from "../store/useAISmartReplyStore";
 import { toast } from "../store/useToastStore";
 import i18n from "../i18n/i18n";
 
@@ -62,6 +64,24 @@ function handleModerationEnforcement(
   toast.info(i18n.t("CHAT.MODERATION_REMOVED_TOAST"));
 }
 
+/* ───────────────────────── A2 — Smart Reply ─────────────────────────
+ * Ported 1:1 from Frontend_mobile `AIHandler.handleSmartReplyResult`.
+ * Server→client `ai:smart-reply:result` is unicast to the requesting user and
+ * carries `{ conversation_id, suggestions }`. On AI failure the BE sends
+ * `suggestions: []` (no error event), so this handler simply mirrors whatever
+ * arrives into the store and always clears the loading/error flags — the
+ * request side (`smartReplyService`) owns the timeout/ack-error paths.
+ */
+function handleSmartReplyResult(payload: WsAiSmartReplyResultPayload): void {
+  const conversationId = payload?.conversation_id;
+  if (!conversationId) return;
+
+  const store = useAISmartReplyStore.getState();
+  store.setSuggestions(conversationId, payload?.suggestions || []);
+  store.setLoading(conversationId, false);
+  store.setError(conversationId, null);
+}
+
 /**
  * Central registration point for all AI-feature socket listeners.
  *
@@ -85,7 +105,10 @@ export function registerAiSocketHandlers(socket: Socket): void {
   socket.on(AiWsEvents.AiModerationResult, handleModerationResult);
   socket.on(AiWsEvents.AiModerationEnforcement, handleModerationEnforcement);
 
-  // Feature handlers A2..B3 are registered below incrementally.
+  // ── A2 Smart Reply ──
+  socket.on(AiWsEvents.AiSmartReplyResult, handleSmartReplyResult);
+
+  // Feature handlers A3..B3 are registered below incrementally.
 }
 
 /**

@@ -25,6 +25,7 @@ import PendingAttachmentList from "./PendingAttachmentsList";
 import ComposerActionPreview from "./ComposerActionPreview";
 import AdminMentionPopover from "./AdminMentionPopover";
 import MentionSuggestions from "./MentionSuggestions";
+import SmartReplyChips from "./SmartReplyChips";
 
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
@@ -376,6 +377,21 @@ export default function ChatInput({
     }
   };
 
+  // A2 — Smart Reply: prefill the composer with a chosen suggestion. This only
+  // sets the input value (and focuses, caret at end); it never calls onSend, so
+  // the user can edit before sending. Existing send/edit/reply/attachment flows
+  // are untouched.
+  const handlePickSmartReply = (text: string) => {
+    setValue(text);
+    requestAnimationFrame(() => {
+      const input = textInputRef.current;
+      if (!input) return;
+      input.focus();
+      const end = text.length;
+      input.setSelectionRange(end, end);
+    });
+  };
+
   const handleEmojiClick = (emojiData: EmojiClickData) => {
     const input = textInputRef.current;
     const emoji = emojiData.emoji;
@@ -428,6 +444,14 @@ export default function ChatInput({
         onCancelReply={onCancelReply}
         onCancelEdit={onCancelEdit}
       />
+
+      {/* A2 — Smart Reply: inline suggestion chips directly above the input. */}
+      {!editMessage && (
+        <SmartReplyChips
+          conversationId={conversationId}
+          onPick={handlePickSmartReply}
+        />
+      )}
 
       <ComposerWrap sx={{ position: "relative" }}>
         {showAdminMention && (
