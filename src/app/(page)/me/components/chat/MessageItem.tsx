@@ -12,6 +12,10 @@ import EntityHighlightText from "./EntityHighlightText";
 import EntityInfoPopover from "./EntityInfoPopover";
 import { useEntityDetectionStore } from "@/src/common/store/useEntityDetectionStore";
 import type { DetectedEntity } from "@/src/common/store/useEntityDetectionStore";
+
+// Stable empty reference so the Zustand selector never creates a new array
+// for messages without entities (avoids re-render on every store update).
+const EMPTY_ENTITIES: DetectedEntity[] = [];
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
@@ -160,11 +164,13 @@ export default function MessageItem({
     el: HTMLElement;
     entity: DetectedEntity;
   } | null>(null);
-  const entities = useEntityDetectionStore((s) =>
-    s.getEntities(message.messageId),
+  // W2 fix: stable selector — no new array on each render for entity-free messages.
+  const entityArr = useEntityDetectionStore(
+    (s) => s.entitiesByMessage[message.messageId],
   );
-  const isEntityPending = useEntityDetectionStore((s) =>
-    s.isPending(message.messageId),
+  const entities = entityArr ?? EMPTY_ENTITIES;
+  const isEntityPending = useEntityDetectionStore(
+    (s) => !!s.pendingByMessage[message.messageId],
   );
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
@@ -318,8 +324,10 @@ export default function MessageItem({
                 ) : hasText ? (
                   <MessageText>
                     {entities.length > 0 ? (
+                      // W1 fix: pass raw body (not textContent) so start/end
+                      // indices from the BE align with the same string it measured.
                       <EntityHighlightText
-                        body={textContent!}
+                        body={message.body ?? ""}
                         entities={entities}
                         mine={mine}
                         onEntityClick={(entity, el) =>
@@ -456,8 +464,10 @@ export default function MessageItem({
                 ) : hasText ? (
                   <MessageText>
                     {entities.length > 0 ? (
+                      // W1 fix: pass raw body (not textContent) so start/end
+                      // indices from the BE align with the same string it measured.
                       <EntityHighlightText
-                        body={textContent!}
+                        body={message.body ?? ""}
                         entities={entities}
                         mine={mine}
                         onEntityClick={(entity, el) =>
