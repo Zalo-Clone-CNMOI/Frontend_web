@@ -11,6 +11,7 @@ import { usePollStore } from "../store/usePollStore";
 import { useGroupInviteStore } from "../store/useGroupInviteStore";
 import type { GroupInviteStatus } from "../interface/invite-interface";
 import { IPollDto } from "../interface/poll-interface";
+import { registerAiSocketHandlers } from "./ai.action";
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -760,6 +761,9 @@ export const initChat = (accessToken: string, currentUserId: string) => {
       useChatStore.getState().updateTypingUsers(conversationId, users);
     }
   });
+
+  // AI features (A1..B3) bind their socket listeners here (off-then-on inside).
+  registerAiSocketHandlers(socket);
 
   socket.onAny((event, ...args) => {
 

@@ -6,6 +6,7 @@ import {
   SendGroupInvitesResponse,
 } from "../interface/invite-interface";
 import { chatService } from "@/src/common/service/chat-service";
+import { inviteService } from "../service/invite-service";
 import { useChatStore } from "./useChatStore";
 
 interface GroupInviteState {
