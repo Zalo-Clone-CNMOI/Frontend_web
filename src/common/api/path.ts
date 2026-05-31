@@ -62,6 +62,20 @@ export const API = {
         `/api/conversations/${conversationId}/pin`,
     API_CONVERSATIONS_GROUP_SETTINGS: (conversationId: string) =>
         `/api/conversations/${conversationId}/group-settings`,
+
+    /* ================= GROUP INVITES ================= */
+    API_CONVERSATIONS_SEND_INVITES: (conversationId: string) =>
+        `/api/conversations/${conversationId}/invites`,
+    API_CONVERSATIONS_PENDING_INVITES: "/api/conversations/invites/pending",
+    API_CONVERSATIONS_LIST_INVITES: (conversationId: string) =>
+        `/api/conversations/${conversationId}/invites`,
+    API_CONVERSATIONS_ACCEPT_INVITE: (conversationId: string, inviteId: string) =>
+        `/api/conversations/${conversationId}/invites/${inviteId}/accept`,
+    API_CONVERSATIONS_REJECT_INVITE: (conversationId: string, inviteId: string) =>
+        `/api/conversations/${conversationId}/invites/${inviteId}/reject`,
+    API_CONVERSATIONS_CANCEL_INVITE: (conversationId: string, inviteId: string) =>
+        `/api/conversations/${conversationId}/invites/${inviteId}/cancel`,
+
     /* ================= MESSAGES ================= */
 
 

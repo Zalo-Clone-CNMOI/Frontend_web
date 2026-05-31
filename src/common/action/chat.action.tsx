@@ -8,6 +8,8 @@ import { chatService } from "../service/chat-service";
 import { connectSocket, getSocket } from "../socket/socket";
 import { useChatStore } from "../store/useChatStore";
 import { usePollStore } from "../store/usePollStore";
+import { useGroupInviteStore } from "../store/useGroupInviteStore";
+import type { GroupInviteStatus } from "../interface/invite-interface";
 import { IPollDto } from "../interface/poll-interface";
 type MessagePreviewType =
   | "poll"
@@ -217,6 +219,11 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.off("group:poll:option:added");
   socket.off("group:poll:option:removed");
   socket.off("group:poll:closed");
+  socket.off("group:invite:sent");
+  socket.off("group:invite:accepted");
+  socket.off("group:invite:rejected");
+  socket.off("group:invite:cancelled");
+  socket.off("group:invite:expired");
   socket.offAny();
 
   const handleIncomingMessage = (raw: any) => {
@@ -689,6 +696,62 @@ export const initChat = (accessToken: string, currentUserId: string) => {
   socket.on("group:poll:option:added", handlePollRealtime);
   socket.on("group:poll:option:removed", handlePollRealtime);
   socket.on("group:poll:closed", handlePollRealtime);
+  socket.on("group:invite:sent", (payload: any) => {
+    const raw = payload?.data ?? payload;
+    const invitedUserId = raw.invited_user_id ?? raw.invitedUserId;
+    if (invitedUserId && invitedUserId !== currentUserId) return;
+    const eventId = raw.invite_id ?? raw.id;
+    const invite = {
+      id: raw.invite_id ?? raw.id,
+      conversationId: raw.conversation_id ?? raw.conversationId,
+      inviterUserId: raw.inviter_id ?? raw.inviterUserId,
+      invitedUserId: invitedUserId,
+      status: "pending" as GroupInviteStatus,
+      message: raw.message ?? null,
+      expiresAt: raw.expires_at ?? raw.expiresAt ?? Date.now(),
+      createdAt: raw.sent_at ?? raw.createdAt ?? Date.now(),
+      respondedAt: null,
+      conversation: raw.conversation ?? raw.group
+        ? {
+            id: raw.conversation?.id ?? raw.group?.id ?? raw.conversation_id,
+            name: raw.conversation?.name ?? raw.group?.name ?? raw.conversation_name ?? "Nhóm",
+            avatarUrl: raw.conversation?.avatarUrl ?? raw.group?.avatarUrl ?? null,
+          }
+        : undefined,
+      inviter: raw.inviter
+        ? {
+            id: raw.inviter.id ?? raw.inviter_id,
+            fullName: raw.inviter.fullName ?? raw.inviter.full_name ?? raw.inviter_name ?? "Người dùng",
+            avatarUrl: raw.inviter.avatarUrl ?? null,
+          }
+        : undefined,
+    };
+    useGroupInviteStore.getState().handleInviteSent(invite, eventId);
+
+    fetchListConversation({ page: 1, limit: 10 });
+  });
+  socket.on("group:invite:accepted", (payload: any) => {
+    const raw = payload?.data ?? payload;
+    const inviteId = raw.invite_id ?? raw.id;
+    const respondedAt = raw.responded_at ?? raw.respondedAt ?? Date.now();
+    useGroupInviteStore.getState().handleInviteAccepted(inviteId, respondedAt, inviteId);
+  });
+  socket.on("group:invite:rejected", (payload: any) => {
+    const raw = payload?.data ?? payload;
+    const inviteId = raw.invite_id ?? raw.id;
+    const respondedAt = raw.responded_at ?? raw.respondedAt ?? Date.now();
+    useGroupInviteStore.getState().handleInviteRejected(inviteId, respondedAt, inviteId);
+  });
+  socket.on("group:invite:cancelled", (payload: any) => {
+    const raw = payload?.data ?? payload;
+    const inviteId = raw.invite_id ?? raw.id;
+    useGroupInviteStore.getState().handleInviteCancelled(inviteId, inviteId);
+  });
+  socket.on("group:invite:expired", (payload: any) => {
+    const raw = payload?.data ?? payload;
+    const inviteId = raw.invite_id ?? raw.id;
+    useGroupInviteStore.getState().handleInviteExpired(inviteId, inviteId);
+  });
   socket.on("chat:system-message", handleSystemMessage);
   socket.on("chat:typing:update", (payload: any) => {
     const conversationId = payload?.conversation_id ?? payload?.conversationId;
@@ -1164,6 +1227,11 @@ export const cleanupChat = () => {
   socket?.off("group:poll:option:added");
   socket?.off("group:poll:option:removed");
   socket?.off("group:poll:closed");
+  socket?.off("group:invite:sent");
+  socket?.off("group:invite:accepted");
+  socket?.off("group:invite:rejected");
+  socket?.off("group:invite:cancelled");
+  socket?.off("group:invite:expired");
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();

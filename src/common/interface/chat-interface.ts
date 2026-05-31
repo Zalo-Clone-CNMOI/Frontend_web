@@ -158,8 +158,8 @@ export interface UiMessage {
   body: string;
   createdAt: number;
   attachments: any[];
-  type?: "text" | "system" | "poll";
-  message_type?: "user" | "system" | "poll";
+  type?: "text" | "system" | "poll" | "invite";
+  message_type?: "user" | "system" | "poll" | "invite";
   systemAction?: SystemEventType;
   system_event_type?: SystemEventType;
   metadata?: SystemMessageMetadata;
