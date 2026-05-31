@@ -14,6 +14,7 @@ import { IPollDto } from "../interface/poll-interface";
 import { registerAiSocketHandlers, unregisterAiSocketHandlers } from "./ai.action";
 import { smartReplyService } from "../service/ai/smartReplyService";
 import { useAISummaryStore } from "../store/useAISummaryStore";
+import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -309,6 +310,20 @@ export const initChat = (accessToken: string, currentUserId: string) => {
       // A3: a new inbound message means the conversation has progressed →
       // drop any cached summary so the next catch-up fetches fresh data.
       useAISummaryStore.getState().invalidate(conversationId);
+    }
+
+    // B2: mark inbound text messages as pending entity detection so the bubble
+    // can show "✨ Analyzing…" until the message:entities broadcast arrives.
+    // Mirrors mobile chatService.markInboundEntityPending — same three conditions.
+    const msgType = finalMessage.type ?? finalMessage.message_type;
+    const msgBody = finalMessage.body ?? "";
+    if (
+      messageId &&
+      senderId !== currentUserId &&
+      (msgType === "text" || !msgType) &&
+      msgBody.trim()
+    ) {
+      useEntityDetectionStore.getState().markPending(messageId);
     }
   };
 

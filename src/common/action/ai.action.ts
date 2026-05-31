@@ -6,11 +6,13 @@ import {
   WsAiSmartReplyResultPayload,
   WsAiSummaryResultPayload,
   WsAiTranslateResultPayload,
+  WsMessageEntitiesPayload,
 } from "../socket/aiEvents";
 import { useChatStore } from "../store/useChatStore";
 import { useAISmartReplyStore } from "../store/useAISmartReplyStore";
 import { useAISummaryStore } from "../store/useAISummaryStore";
 import { useAITranslationStore } from "../store/useAITranslationStore";
+import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
 import { toast } from "../store/useToastStore";
 import i18n from "../i18n/i18n";
 
@@ -131,6 +133,19 @@ function handleTranslateResult(payload: WsAiTranslateResultPayload): void {
   store.setError(messageId, targetLang, null);
 }
 
+/* ───────────────────────── B2 — Entity Detection ─────────────────────────
+ * Ported 1:1 from Frontend_mobile `AIHandler.handleMessageEntities`.
+ * Room broadcast `message:entities` carries `{ conversation_id, message_id, entities[] }`.
+ * BE only emits when entities is NON-EMPTY — an empty result means the backend
+ * found nothing (the pending timeout in useEntityDetectionStore auto-clears pending).
+ * Any result (even empty fallback) resolves pending state via setEntities.
+ */
+function handleMessageEntities(payload: WsMessageEntitiesPayload): void {
+  const { conversation_id, message_id, entities } = payload || {};
+  if (!conversation_id || !message_id) return;
+  useEntityDetectionStore.getState().setEntities(message_id, entities || []);
+}
+
 /**
  * Central registration point for all AI-feature socket listeners.
  *
@@ -163,7 +178,8 @@ export function registerAiSocketHandlers(socket: Socket): void {
   // ── B1 Translation ──
   socket.on(AiWsEvents.AiTranslateResult, handleTranslateResult);
 
-  // Feature handlers B2..B3 are registered below incrementally.
+  // ── B2 Entity Detection ──
+  socket.on(AiWsEvents.MessageEntities, handleMessageEntities);
 }
 
 /**

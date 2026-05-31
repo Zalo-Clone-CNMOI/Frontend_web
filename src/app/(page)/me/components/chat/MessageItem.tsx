@@ -8,6 +8,10 @@ import MessageActions from "./MessageActions";
 import MessageMediaGroup from "./MessageMediaGroup";
 import MessageReplyPreview from "./MessageReplyPreview";
 import TranslationDisplay from "./TranslationDisplay";
+import EntityHighlightText from "./EntityHighlightText";
+import EntityInfoPopover from "./EntityInfoPopover";
+import { useEntityDetectionStore } from "@/src/common/store/useEntityDetectionStore";
+import type { DetectedEntity } from "@/src/common/store/useEntityDetectionStore";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
@@ -151,6 +155,17 @@ export default function MessageItem({
 }: MessageItemProps) {
   const t = useTrans();
   const [translationOpen, setTranslationOpen] = useState(false);
+  // B2: entity detection state
+  const [entityAnchor, setEntityAnchor] = useState<{
+    el: HTMLElement;
+    entity: DetectedEntity;
+  } | null>(null);
+  const entities = useEntityDetectionStore((s) =>
+    s.getEntities(message.messageId),
+  );
+  const isEntityPending = useEntityDetectionStore((s) =>
+    s.isPending(message.messageId),
+  );
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
   const isRemoved = !!message.removed;
@@ -301,8 +316,35 @@ export default function MessageItem({
                     conversationId={message.conversationId}
                   />
                 ) : hasText ? (
-                  <MessageText>{textContent}</MessageText>
+                  <MessageText>
+                    {entities.length > 0 ? (
+                      <EntityHighlightText
+                        body={textContent!}
+                        entities={entities}
+                        mine={mine}
+                        onEntityClick={(entity, el) =>
+                          setEntityAnchor({ el, entity })
+                        }
+                      />
+                    ) : (
+                      textContent
+                    )}
+                  </MessageText>
                 ) : null}
+
+                {/* B2: "analyzing…" hint while entity detection is in-flight */}
+                {isEntityPending && !entities.length && hasText && (
+                  <MessageText
+                    style={{
+                      fontSize: 11,
+                      fontStyle: "italic",
+                      opacity: 0.55,
+                      marginTop: 2,
+                    }}
+                  >
+                    {t("CHAT.ENTITY_ANALYZING")}
+                  </MessageText>
+                )}
 
                 {!isHidden && otherAttachments.length > 0 && (
                   <AttachmentList>
@@ -412,8 +454,35 @@ export default function MessageItem({
                     conversationId={message.conversationId}
                   />
                 ) : hasText ? (
-                  <MessageText>{textContent}</MessageText>
+                  <MessageText>
+                    {entities.length > 0 ? (
+                      <EntityHighlightText
+                        body={textContent!}
+                        entities={entities}
+                        mine={mine}
+                        onEntityClick={(entity, el) =>
+                          setEntityAnchor({ el, entity })
+                        }
+                      />
+                    ) : (
+                      textContent
+                    )}
+                  </MessageText>
                 ) : null}
+
+                {/* B2: "analyzing…" hint while entity detection is in-flight */}
+                {isEntityPending && !entities.length && hasText && (
+                  <MessageText
+                    style={{
+                      fontSize: 11,
+                      fontStyle: "italic",
+                      opacity: 0.55,
+                      marginTop: 2,
+                    }}
+                  >
+                    {t("CHAT.ENTITY_ANALYZING")}
+                  </MessageText>
+                )}
 
                 {!isHidden && otherAttachments.length > 0 && (
                   <AttachmentList>
@@ -472,6 +541,13 @@ export default function MessageItem({
           />
         </>
       )}
+
+      {/* B2: entity info popover (shared across both bubble branches) */}
+      <EntityInfoPopover
+        anchorEl={entityAnchor?.el ?? null}
+        entity={entityAnchor?.entity ?? null}
+        onClose={() => setEntityAnchor(null)}
+      />
     </MessageRow>
   );
 }
