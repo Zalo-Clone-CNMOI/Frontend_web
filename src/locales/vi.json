@@ -131,6 +131,7 @@
   "CHAT.ACTION_FORWARD": "Chuyển tiếp",
   "CHAT.ACTION_PIN": "Ghim tin nhắn",
   "CHAT.ACTION_UNPIN": "Bỏ ghim",
+  "CHAT.ACTION_TRANSLATE": "Dịch",
   "CHAT.ACTION_DELETE": "Xóa tin nhắn",
   "CHAT.PINNED_MESSAGES": "Tin nhắn đã ghim",
   "CHAT.PIN_COUNT": "+{count} ghim",
@@ -160,6 +161,14 @@
   "CHAT.CATCH_UP_COPY": "Sao chép",
   "CHAT.CATCH_UP_COPIED": "Đã sao chép!",
   "CHAT.CATCH_UP_CLOSE": "Đóng",
+
+  "CHAT.TRANSLATION_LABEL": "Dịch",
+  "CHAT.TRANSLATION_LOADING": "Đang dịch…",
+  "CHAT.TRANSLATION_ERROR": "Dịch thất bại",
+  "CHAT.TRANSLATION_RETRY": "Thử lại",
+  "CHAT.TRANSLATION_CLOSE": "Đóng",
+  "CHAT.TRANSLATION_SHOW_ORIGINAL": "Xem bản gốc",
+  "CHAT.TRANSLATION_SHOW_TRANSLATED": "Xem bản dịch",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Tạo nhóm",

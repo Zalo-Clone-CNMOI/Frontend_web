@@ -5,10 +5,12 @@ import {
   WsAiModerationResultPayload,
   WsAiSmartReplyResultPayload,
   WsAiSummaryResultPayload,
+  WsAiTranslateResultPayload,
 } from "../socket/aiEvents";
 import { useChatStore } from "../store/useChatStore";
 import { useAISmartReplyStore } from "../store/useAISmartReplyStore";
 import { useAISummaryStore } from "../store/useAISummaryStore";
+import { useAITranslationStore } from "../store/useAITranslationStore";
 import { toast } from "../store/useToastStore";
 import i18n from "../i18n/i18n";
 
@@ -105,6 +107,30 @@ function handleSummaryResult(payload: WsAiSummaryResultPayload): void {
   store.setError(conversationId, null);
 }
 
+/* ───────────────────────── B1 — Translation ─────────────────────────
+ * Ported 1:1 from Frontend_mobile `AIHandler.handleTranslateResult`.
+ * Server→client `ai:translate:result` is unicast to the requesting user and carries
+ * `{ message_id, conversation_id, original_body, translated_body, source_language,
+ *    target_language, cached }`.
+ * On AI failure the BE echoes original_body as translated_body — the client stores
+ * and displays it as-is (the 20s timeout in translationService catches the case
+ * where the result NEVER arrives).
+ */
+function handleTranslateResult(payload: WsAiTranslateResultPayload): void {
+  const messageId = payload?.message_id;
+  if (!messageId) return;
+
+  const targetLang = payload?.target_language || "vi";
+  const originalBody = payload?.original_body || "";
+  // BE echoes original on AI failure; store it as-is (mobile parity)
+  const translatedBody = payload?.translated_body || originalBody;
+
+  const store = useAITranslationStore.getState();
+  store.setTranslation(messageId, targetLang, originalBody, translatedBody);
+  store.setLoading(messageId, targetLang, false);
+  store.setError(messageId, targetLang, null);
+}
+
 /**
  * Central registration point for all AI-feature socket listeners.
  *
@@ -134,7 +160,10 @@ export function registerAiSocketHandlers(socket: Socket): void {
   // ── A3 Summary ──
   socket.on(AiWsEvents.AiSummaryResult, handleSummaryResult);
 
-  // Feature handlers B1..B3 are registered below incrementally.
+  // ── B1 Translation ──
+  socket.on(AiWsEvents.AiTranslateResult, handleTranslateResult);
+
+  // Feature handlers B2..B3 are registered below incrementally.
 }
 
 /**
