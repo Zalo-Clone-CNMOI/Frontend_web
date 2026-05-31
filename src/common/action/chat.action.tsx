@@ -12,6 +12,7 @@ import { useGroupInviteStore } from "../store/useGroupInviteStore";
 import type { GroupInviteStatus } from "../interface/invite-interface";
 import { IPollDto } from "../interface/poll-interface";
 import { registerAiSocketHandlers, unregisterAiSocketHandlers } from "./ai.action";
+import { smartReplyService } from "../service/ai/smartReplyService";
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -283,6 +284,29 @@ export const initChat = (accessToken: string, currentUserId: string) => {
     });
 
     appendMessageDerivedData(finalMessage);
+
+    // A2 — Smart Reply: after an inbound NON-SELF message is stored, request
+    // fresh suggestions for this conversation (ported from mobile's
+    // `onInboundMessageForAI`). Self-authored messages and incomplete payloads
+    // are skipped. Failures are swallowed so the message pipeline never breaks.
+    // NOTE: no throttle/debounce — faithful to mobile; the resulting spam risk
+    // on rapid inbound bursts is intentional parity (revisit if it bites).
+    const senderId = finalMessage.senderId;
+    const messageId = finalMessage.messageId;
+    const conversationId = finalMessage.conversationId;
+    if (
+      conversationId &&
+      messageId &&
+      senderId &&
+      senderId !== currentUserId
+    ) {
+      void smartReplyService
+        .requestSmartReply({ conversationId, userId: currentUserId })
+        .catch(() => {
+          // swallow — smart reply is best-effort, must not break chat
+        });
+      // A3: summary invalidate goes here
+    }
   };
 
   const handleDeletedMessage = (raw: any) => {

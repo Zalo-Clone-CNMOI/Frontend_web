@@ -149,6 +149,10 @@
   "CHAT.PLACEHOLDER": "Type a message...",
   "CHAT.SEND_DISABLED": "Only admins can send messages in this group.",
   "CHAT.IN_CALL": "In call",
+  "CHAT.SMART_REPLY_LABEL": "Suggested replies",
+  "CHAT.SMART_REPLY_LOADING": "Generating suggestions…",
+  "CHAT.SMART_REPLY_ERROR": "Couldn't load suggestions",
+  "CHAT.SMART_REPLY_RETRY": "Retry",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Create group",
