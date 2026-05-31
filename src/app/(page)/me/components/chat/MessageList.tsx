@@ -7,6 +7,7 @@ import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import MessageItem from "./MessageItem";
 import SystemMessageBanner from "./message-system/SystemMessageBanner";
+import CatchUpBanner from "./CatchUpBanner";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 
 interface MessageListProps {
@@ -150,6 +151,9 @@ export default function MessageList({
         </EmptyState>
       ) : (
         <MessagesContent>
+          {/* A3 — Catch-up banner: always available at the top of the message area */}
+          <CatchUpBanner conversationId={conversationId} />
+
           {messages.map((message) => {
             const isSystemMessage = message.type === 'system' || message.senderId === 'SYSTEM';
 

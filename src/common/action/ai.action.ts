@@ -4,9 +4,11 @@ import {
   WsAiModerationEnforcementPayload,
   WsAiModerationResultPayload,
   WsAiSmartReplyResultPayload,
+  WsAiSummaryResultPayload,
 } from "../socket/aiEvents";
 import { useChatStore } from "../store/useChatStore";
 import { useAISmartReplyStore } from "../store/useAISmartReplyStore";
+import { useAISummaryStore } from "../store/useAISummaryStore";
 import { toast } from "../store/useToastStore";
 import i18n from "../i18n/i18n";
 
@@ -82,6 +84,27 @@ function handleSmartReplyResult(payload: WsAiSmartReplyResultPayload): void {
   store.setError(conversationId, null);
 }
 
+/* ───────────────────────── A3 — Summary ─────────────────────────
+ * Ported 1:1 from Frontend_mobile `AIHandler.handleSummaryResult`.
+ * Server→client `ai:summary:result` is unicast to the requesting user and carries
+ * `{ conversation_id, summary, message_range: { from_message_id, to_message_id, count }, cached }`.
+ * Key: read `message_range.count` — NOT a top-level `message_count` field.
+ * On AI failure the BE returns the fallback string as the summary (not an error event),
+ * so this handler stores whatever arrives and always clears loading.
+ */
+function handleSummaryResult(payload: WsAiSummaryResultPayload): void {
+  const conversationId = payload?.conversation_id;
+  if (!conversationId) return;
+
+  const messageCount = payload?.message_range?.count ?? 0;
+  const store = useAISummaryStore.getState();
+  store.setSummary(conversationId, payload?.summary ?? "", messageCount, {
+    cached: payload?.cached ?? false,
+  });
+  store.setLoading(conversationId, false);
+  store.setError(conversationId, null);
+}
+
 /**
  * Central registration point for all AI-feature socket listeners.
  *
@@ -108,7 +131,10 @@ export function registerAiSocketHandlers(socket: Socket): void {
   // ── A2 Smart Reply ──
   socket.on(AiWsEvents.AiSmartReplyResult, handleSmartReplyResult);
 
-  // Feature handlers A3..B3 are registered below incrementally.
+  // ── A3 Summary ──
+  socket.on(AiWsEvents.AiSummaryResult, handleSummaryResult);
+
+  // Feature handlers B1..B3 are registered below incrementally.
 }
 
 /**
