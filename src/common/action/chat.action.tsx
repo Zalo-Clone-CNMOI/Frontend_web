@@ -13,6 +13,7 @@ import type { GroupInviteStatus } from "../interface/invite-interface";
 import { IPollDto } from "../interface/poll-interface";
 import { registerAiSocketHandlers, unregisterAiSocketHandlers } from "./ai.action";
 import { smartReplyService } from "../service/ai/smartReplyService";
+import { useAISummaryStore } from "../store/useAISummaryStore";
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -305,7 +306,9 @@ export const initChat = (accessToken: string, currentUserId: string) => {
         .catch(() => {
           // swallow — smart reply is best-effort, must not break chat
         });
-      // A3: summary invalidate goes here
+      // A3: a new inbound message means the conversation has progressed →
+      // drop any cached summary so the next catch-up fetches fresh data.
+      useAISummaryStore.getState().invalidate(conversationId);
     }
   };
 
