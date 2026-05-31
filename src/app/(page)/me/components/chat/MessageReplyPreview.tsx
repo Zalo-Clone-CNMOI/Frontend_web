@@ -5,6 +5,7 @@ import { styled } from "@mui/material/styles";
 import { IMessageReplyPreview } from "@/src/common/interface/chat-interface";
 import { getReplyPreview } from "@/src/common/helpers/displayPreviewReply";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { useTrans } from "@/src/common/utilities/hook/trans";
 
 interface MessageReplyPreviewProps {
   replyTo?: IMessageReplyPreview | null;
@@ -57,6 +58,7 @@ export default function MessageReplyPreview({
   onClick,
   mine,
 }: MessageReplyPreviewProps) {
+  const t = useTrans();
   const conversationId = useChatStore((s) => s.activeConversationId);
   const messagesByConversation = useChatStore((s) =>
     conversationId ? s.messagesByConversation[conversationId] ?? [] : []
@@ -68,14 +70,18 @@ export default function MessageReplyPreview({
     (m) => m.messageId === replyTo.messageId
   );
 
+  const originalHidden = originalMessage
+    ? originalMessage.isDeleted || originalMessage.removed
+    : false;
   const currentReplyTo: IMessageReplyPreview = originalMessage
     ? {
         ...replyTo,
-        body: originalMessage.isDeleted ? "" : originalMessage.body,
-        attachments: originalMessage.isDeleted
+        body: originalHidden ? "" : originalMessage.body,
+        attachments: originalHidden
           ? []
           : originalMessage.attachments ?? [],
         isDeleted: Boolean(originalMessage.isDeleted),
+        removed: Boolean(originalMessage.removed),
       }
     : replyTo;
 
@@ -83,23 +89,28 @@ export default function MessageReplyPreview({
     getReplyPreview(currentReplyTo);
 
   const isDeleted = Boolean(currentReplyTo.isDeleted);
+  const removed = Boolean(currentReplyTo.removed);
 
   return (
     <ReplyBox mine={mine} onClick={onClick}>
       <Box sx={{ alignItems: "stretch", gap: "8px" }}>
         <ReplyText>
-          {isDeleted ? "Tin nhắn đã được thu hồi" : text}
+          {removed
+            ? t("CHAT.MESSAGE_REMOVED_BY_AI")
+            : isDeleted
+              ? "Tin nhắn đã được thu hồi"
+              : text}
         </ReplyText>
       </Box>
 
-      {!isDeleted && imageAttachment && (
+      {!isDeleted && !removed && imageAttachment && (
         <ReplyMediaImage
           src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${imageAttachment.key}`}
           alt={imageAttachment.name ?? "reply-image"}
         />
       )}
 
-      {!isDeleted && videoAttachment && (
+      {!isDeleted && !removed && videoAttachment && (
         <ReplyMediaVideo
           src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${videoAttachment.key}`}
           preload="metadata"
