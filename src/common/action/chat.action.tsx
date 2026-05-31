@@ -11,7 +11,7 @@ import { usePollStore } from "../store/usePollStore";
 import { useGroupInviteStore } from "../store/useGroupInviteStore";
 import type { GroupInviteStatus } from "../interface/invite-interface";
 import { IPollDto } from "../interface/poll-interface";
-import { registerAiSocketHandlers } from "./ai.action";
+import { registerAiSocketHandlers, unregisterAiSocketHandlers } from "./ai.action";
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -1236,6 +1236,7 @@ export const cleanupChat = () => {
   socket?.off("group:invite:rejected");
   socket?.off("group:invite:cancelled");
   socket?.off("group:invite:expired");
+  if (socket) unregisterAiSocketHandlers(socket);
   socket?.offAny();
 
   if (socket?.connected) socket.disconnect();
