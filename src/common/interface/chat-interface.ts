@@ -177,6 +177,10 @@ export interface UiMessage {
   poll_id?: string | null;
   pollId?: string | null;
   poll?: IPollDto | null;
+
+  /** AI moderation (A1): set when an `ai:moderation:enforcement` event soft-deletes this message. */
+  removed?: boolean;
+  removalReason?: string;
 }
 
 export interface MessagePageDto {

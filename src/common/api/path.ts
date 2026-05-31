@@ -139,4 +139,13 @@ export const API = {
     API_ICE_SERVERS: "/api/calls/ice-servers",
     API_CONVERSATION_CALL_STATE: (conversationId: string) => `/api/conversations/${conversationId}/call-state`,
     API_CONVERSATION_CALL_END: (conversationId: string, callId: string) => `/api/conversations/${conversationId}/calls/${callId}/end`,
+
+    /* ================= AI (ai-core) ================= */
+    // Summary / Catch-up (A3) — synchronous HTTP, 30s timeout
+    API_AI_CATCH_UP: (conversationId: string) =>
+        `/api/ai-assist/conversations/${conversationId}/catch-up`,
+    // Entity Info panel (B2) — GET with ?text=&type=&lang=
+    API_AI_ENTITY_INFO: "/api/entity-info",
+    // Zai conversation bootstrap (B3)
+    API_AI_ZAI_CONVERSATION: "/api/ai-assist/conversations/zai",
 } as const;

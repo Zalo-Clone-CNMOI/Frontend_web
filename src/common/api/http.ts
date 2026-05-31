@@ -17,6 +17,9 @@ export type CustomOptions = Omit<RequestInit, "method" | "body"> & {
   body?: any;
   skipAuth?: boolean;
   _retry?: boolean;
+  /** Per-request timeout in ms. Overrides the global NEXT_PUBLIC_HTTP_TIMEOUT.
+   *  AI calls (catch-up, entity-info) pass 30000 to match mobile. */
+  timeout?: number;
 };
 
 export interface IHttpresponse<T = any> {
@@ -211,7 +214,8 @@ export const request = async <T = any>(
     
     // Add timeout for the request
       const controller = new AbortController();
-      const timeoutMs = Number(process.env.NEXT_PUBLIC_HTTP_TIMEOUT) || 60000; // default 60s
+      const timeoutMs =
+        options?.timeout ?? (Number(process.env.NEXT_PUBLIC_HTTP_TIMEOUT) || 60000); // default 60s
       const timeoutId = setTimeout(() => {
         console.error(`[HTTP] Request timeout after ${timeoutMs / 1000}s: ${method} ${url}`);
         controller.abort();
