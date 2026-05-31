@@ -1,11 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import MessageActions from "./MessageActions";
 import MessageMediaGroup from "./MessageMediaGroup";
 import MessageReplyPreview from "./MessageReplyPreview";
+import TranslationDisplay from "./TranslationDisplay";
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
@@ -148,6 +150,7 @@ export default function MessageItem({
   isHighlighted = false,
 }: MessageItemProps) {
   const t = useTrans();
+  const [translationOpen, setTranslationOpen] = useState(false);
   const mine = message.senderId === currentUserId;
   const senderId = message.senderId;
   const isRemoved = !!message.removed;
@@ -181,6 +184,8 @@ export default function MessageItem({
   const hasText = !isHidden && !!textContent;
   const isPoll = !isHidden && (message.type === "poll" || message.message_type === "poll");
   const isInvite = !isHidden && (message.type === "invite" || message.message_type === "invite");
+  // B1: translate is available for text messages that are not deleted/removed/poll/invite
+  const canTranslate = hasText && !isHidden && !isPoll && !isInvite;
   const inviteMetadata = isInvite && message.metadata
     ? (message.metadata as unknown as import("@/src/common/interface/invite-interface").InviteMessageMetadata)
     : null;
@@ -318,6 +323,16 @@ export default function MessageItem({
                     {message.editedAt && <MetaText>{t("CHAT.MESSAGE_EDITED")}</MetaText>}
                   </MetaLeft>
                 </MetaRow>
+
+                {/* B1: inline translation panel */}
+                {translationOpen && (
+                  <TranslationDisplay
+                    messageId={message.messageId}
+                    conversationId={message.conversationId}
+                    body={message.body ?? ""}
+                    onClose={() => setTranslationOpen(false)}
+                  />
+                )}
               </Bubble>
             )}
 
@@ -330,6 +345,7 @@ export default function MessageItem({
             canDelete={canDelete}
             canForward={canForward}
             canPin={canPin}
+            canTranslate={canTranslate}
             onReply={() => onReplyMessage(message)}
             onForward={() => onForwardMessage(message)}
             onDelete={() =>
@@ -341,6 +357,7 @@ export default function MessageItem({
             }
             isPinned={isPinned}
             onTogglePin={() => togglePin(message.conversationId, message.createdAt, message.messageId)}
+            onTranslate={() => setTranslationOpen((v) => !v)}
           />
         </LeftMessageWrap>
       ) : (
@@ -417,6 +434,16 @@ export default function MessageItem({
                     {message.editedAt && <MetaText>{t("CHAT.MESSAGE_EDITED")}</MetaText>}
                   </MetaLeft>
                 </MetaRow>
+
+                {/* B1: inline translation panel */}
+                {translationOpen && (
+                  <TranslationDisplay
+                    messageId={message.messageId}
+                    conversationId={message.conversationId}
+                    body={message.body ?? ""}
+                    onClose={() => setTranslationOpen(false)}
+                  />
+                )}
               </Bubble>
             )}
 
@@ -429,6 +456,7 @@ export default function MessageItem({
             canDelete={canDelete}
             canForward={canForward}
             canPin={canPin}
+            canTranslate={canTranslate}
             onReply={() => onReplyMessage(message)}
             onForward={() => onForwardMessage(message)}
             onDelete={() =>
@@ -440,6 +468,7 @@ export default function MessageItem({
             }
             isPinned={isPinned}
             onTogglePin={() => togglePin(message.conversationId, message.createdAt, message.messageId)}
+            onTranslate={() => setTranslationOpen((v) => !v)}
           />
         </>
       )}

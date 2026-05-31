@@ -136,6 +136,7 @@
   "CHAT.ACTION_FORWARD": "Forward",
   "CHAT.ACTION_PIN": "Pin message",
   "CHAT.ACTION_UNPIN": "Unpin",
+  "CHAT.ACTION_TRANSLATE": "Translate",
   "CHAT.ACTION_DELETE": "Delete message",
   "CHAT.PINNED_MESSAGES": "Pinned messages",
   "CHAT.PIN_COUNT": "+{count} pinned",
@@ -166,6 +167,14 @@
   "CHAT.CATCH_UP_COPY": "Copy",
   "CHAT.CATCH_UP_COPIED": "Copied!",
   "CHAT.CATCH_UP_CLOSE": "Close",
+
+  "CHAT.TRANSLATION_LABEL": "Translate",
+  "CHAT.TRANSLATION_LOADING": "Translating…",
+  "CHAT.TRANSLATION_ERROR": "Translation failed",
+  "CHAT.TRANSLATION_RETRY": "Retry",
+  "CHAT.TRANSLATION_CLOSE": "Close",
+  "CHAT.TRANSLATION_SHOW_ORIGINAL": "Show original",
+  "CHAT.TRANSLATION_SHOW_TRANSLATED": "Show translation",
 
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Create group",
