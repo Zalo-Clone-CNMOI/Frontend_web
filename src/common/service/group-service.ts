@@ -37,7 +37,7 @@ export const groupService = {
         );
     },
     leaveGroup(conversationId: string) {
-        return http.post<IApiResponse<void>>(
+        return http.post<IApiResponse<{ message: string }>>(
             API.API_CONVERSATIONS_LEAVE(conversationId)
         );
     },

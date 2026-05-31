@@ -25,7 +25,11 @@ import { chatService } from "@/src/common/service/chat-service";
 import AppModal from "@/src/shared/component/AppModal";
 import { fetchListConversation } from "@/src/common/action/chat.action";
 import { useTrans } from "@/src/common/utilities/hook/trans";
-import { canMemberDo } from "@/src/common/interface/group-settings-interface";
+import {
+  canMemberDo,
+  normalizeGroupSettings,
+} from "@/src/common/interface/group-settings-interface";
+import ConversationInviteManage from "../invite/ConversationInviteManage";
 
 const Card = styled(Box)({
   background: "#fff",
@@ -157,6 +161,7 @@ export default function ProfileCard() {
   const isPinned = Boolean(listItemConversation?.isPinned);
   const [openCreateGroupDialog, setOpenCreateGroupDialog] = useState(false);
   const [openAddMemberDialog, setOpenAddMemberDialog] = useState(false);
+  const [openInviteManage, setOpenInviteManage] = useState(false);
   const [openEditGroupNameDialog, setOpenEditGroupNameDialog] = useState(false);
   const [groupName, setGroupName] = useState("");
   const [updatingGroupName, setUpdatingGroupName] = useState(false);
@@ -169,6 +174,8 @@ export default function ProfileCard() {
   const myRole = myMember?.role ?? conversationDetail?.mySettings?.role ?? 'member';
   const myNickname = conversationDetail?.mySettings?.nickname ?? "";
   const settings = conversationDetail?.settings ?? null;
+  const normalizedSettings = normalizeGroupSettings(settings);
+  const joinApproval = normalizedSettings.policies.join_approval === true;
   const canEditGroup = isGroup && canMemberDo('change_info', myRole, settings);
 
   const otherMember = !isGroup
@@ -185,7 +192,11 @@ export default function ProfileCard() {
 
   const handleGroupAction = () => {
     if (isGroup) {
-      setOpenAddMemberDialog(true);
+      if (joinApproval) {
+        setOpenInviteManage(true);
+      } else {
+        setOpenAddMemberDialog(true);
+      }
       return;
     }
     setOpenCreateGroupDialog(true);
@@ -361,7 +372,7 @@ export default function ProfileCard() {
                   <GroupAddOutlinedIcon sx={{ fontSize: 20 }} />
                 </ActionIcon>
                 <ActionText>
-                  {isGroup ? t("CONVO.ADD_MEMBER") : t("CONVO.CREATE_GROUP_CHAT")}
+                  {isGroup ? (joinApproval ? t("INVITE.LABEL_INVITES") : t("CONVO.ADD_MEMBER")) : t("CONVO.CREATE_GROUP_CHAT")}
                 </ActionText>
               </ActionItem>
             )}
@@ -384,6 +395,23 @@ export default function ProfileCard() {
           await fetchConversationDetail(activeConversationId, true);
         }}
       />
+
+      <AppModal
+        open={openInviteManage}
+        onClose={() => setOpenInviteManage(false)}
+        title={t("INVITE.CONVO_MANAGE_TITLE")}
+        maxWidth="sm"
+        fullWidth
+        headerDivider
+      >
+        {activeConversationId && (
+          <ConversationInviteManage
+            conversationId={activeConversationId}
+            existingMemberIds={members.map((m) => m.userId)}
+          />
+        )}
+      </AppModal>
+
       <AppModal
 
         open={openEditGroupNameDialog}

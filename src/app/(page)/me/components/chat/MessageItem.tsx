@@ -15,6 +15,7 @@ import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { canMemberDo, normalizeGroupSettings } from "@/src/common/interface/group-settings-interface";
 import PollMessageCard from "@/src/shared/component/PollMessageCard";
+import InviteMessageBubble from "../invite/InviteMessageBubble";
 
 interface MessageItemProps {
   message: UiMessage;
@@ -175,6 +176,10 @@ export default function MessageItem({
   const textContent = getMessageTextContent(message.body);
   const hasText = !message.isDeleted && !!textContent;
   const isPoll = !message.isDeleted && (message.type === "poll" || message.message_type === "poll");
+  const isInvite = !message.isDeleted && (message.type === "invite" || message.message_type === "invite");
+  const inviteMetadata = isInvite && message.metadata
+    ? (message.metadata as unknown as import("@/src/common/interface/invite-interface").InviteMessageMetadata)
+    : null;
 
   const showBubble = shouldShowMessageBubble({
     isDeleted: message.isDeleted,
@@ -275,6 +280,11 @@ export default function MessageItem({
                     conversationId={message.conversationId}
                     pollFromMessage={message.poll}
                   />
+                ) : isInvite && inviteMetadata ? (
+                  <InviteMessageBubble
+                    metadata={inviteMetadata}
+                    conversationId={message.conversationId}
+                  />
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>
                 ) : null}
@@ -366,6 +376,11 @@ export default function MessageItem({
                     messageId={message.messageId}
                     conversationId={message.conversationId}
                     pollFromMessage={message.poll}
+                  />
+                ) : isInvite && inviteMetadata ? (
+                  <InviteMessageBubble
+                    metadata={inviteMetadata}
+                    conversationId={message.conversationId}
                   />
                 ) : hasText ? (
                   <MessageText>{textContent}</MessageText>

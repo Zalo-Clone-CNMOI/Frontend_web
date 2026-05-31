@@ -5,6 +5,7 @@ import {
   Box,
   Button,
   Radio,
+  Snackbar,
   Typography,
 } from "@mui/material";
 import { styled } from "@mui/material/styles";
@@ -56,6 +57,7 @@ export default function TransferOwnershipModal({
   const t = useTrans();
   const [selectedUserId, setSelectedUserId] = useState<string | null>(null);
   const [submitting, setSubmitting] = useState(false);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
 
   const conversationDetail = useChatStore(
     (state) => state.conversationDetailById?.[conversationId]
@@ -72,11 +74,28 @@ export default function TransferOwnershipModal({
 
     try {
       setSubmitting(true);
-      await groupService.transferOwnership(conversationId, selectedUserId);
+      setErrorMsg(null);
+      const res = await groupService.transferOwnership(conversationId, selectedUserId);
+      if (!res.ok) {
+        const payload = res.payload as any;
+        const code = payload?.error?.code;
+        if (code === "CONVERSATION_INVALID_TYPE") {
+          setErrorMsg(t("TRANSFER_ERROR_INVALID_TYPE"));
+        } else if (code === "CONVERSATION_PERMISSION_DENIED") {
+          setErrorMsg(t("TRANSFER_ERROR_PERMISSION_DENIED"));
+        } else if (code === "CONVERSATION_MEMBER_NOT_FOUND") {
+          setErrorMsg(t("TRANSFER_ERROR_MEMBER_NOT_FOUND"));
+        } else {
+          setErrorMsg(payload?.message || t("TRANSFER_ERROR_UNKNOWN"));
+        }
+        return;
+      }
       await fetchConversationDetail(conversationId, true);
+      setSelectedUserId(null);
       onClose();
     } catch (error) {
       console.error("Transfer ownership failed", error);
+      setErrorMsg(t("TRANSFER_ERROR_UNKNOWN"));
     } finally {
       setSubmitting(false);
     }
@@ -85,6 +104,7 @@ export default function TransferOwnershipModal({
   const handleClose = () => {
     if (submitting) return;
     setSelectedUserId(null);
+    setErrorMsg(null);
     onClose();
   };
 
@@ -113,6 +133,12 @@ export default function TransferOwnershipModal({
       <Typography sx={{ fontSize: 14, color: "#64748B", mb: 2 }}>
         {t("TRANSFER_OWNERSHIP_DESC")}
       </Typography>
+
+      {errorMsg && (
+        <Typography sx={{ fontSize: 13, color: "#DC2626", mb: 2, px: 1 }}>
+          {errorMsg}
+        </Typography>
+      )}
 
       {eligibleMembers.length === 0 ? (
         <Typography sx={{ fontSize: 14, color: "#64748B", textAlign: "center", py: 2 }}>

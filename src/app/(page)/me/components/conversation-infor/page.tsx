@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Box, Button, Grid, Stack, Typography } from "@mui/material";
+import { Box, Button, Grid, Snackbar, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 
 import { fetchListConversation } from "@/src/common/action/chat.action";
@@ -18,9 +18,11 @@ import SecuritySection from "./SecuritySection";
 import GroupMemberBlock from "./GroupMemberBlock";
 import GroupMemberListView from "./GroupMemberListView";
 import GroupSettingsSection from "./GroupSettingsSection";
+import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import TransferOwnershipModal from "./TransferOwnershipModal";
 import { groupService } from "@/src/common/service/group-service";
 import AddMemberGroupDialog from "./AddMemberGroupDialog";
+import ConversationInviteManage from "../invite/ConversationInviteManage";
 import AppModal from "@/src/shared/component/AppModal";
 import MediaPreviewModal, { MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
 import type { MemberRole } from "@/src/common/interface/group-settings-interface";
@@ -71,7 +73,10 @@ export default function InfConvColumn({
   const [previewMedia, setPreviewMedia] = useState<MediaPreviewItem | null>(null);
   const [previewOpen, setPreviewOpen] = useState(false);
   const [openTransferOwnership, setOpenTransferOwnership] = useState(false);
+  const [openInviteManage, setOpenInviteManage] = useState(false);
+  const [errorToast, setErrorToast] = useState<string | null>(null);
   const currentUserId = useChatStore((s) => s.currentUserId);
+  const fetchConversationDetail = useChatStore((state) => state.fetchConversationDetail);
 
   const handleOpenRemoveMember = (member: ConversationMemberDto) => {
     setSelectedMember(member);
@@ -93,7 +98,10 @@ export default function InfConvColumn({
 
   useEffect(() => {
     setView("overview");
-  }, [conversationId]);
+    if (conversationId) {
+      fetchConversationDetail(conversationId);
+    }
+  }, [conversationId, fetchConversationDetail]);
 
   const mediaItems = useChatStore(
     (state) => state.mediaByConversation?.[conversationId] ?? EMPTY_ATTACHMENTS
@@ -110,8 +118,6 @@ export default function InfConvColumn({
   const conversationDetail = useChatStore(
     (state) => state.conversationDetailById?.[conversationId] ?? null
   );
-
-  const fetchConversationDetail = useChatStore((state) => state.fetchConversationDetail);
 
   const isGroup = conversationDetail?.type === "group";
   const members = conversationDetail?.members ?? [];
@@ -173,6 +179,27 @@ export default function InfConvColumn({
               myRole={(myRole as MemberRole) || 'member'}
             />
           )}
+          {isGroup && isPrivileged && (
+            <Box
+              sx={{
+                background: "#fff",
+                marginBottom: "8px",
+                minHeight: 56,
+                padding: "0 20px",
+                display: "flex",
+                alignItems: "center",
+                gap: 12,
+                cursor: "pointer",
+                "&:hover": { background: "#F8FAFC" },
+              }}
+              onClick={() => setOpenInviteManage(true)}
+            >
+              <GroupAddOutlinedIcon sx={{ color: "#005AE0", fontSize: 22 }} />
+              <Typography sx={{ fontSize: 16, fontWeight: 600, color: "#0F172A" }}>
+                {t("INVITE.CONVO_MANAGE_TITLE")}
+              </Typography>
+            </Box>
+          )}
           <DangerZone onTransferOwnership={() => setOpenTransferOwnership(true)} />
         </>
       ) : (
@@ -181,8 +208,22 @@ export default function InfConvColumn({
           onOpenAddMember={handleOpenAddMemberDialog}
           onRemoveMember={handleOpenRemoveMember}
           onUpdateMemberRole={async (member, role) => {
-            await groupService.updateMemberRole(conversationId, member.userId, role);
-            await fetchConversationDetail(conversationId, true);
+            try {
+              const res = await groupService.updateMemberRole(conversationId, member.userId, role);
+              if (!res.ok) {
+                const payload = res.payload as any;
+                const code = payload?.error?.code;
+                if (code === "OWNER_TRANSFER_REQUIRED") {
+                  setErrorToast("Vui lòng dùng tính năng Chuyển quyền chủ nhóm để đổi Owner.");
+                } else {
+                  setErrorToast(payload?.message || "Cập nhật quyền thất bại");
+                }
+                return;
+              }
+              await fetchConversationDetail(conversationId, true);
+            } catch {
+              setErrorToast("Cập nhật quyền thất bại");
+            }
           }}
         />
       )}
@@ -235,6 +276,33 @@ export default function InfConvColumn({
         onClose={() => setOpenTransferOwnership(false)}
         conversationId={conversationId}
       />
+
+      <AppModal
+        open={openInviteManage}
+        onClose={() => setOpenInviteManage(false)}
+        title={t("INVITE.CONVO_MANAGE_TITLE")}
+        maxWidth="sm"
+        fullWidth
+        headerDivider
+      >
+        <ConversationInviteManage
+          conversationId={conversationId}
+          existingMemberIds={members.map((m) => m.userId)}
+        />
+      </AppModal>
+
+      {errorToast && (
+        <Snackbar
+          open
+          autoHideDuration={3000}
+          onClose={() => setErrorToast(null)}
+          message={errorToast}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          ContentProps={{
+            sx: { bgcolor: "#DC2626", color: "#fff", fontWeight: 500, borderRadius: "8px" },
+          }}
+        />
+      )}
     </Root>
   );
 }

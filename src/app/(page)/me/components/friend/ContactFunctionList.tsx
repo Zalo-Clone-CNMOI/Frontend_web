@@ -6,13 +6,16 @@ import PeopleOutlineIcon from "@mui/icons-material/PeopleOutline";
 import GroupsOutlinedIcon from "@mui/icons-material/GroupsOutlined";
 import PersonAddAltOutlinedIcon from "@mui/icons-material/PersonAddAltOutlined";
 import ForwardToInboxOutlinedIcon from '@mui/icons-material/ForwardToInboxOutlined';
+import GroupAddOutlinedIcon from '@mui/icons-material/GroupAddOutlined';
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { useGroupInviteStore } from "@/src/common/store/useGroupInviteStore";
 
 export type ContactView =
     | "friends"
     | "groups"
     | "friendRequests"
-    | "sentRequests";
+    | "sentRequests"
+    | "invites";
 
 interface Props {
     value: ContactView;
@@ -50,6 +53,7 @@ const Label = styled(Typography)({
 
 export default function ContactFunctionList({ value, onChange }: Props) {
     const t = useTrans();
+    const unreadInvites = useGroupInviteStore((s) => s.unreadCount);
     return (
         <Wrap>
             <Item active={value === "friends"} onClick={() => onChange("friends")}>
@@ -76,6 +80,32 @@ export default function ContactFunctionList({ value, onChange }: Props) {
             >
                 <ForwardToInboxOutlinedIcon fontSize="small" />
                 <Label>{t("FRIEND.LABEL_SENT")}</Label>
+            </Item>
+
+            <Item
+                active={value === "invites"}
+                onClick={() => onChange("invites")}
+            >
+                <GroupAddOutlinedIcon fontSize="small" />
+                <Label>{t("INVITE.LABEL_INVITES")}</Label>
+                {unreadInvites > 0 && (
+                    <Box
+                        sx={{
+                            ml: "auto",
+                            bgcolor: "#EF4444",
+                            color: "#fff",
+                            borderRadius: "10px",
+                            px: 1,
+                            fontSize: 11,
+                            fontWeight: 700,
+                            lineHeight: "18px",
+                            minWidth: 18,
+                            textAlign: "center",
+                        }}
+                    >
+                        {unreadInvites > 99 ? "99+" : unreadInvites}
+                    </Box>
+                )}
             </Item>
         </Wrap>
     );

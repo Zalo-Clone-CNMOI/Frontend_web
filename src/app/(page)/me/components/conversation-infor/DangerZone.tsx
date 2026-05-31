@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useMemo, useState } from "react";
-import { Box, Button, Divider, Stack, Typography } from "@mui/material";
+import { Box, Button, Divider, Snackbar, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
 import ReportGmailerrorredRoundedIcon from "@mui/icons-material/ReportGmailerrorredRounded";
 import DeleteOutlineRoundedIcon from "@mui/icons-material/DeleteOutlineRounded";
@@ -48,6 +48,7 @@ export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
   const setActiveConversationId = useChatStore((s) => s.setActiveConversationId);
 
   const isGroup = conversationDetail?.type === "group";
+  const memberCount = conversationDetail?.memberCount ?? 0;
 
   const myRole = useMemo(() => {
     if (!currentUserId) return undefined;
@@ -56,22 +57,32 @@ export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
   }, [conversationDetail?.members, currentUserId]);
 
   const isOwner = myRole === "owner";
+  const isSoleOwner = isOwner && memberCount === 1;
 
   const [leaving, setLeaving] = useState(false);
   const [disbanding, setDisbanding] = useState(false);
   const [openLeaveGroupModal, setOpenLeaveGroupModal] = useState(false);
   const [openDisbandGroupModal, setOpenDisbandGroupModal] = useState(false);
+  const [snackbar, setSnackbar] = useState<{ message: string; severity: "success" | "error" } | null>(null);
 
   const handleOutGroup = async () => {
     if (!conversationId) return;
 
     try {
       setLeaving(true);
-      await groupService.leaveGroup(conversationId);
+      const res = await groupService.leaveGroup(conversationId);
+      const message = res?.payload?.message ?? "";
+      const isDisbanded = message.toLowerCase().includes("disbanded");
       removeConversationLocally(conversationId);
       setActiveConversationId(null);
       setOpenLeaveGroupModal(false);
+      if (isDisbanded) {
+        setSnackbar({ message: t("CONVO.LEAVE_DISBANDED"), severity: "success" });
+      } else {
+        setSnackbar({ message: t("CONVO.LEAVE_SUCCESS"), severity: "success" });
+      }
     } catch (error) {
+      setSnackbar({ message: t("CONVO.LEAVE_ERROR"), severity: "error" });
     } finally {
       setLeaving(false);
     }
@@ -137,7 +148,7 @@ export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
           if (leaving) return;
           setOpenLeaveGroupModal(false);
         }}
-        title={isOwner ? t("CONVO.LEAVE_TITLE_OWNER") : t("CONVO.LEAVE_TITLE_MEMBER")}
+        title={isSoleOwner ? t("CONVO.LEAVE_TITLE_LAST_OWNER") : (isOwner ? t("CONVO.LEAVE_TITLE_OWNER") : t("CONVO.LEAVE_TITLE_MEMBER"))}
         headerDivider
         actions={
           <>
@@ -160,9 +171,11 @@ export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
         }
       >
         <Typography fontSize={14}>
-          {isOwner
-            ? t("CONVO.LEAVE_DESC_OWNER")
-            : t("CONVO.LEAVE_DESC_MEMBER")}
+          {isSoleOwner
+            ? t("CONVO.LEAVE_DESC_LAST_OWNER")
+            : (isOwner
+              ? t("CONVO.LEAVE_DESC_OWNER")
+              : t("CONVO.LEAVE_DESC_MEMBER"))}
         </Typography>
       </AppModal>
 
@@ -198,6 +211,24 @@ export default function DangerZone({ onTransferOwnership }: DangerZoneProps) {
           {t("CONVO.DISBAND_DESC")}
         </Typography>
       </AppModal>
+
+      {snackbar && (
+        <Snackbar
+          open
+          autoHideDuration={3000}
+          onClose={() => setSnackbar(null)}
+          message={snackbar.message}
+          anchorOrigin={{ vertical: "bottom", horizontal: "center" }}
+          ContentProps={{
+            sx: {
+              bgcolor: snackbar.severity === "success" ? "#16A34A" : "#DC2626",
+              color: "#fff",
+              fontWeight: 500,
+              borderRadius: "8px",
+            },
+          }}
+        />
+      )}
     </>
   );
 }

@@ -7,6 +7,7 @@ import SentFriendRequestList from "./SentFriendRequestList";
 import GroupList from "./GroupList";
 import PendingRequestFriendList from "./PendingRequestFriendList";
 import FriendList from "./FriendList";
+import InviteCenter from "../invite/InviteCenter";
 
 interface Props {
     view: ContactView;
@@ -19,7 +20,7 @@ const Wrap = styled(Box)({
 
 export default function ContactContentPanel({ view }: Props) {
     if (view === "sentRequests") {
-        return < SentFriendRequestList />;
+        return <SentFriendRequestList />;
     }
 
     if (view === "groups") {
@@ -28,6 +29,10 @@ export default function ContactContentPanel({ view }: Props) {
 
     if (view === "friendRequests") {
         return <PendingRequestFriendList />;
+    }
+
+    if (view === "invites") {
+        return <InviteCenter />;
     }
 
     return <FriendList />;

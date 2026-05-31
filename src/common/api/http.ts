@@ -210,19 +210,20 @@ export const request = async <T = any>(
     console.log(`[HTTP] Sending request...`);
     
     // Add timeout for the request
-    const controller = new AbortController();
-    const timeoutId = setTimeout(() => {
-      console.error(`[HTTP] Request timeout after 20s: ${method} ${url}`);
-      controller.abort();
-    }, 20000);
-    
-    const res = await fetch(fullUrl, {
-      ...options,
-      method,
-      headers: { ...headers, ...optionHeaders },
-      body,
-      signal: controller.signal,
-    });
+      const controller = new AbortController();
+      const timeoutMs = Number(process.env.NEXT_PUBLIC_HTTP_TIMEOUT) || 60000; // default 60s
+      const timeoutId = setTimeout(() => {
+        console.error(`[HTTP] Request timeout after ${timeoutMs / 1000}s: ${method} ${url}`);
+        controller.abort();
+      }, timeoutMs);
+      
+      const res = await fetch(fullUrl, {
+        ...options,
+        method,
+        headers: { ...headers, ...optionHeaders },
+        body,
+        signal: controller.signal,
+      });
     
     clearTimeout(timeoutId);
 
