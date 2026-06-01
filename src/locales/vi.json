@@ -170,6 +170,12 @@
   "CHAT.TRANSLATION_SHOW_ORIGINAL": "Xem bản gốc",
   "CHAT.TRANSLATION_SHOW_TRANSLATED": "Xem bản dịch",
 
+  "CHAT.ENTITY_ANALYZING": "✨ Đang phân tích…",
+  "CHAT.ENTITY_INFO_LOADING": "Đang tải thông tin…",
+  "CHAT.ENTITY_INFO_ERROR": "Không thể tải thông tin. Vui lòng thử lại.",
+  "CHAT.ENTITY_INFO_DETAILS": "Chi tiết",
+  "CHAT.ENTITY_INFO_RELATED": "Liên quan",
+
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Tạo nhóm",
   "GROUP.CREATE_CANCEL": "Hủy",

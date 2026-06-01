@@ -176,6 +176,12 @@
   "CHAT.TRANSLATION_SHOW_ORIGINAL": "Show original",
   "CHAT.TRANSLATION_SHOW_TRANSLATED": "Show translation",
 
+  "CHAT.ENTITY_ANALYZING": "✨ Analyzing…",
+  "CHAT.ENTITY_INFO_LOADING": "Loading information…",
+  "CHAT.ENTITY_INFO_ERROR": "Unable to load information. Please try again.",
+  "CHAT.ENTITY_INFO_DETAILS": "Details",
+  "CHAT.ENTITY_INFO_RELATED": "Related",
+
   "// ============================== GROUP ==============================": "",
   "GROUP.CREATE_TITLE": "Create group",
   "GROUP.CREATE_CANCEL": "Cancel",
