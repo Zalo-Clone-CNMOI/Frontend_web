@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect } from "react";
+import { useEffect, useMemo, useRef } from "react";
 import {
   Popover,
   Box,
@@ -14,6 +14,7 @@ import { styled } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { getEntityColor } from "@/src/common/constants/entityColors";
+import { useShallow } from "zustand/react/shallow";
 import { useEntityInfoStore, entityInfoKey, ENTITY_INFO_TTL } from "@/src/common/store/useEntityInfoStore";
 import { getEntityInfo } from "@/src/common/service/ai/entityInfoApi";
 import type { DetectedEntity } from "@/src/common/store/useEntityDetectionStore";
@@ -80,16 +81,27 @@ export default function EntityInfoPopover({
   const open = Boolean(anchorEl) && entity !== null;
   const key = entity ? entityInfoKey(entity.type, entity.text, lang) : "";
 
-  // Proper Zustand selectors — each selector is granular so React only re-renders
-  // when the specific slice it cares about changes (avoids the "no-selector" tearing
-  // risk in React 18 concurrent mode where store.get() live-reads bypass the snapshot).
-  const cacheEntry = useEntityInfoStore((s) => s.cache[key]);
-  const loading = useEntityInfoStore((s) => !!s.loadingByKey[key]);
-  const error = useEntityInfoStore((s) => s.errorByKey[key] ?? null);
+  // Single combined selector (useShallow prevents re-render when object ref changes
+  // but values are equal). Avoids 3 separate subscriptions and the no-selector
+  // tearing risk in React 18 concurrent mode.
+  const { cacheEntry, loading, error } = useEntityInfoStore(
+    useShallow((s) => ({
+      cacheEntry: s.cache[key],
+      loading: !!s.loadingByKey[key],
+      error: s.errorByKey[key] ?? null,
+    })),
+  );
 
-  const cached = cacheEntry && (Date.now() - cacheEntry.cachedAt <= ENTITY_INFO_TTL)
-    ? cacheEntry.data
-    : null;
+  // useMemo ensures `cached` only changes when `cacheEntry` changes (store write),
+  // not on every render tick where Date.now() would produce a new value.
+  const cached = useMemo(() => {
+    if (!cacheEntry) return null;
+    return Date.now() - cacheEntry.cachedAt <= ENTITY_INFO_TTL ? cacheEntry.data : null;
+  }, [cacheEntry]);
+
+  // Tracks which entity key was already fetched in the current "open" session so
+  // the effect can have full deps without risking a double-fetch on re-renders.
+  const fetchedKeyRef = useRef<string | null>(null);
 
   const fetchInfo = (force = false) => {
     if (!entity || !key) return;
@@ -100,17 +112,22 @@ export default function EntityInfoPopover({
     getEntityInfo(entity.text, entity.type, lang)
       .then((data) => useEntityInfoStore.getState().set(key, data))
       .catch((err: Error) => {
-        useEntityInfoStore.getState().setLoading(key, false);
-        useEntityInfoStore.getState().setError(key, err?.message || t("CHAT.ENTITY_INFO_ERROR"));
+        const s = useEntityInfoStore.getState();
+        s.setLoading(key, false);
+        s.setError(key, err?.message || t("CHAT.ENTITY_INFO_ERROR"));
       });
   };
 
   useEffect(() => {
-    if (open && entity && key && !cached && !loading) {
+    if (!open) {
+      fetchedKeyRef.current = null;
+      return;
+    }
+    if (entity && key && !cached && !loading && fetchedKeyRef.current !== key) {
+      fetchedKeyRef.current = key;
       fetchInfo();
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [open, key]);
+  }, [open, key, cached, loading]); // eslint-disable-line react-hooks/exhaustive-deps
 
   if (!entity) return null;
 
