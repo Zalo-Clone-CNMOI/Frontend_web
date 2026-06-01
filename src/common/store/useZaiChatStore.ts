@@ -118,12 +118,13 @@ export const useZaiChatStore = create<ZaiChatState>((set, get) => ({
       const current = s.streamingByConversation[conversationId];
       // Guard: ignore complete for a different (stale) stream_id.
       if (!current || current.streamId !== streamId) return s;
-      return {
-        streamingByConversation: {
-          ...s.streamingByConversation,
-          [conversationId]: { ...current, complete: true },
-        },
-      };
+      // W2: remove immediately on complete — bar is already unmounted at this
+      // point (isStreamActive → false unmounts ZaiStreamBar), so the completed
+      // text is not needed in the store. Prevents unbounded memory growth across
+      // multiple Zai sessions.
+      const streamingByConversation = { ...s.streamingByConversation };
+      delete streamingByConversation[conversationId];
+      return { streamingByConversation };
     });
   },
 

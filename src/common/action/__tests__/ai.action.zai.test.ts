@@ -164,6 +164,19 @@ describe("B3 ai:stream:chunk handler", () => {
     expect(useZaiChatStore.getState().getStreamingText("c1")).toBeNull();
   });
 
+  it("W1: ignores chunks with feature !== zai_chat", () => {
+    const { socket, emit } = makeFakeSocket();
+    registerAiSocketHandlers(socket);
+
+    emit(AiWsEvents.AiStreamChunk, {
+      conversation_id: "c1", stream_id: "s1",
+      chunk_index: 0, content: "Should be ignored", is_final: false,
+      feature: "other_feature",
+    });
+
+    expect(useZaiChatStore.getState().getStreamingText("c1")).toBeNull();
+  });
+
   it("stall watchdog auto-clears stream after 30s without a chunk", () => {
     jest.useFakeTimers();
     const { socket, emit } = makeFakeSocket();
@@ -219,7 +232,7 @@ describe("B3 ai:stream:complete handler", () => {
     resetStore();
   });
 
-  it("marks stream as complete (isStreamActive → false)", () => {
+  it("marks stream as complete (isStreamActive → false) and removes state (W2)", () => {
     const { socket, emit } = makeFakeSocket();
     registerAiSocketHandlers(socket);
 
@@ -231,9 +244,10 @@ describe("B3 ai:stream:complete handler", () => {
       conversation_id: "c1", stream_id: "s1", feature: "zai_chat", total_chunks: 1,
     });
 
+    // W2: stream state is cleared immediately on complete (not just marked complete)
+    // so memory doesn't accumulate across Zai sessions.
     expect(useZaiChatStore.getState().isStreamActive("c1")).toBe(false);
-    // Text is still accessible after complete (for display)
-    expect(useZaiChatStore.getState().getStreamingText("c1")).toBe("Hello world");
+    expect(useZaiChatStore.getState().getStreamingText("c1")).toBeNull();
   });
 
   it("ignores complete for a different (stale) stream_id", () => {
@@ -261,6 +275,24 @@ describe("B3 ai:stream:complete handler", () => {
     emit(AiWsEvents.AiStreamComplete, { stream_id: "s1", total_chunks: 2 });
 
     expect(spy).not.toHaveBeenCalled();
+  });
+
+  it("W1: ignores complete events with feature !== zai_chat", () => {
+    const { socket, emit } = makeFakeSocket();
+    registerAiSocketHandlers(socket);
+
+    emit(AiWsEvents.AiStreamChunk, {
+      conversation_id: "c1", stream_id: "s1",
+      chunk_index: 0, content: "Active", is_final: false, feature: "zai_chat",
+    });
+
+    emit(AiWsEvents.AiStreamComplete, {
+      conversation_id: "c1", stream_id: "s1",
+      feature: "other_feature", total_chunks: 1,
+    });
+
+    // Stream should still be active — complete was ignored due to wrong feature.
+    expect(useZaiChatStore.getState().isStreamActive("c1")).toBe(true);
   });
 });
 
@@ -315,6 +347,19 @@ describe("B3 emitStreamCancel", () => {
 
     expect(emitted).toHaveLength(0);
   });
+
+  it("S3: also clears typing indicator on cancel", () => {
+    const { socket } = makeFakeSocket(true);
+    mockedGetSocket.mockReturnValue(socket);
+
+    useZaiChatStore.getState().setZaiTyping("c1", true);
+    useZaiChatStore.getState().addStreamChunk("c1", "s1", 0, "partial");
+
+    emitStreamCancel("c1");
+
+    expect(useZaiChatStore.getState().isZaiTyping("c1")).toBe(false);
+    expect(useZaiChatStore.getState().isStreamActive("c1")).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -340,10 +385,11 @@ describe("B3 useZaiChatStore — store logic", () => {
     expect(useZaiChatStore.getState().getStreamingText("c1")).toBeNull();
   });
 
-  it("isStreamActive is false after completeStream", () => {
+  it("isStreamActive is false and state is cleared after completeStream (W2)", () => {
     useZaiChatStore.getState().addStreamChunk("c1", "s1", 0, "Hello");
     useZaiChatStore.getState().completeStream("c1", "s1");
     expect(useZaiChatStore.getState().isStreamActive("c1")).toBe(false);
+    expect(useZaiChatStore.getState().getStreamingText("c1")).toBeNull();
   });
 
   it("clearStreaming removes the stream entirely", () => {

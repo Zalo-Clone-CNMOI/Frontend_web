@@ -171,7 +171,9 @@ function handleZaiTyping(payload: WsAiZaiTypingPayload): void {
 }
 
 function handleStreamChunk(payload: WsAiStreamChunkPayload): void {
-  const { conversation_id, stream_id, chunk_index, content } = payload || {};
+  const { conversation_id, stream_id, chunk_index, content, feature } = payload || {};
+  // W1: only handle Zai chat streams; future streaming features use a different feature key.
+  if (feature !== "zai_chat") return;
   if (!conversation_id || !stream_id) return;
   useZaiChatStore
     .getState()
@@ -179,7 +181,9 @@ function handleStreamChunk(payload: WsAiStreamChunkPayload): void {
 }
 
 function handleStreamComplete(payload: WsAiStreamCompletePayload): void {
-  const { conversation_id, stream_id } = payload || {};
+  const { conversation_id, stream_id, feature } = payload || {};
+  // W1: only handle Zai chat streams.
+  if (feature !== "zai_chat") return;
   if (!conversation_id || !stream_id) return;
   useZaiChatStore.getState().completeStream(conversation_id, stream_id);
 }
@@ -197,8 +201,10 @@ export function emitStreamCancel(conversationId: string): void {
       conversation_id: conversationId,
     } satisfies WsAiStreamCancelPayload);
   }
-  // Optimistic local clear regardless of socket state.
-  useZaiChatStore.getState().clearStreaming(conversationId);
+  // Optimistic local clear regardless of socket state (S3: also clear typing).
+  const store = useZaiChatStore.getState();
+  store.clearStreaming(conversationId);
+  store.setZaiTyping(conversationId, false);
 }
 
 /**
