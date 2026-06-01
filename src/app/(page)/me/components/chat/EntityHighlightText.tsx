@@ -52,7 +52,7 @@ interface EntityHighlightTextProps {
   entities: DetectedEntity[];
   /** mine=true → white underline on colored bubble; mine=false → colored underline */
   mine?: boolean;
-  onEntityClick?: (entity: DetectedEntity, anchorEl: HTMLElement) => void;
+  onEntityClick?: (entity: DetectedEntity) => void;
 }
 
 export default function EntityHighlightText({
@@ -81,7 +81,7 @@ export default function EntityHighlightText({
               onEntityClick
                 ? (e) => {
                     e.stopPropagation();
-                    onEntityClick(seg.entity!, e.currentTarget as HTMLElement);
+                    onEntityClick(seg.entity!);
                   }
                 : undefined
             }

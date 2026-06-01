@@ -2,7 +2,9 @@
 
 import { useEffect, useMemo, useRef } from "react";
 import {
-  Popover,
+  Dialog,
+  DialogTitle,
+  DialogContent,
   Box,
   Typography,
   Chip,
@@ -13,6 +15,7 @@ import {
 import { styled } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
+import InfoOutlinedIcon from "@mui/icons-material/InfoOutlined";
 import { getEntityColor } from "@/src/common/constants/entityColors";
 import { useShallow } from "zustand/react/shallow";
 import { useEntityInfoStore, entityInfoKey, ENTITY_INFO_TTL } from "@/src/common/store/useEntityInfoStore";
@@ -31,59 +34,50 @@ const ENTITY_TYPE_LABELS: Record<string, string> = {
   other: "Other",
 };
 
-const PopoverContent = styled(Box)({
-  padding: "16px",
-  maxWidth: 320,
-  minWidth: 240,
-});
-
 const TypeChip = styled(Chip)<{ entitycolor: string }>(({ entitycolor }) => ({
   backgroundColor: entitycolor + "20",
   color: entitycolor,
-  fontWeight: 600,
-  fontSize: 11,
-  height: 22,
-  borderRadius: 4,
+  fontWeight: 700,
+  fontSize: 12,
+  height: 26,
+  borderRadius: 6,
   border: `1px solid ${entitycolor}40`,
 }));
 
 const SectionLabel = styled(Typography)({
   fontSize: 11,
-  fontWeight: 600,
+  fontWeight: 700,
   color: "#6B7280",
   textTransform: "uppercase",
-  letterSpacing: 0.5,
-  marginBottom: 4,
+  letterSpacing: 0.8,
+  marginBottom: 6,
 });
 
 const RelatedChip = styled(Chip)<{ entitycolor: string }>(({ entitycolor }) => ({
   backgroundColor: entitycolor + "15",
   color: entitycolor,
-  fontSize: 11,
-  height: 20,
-  borderRadius: 10,
+  fontSize: 12,
+  height: 24,
+  borderRadius: 12,
+  fontWeight: 500,
 }));
 
 interface EntityInfoPopoverProps {
-  anchorEl: HTMLElement | null;
+  open: boolean;
   entity: DetectedEntity | null;
   onClose: () => void;
   lang?: EntityInfoLang;
 }
 
 export default function EntityInfoPopover({
-  anchorEl,
+  open,
   entity,
   onClose,
   lang = "vi",
 }: EntityInfoPopoverProps) {
   const t = useTrans();
-  const open = Boolean(anchorEl) && entity !== null;
   const key = entity ? entityInfoKey(entity.type, entity.text, lang) : "";
 
-  // Single combined selector (useShallow prevents re-render when object ref changes
-  // but values are equal). Avoids 3 separate subscriptions and the no-selector
-  // tearing risk in React 18 concurrent mode.
   const { cacheEntry, loading, error } = useEntityInfoStore(
     useShallow((s) => ({
       cacheEntry: s.cache[key],
@@ -92,15 +86,11 @@ export default function EntityInfoPopover({
     })),
   );
 
-  // useMemo ensures `cached` only changes when `cacheEntry` changes (store write),
-  // not on every render tick where Date.now() would produce a new value.
   const cached = useMemo(() => {
     if (!cacheEntry) return null;
     return Date.now() - cacheEntry.cachedAt <= ENTITY_INFO_TTL ? cacheEntry.data : null;
   }, [cacheEntry]);
 
-  // Tracks which entity key was already fetched in the current "open" session so
-  // the effect can have full deps without risking a double-fetch on re-renders.
   const fetchedKeyRef = useRef<string | null>(null);
 
   const fetchInfo = (force = false) => {
@@ -135,48 +125,64 @@ export default function EntityInfoPopover({
   const typeLabel = ENTITY_TYPE_LABELS[entity.type] ?? entity.type;
 
   return (
-    <Popover
+    <Dialog
       open={open}
-      anchorEl={anchorEl}
       onClose={onClose}
-      anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-      transformOrigin={{ vertical: "top", horizontal: "left" }}
+      maxWidth="sm"
+      fullWidth
       PaperProps={{
-        elevation: 4,
-        sx: { borderRadius: 2, maxHeight: 420, overflow: "auto" },
+        elevation: 6,
+        sx: {
+          borderRadius: 3,
+          overflow: "hidden",
+        },
       }}
     >
-      <PopoverContent>
-        {/* Header */}
-        <Box display="flex" alignItems="center" justifyContent="space-between" mb={1}>
-          <TypeChip entitycolor={color} label={typeLabel} size="small" />
-          <IconButton size="small" onClick={onClose} sx={{ ml: 1, p: 0.5 }}>
+      {/* Colored header strip */}
+      <Box
+        sx={{
+          background: `linear-gradient(135deg, ${color}18 0%, ${color}08 100%)`,
+          borderBottom: `1px solid ${color}20`,
+          px: 3,
+          pt: 2.5,
+          pb: 2,
+        }}
+      >
+        <Box display="flex" alignItems="flex-start" justifyContent="space-between" gap={1}>
+          <Box display="flex" flexDirection="column" gap={1} flex={1} minWidth={0}>
+            <Box display="flex" alignItems="center" gap={1}>
+              <InfoOutlinedIcon sx={{ fontSize: 16, color, flexShrink: 0 }} />
+              <TypeChip entitycolor={color} label={typeLabel} size="small" />
+            </Box>
+            <Typography
+              variant="h6"
+              fontWeight={700}
+              fontSize={20}
+              sx={{
+                color: "#111827",
+                lineHeight: 1.3,
+                wordBreak: "break-word",
+              }}
+            >
+              {entity.text}
+            </Typography>
+          </Box>
+          <IconButton
+            size="small"
+            onClick={onClose}
+            sx={{ mt: -0.5, flexShrink: 0, color: "#6B7280" }}
+          >
             <CloseIcon fontSize="small" />
           </IconButton>
         </Box>
+      </Box>
 
-        {/* Entity text */}
-        <Typography
-          variant="subtitle2"
-          fontWeight={700}
-          sx={{
-            px: 1,
-            py: 0.5,
-            borderRadius: 1,
-            background: color + "15",
-            color: "#111827",
-            mb: 1.5,
-            fontSize: 13,
-          }}
-        >
-          {entity.text}
-        </Typography>
-
+      <DialogContent sx={{ px: 3, py: 2.5, minHeight: 120 }}>
         {/* Loading */}
         {loading && (
-          <Box display="flex" alignItems="center" gap={1} py={1}>
-            <CircularProgress size={14} />
-            <Typography fontSize={12} color="text.secondary">
+          <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" py={4} gap={2}>
+            <CircularProgress size={32} sx={{ color }} />
+            <Typography fontSize={14} color="text.secondary">
               {t("CHAT.ENTITY_INFO_LOADING")}
             </Typography>
           </Box>
@@ -184,11 +190,22 @@ export default function EntityInfoPopover({
 
         {/* Error */}
         {!loading && error && (
-          <Box display="flex" alignItems="center" gap={1} py={0.5}>
-            <Typography fontSize={12} color="error.main" flex={1}>
+          <Box
+            display="flex"
+            alignItems="center"
+            gap={1.5}
+            py={1}
+            px={2}
+            sx={{
+              background: "#FEF2F2",
+              border: "1px solid #FECACA",
+              borderRadius: 2,
+            }}
+          >
+            <Typography fontSize={13} color="error.main" flex={1} lineHeight={1.5}>
               {error}
             </Typography>
-            <IconButton size="small" onClick={() => fetchInfo(true)}>
+            <IconButton size="small" onClick={() => fetchInfo(true)} sx={{ color: "error.main" }}>
               <RefreshIcon fontSize="small" />
             </IconButton>
           </Box>
@@ -196,38 +213,53 @@ export default function EntityInfoPopover({
 
         {/* Result */}
         {!loading && !error && cached && (
-          <>
-            <Typography fontWeight={700} fontSize={14} mb={0.5}>
-              {cached.title}
-            </Typography>
-            <Typography fontSize={13} color="text.secondary" mb={1} lineHeight={1.5}>
-              {cached.summary}
-            </Typography>
+          <Box display="flex" flexDirection="column" gap={2}>
+            {/* Summary */}
+            <Box>
+              <Typography
+                fontWeight={700}
+                fontSize={17}
+                color="#111827"
+                mb={0.75}
+                lineHeight={1.4}
+              >
+                {cached.title}
+              </Typography>
+              <Typography fontSize={14} color="#374151" lineHeight={1.7}>
+                {cached.summary}
+              </Typography>
+            </Box>
 
+            {/* Details */}
             {cached.details && (
               <>
-                <Divider sx={{ my: 1 }} />
-                <SectionLabel>{t("CHAT.ENTITY_INFO_DETAILS")}</SectionLabel>
-                <Typography fontSize={12} color="#374151" lineHeight={1.6}>
-                  {cached.details}
-                </Typography>
-              </>
-            )}
-
-            {cached.related_entities && cached.related_entities.length > 0 && (
-              <>
-                <Divider sx={{ my: 1 }} />
-                <SectionLabel>{t("CHAT.ENTITY_INFO_RELATED")}</SectionLabel>
-                <Box display="flex" flexWrap="wrap" gap={0.5}>
-                  {cached.related_entities.map((r) => (
-                    <RelatedChip entitycolor={color} key={r} label={r} size="small" />
-                  ))}
+                <Divider />
+                <Box>
+                  <SectionLabel>{t("CHAT.ENTITY_INFO_DETAILS")}</SectionLabel>
+                  <Typography fontSize={13} color="#4B5563" lineHeight={1.75}>
+                    {cached.details}
+                  </Typography>
                 </Box>
               </>
             )}
-          </>
+
+            {/* Related entities */}
+            {cached.related_entities && cached.related_entities.length > 0 && (
+              <>
+                <Divider />
+                <Box>
+                  <SectionLabel>{t("CHAT.ENTITY_INFO_RELATED")}</SectionLabel>
+                  <Box display="flex" flexWrap="wrap" gap={0.75}>
+                    {cached.related_entities.map((r) => (
+                      <RelatedChip entitycolor={color} key={r} label={r} size="small" />
+                    ))}
+                  </Box>
+                </Box>
+              </>
+            )}
+          </Box>
         )}
-      </PopoverContent>
-    </Popover>
+      </DialogContent>
+    </Dialog>
   );
 }

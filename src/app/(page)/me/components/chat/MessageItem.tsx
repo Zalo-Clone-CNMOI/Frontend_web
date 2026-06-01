@@ -159,11 +159,8 @@ export default function MessageItem({
 }: MessageItemProps) {
   const t = useTrans();
   const [translationOpen, setTranslationOpen] = useState(false);
-  // B2: entity detection state
-  const [entityAnchor, setEntityAnchor] = useState<{
-    el: HTMLElement;
-    entity: DetectedEntity;
-  } | null>(null);
+  // B2: entity detection state — only the entity needed (modal is centered, no anchorEl)
+  const [selectedEntity, setSelectedEntity] = useState<DetectedEntity | null>(null);
   // W2 fix: stable selector — no new array on each render for entity-free messages.
   const entityArr = useEntityDetectionStore(
     (s) => s.entitiesByMessage[message.messageId],
@@ -330,8 +327,8 @@ export default function MessageItem({
                         body={message.body ?? ""}
                         entities={entities}
                         mine={mine}
-                        onEntityClick={(entity, el) =>
-                          setEntityAnchor({ el, entity })
+                        onEntityClick={(entity) =>
+                          setSelectedEntity(entity)
                         }
                       />
                     ) : (
@@ -470,8 +467,8 @@ export default function MessageItem({
                         body={message.body ?? ""}
                         entities={entities}
                         mine={mine}
-                        onEntityClick={(entity, el) =>
-                          setEntityAnchor({ el, entity })
+                        onEntityClick={(entity) =>
+                          setSelectedEntity(entity)
                         }
                       />
                     ) : (
@@ -552,11 +549,11 @@ export default function MessageItem({
         </>
       )}
 
-      {/* B2: entity info popover (shared across both bubble branches) */}
+      {/* B2: entity info modal (shared across both bubble branches) */}
       <EntityInfoPopover
-        anchorEl={entityAnchor?.el ?? null}
-        entity={entityAnchor?.entity ?? null}
-        onClose={() => setEntityAnchor(null)}
+        open={selectedEntity !== null}
+        entity={selectedEntity}
+        onClose={() => setSelectedEntity(null)}
       />
     </MessageRow>
   );
