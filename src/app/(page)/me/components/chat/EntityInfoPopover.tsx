@@ -14,7 +14,7 @@ import { styled } from "@mui/material/styles";
 import CloseIcon from "@mui/icons-material/Close";
 import RefreshIcon from "@mui/icons-material/Refresh";
 import { getEntityColor } from "@/src/common/constants/entityColors";
-import { useEntityInfoStore, entityInfoKey } from "@/src/common/store/useEntityInfoStore";
+import { useEntityInfoStore, entityInfoKey, ENTITY_INFO_TTL } from "@/src/common/store/useEntityInfoStore";
 import { getEntityInfo } from "@/src/common/service/ai/entityInfoApi";
 import type { DetectedEntity } from "@/src/common/store/useEntityDetectionStore";
 import type { EntityInfoLang } from "@/src/common/service/ai/entityInfo.types";
@@ -77,24 +77,31 @@ export default function EntityInfoPopover({
   lang = "vi",
 }: EntityInfoPopoverProps) {
   const t = useTrans();
-  const store = useEntityInfoStore();
   const open = Boolean(anchorEl) && entity !== null;
-
   const key = entity ? entityInfoKey(entity.type, entity.text, lang) : "";
-  const cached = key ? store.get(key) : null;
-  const loading = key ? store.isLoading(key) : false;
-  const error = key ? store.getError(key) : null;
+
+  // Proper Zustand selectors — each selector is granular so React only re-renders
+  // when the specific slice it cares about changes (avoids the "no-selector" tearing
+  // risk in React 18 concurrent mode where store.get() live-reads bypass the snapshot).
+  const cacheEntry = useEntityInfoStore((s) => s.cache[key]);
+  const loading = useEntityInfoStore((s) => !!s.loadingByKey[key]);
+  const error = useEntityInfoStore((s) => s.errorByKey[key] ?? null);
+
+  const cached = cacheEntry && (Date.now() - cacheEntry.cachedAt <= ENTITY_INFO_TTL)
+    ? cacheEntry.data
+    : null;
 
   const fetchInfo = (force = false) => {
     if (!entity || !key) return;
     if (!force && (cached || loading)) return;
+    const store = useEntityInfoStore.getState();
     store.setLoading(key, true);
     store.setError(key, null);
     getEntityInfo(entity.text, entity.type, lang)
-      .then((data) => store.set(key, data))
+      .then((data) => useEntityInfoStore.getState().set(key, data))
       .catch((err: Error) => {
-        store.setLoading(key, false);
-        store.setError(key, err?.message || t("CHAT.ENTITY_INFO_ERROR"));
+        useEntityInfoStore.getState().setLoading(key, false);
+        useEntityInfoStore.getState().setError(key, err?.message || t("CHAT.ENTITY_INFO_ERROR"));
       });
   };
 
