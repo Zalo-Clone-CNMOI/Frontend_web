@@ -176,6 +176,10 @@
   "CHAT.TRANSLATION_SHOW_ORIGINAL": "Show original",
   "CHAT.TRANSLATION_SHOW_TRANSLATED": "Show translation",
 
+  "CHAT.ZAI_TYPING": "Zai is replying…",
+  "CHAT.ZAI_STREAM_LABEL": "Zai is generating a response…",
+  "CHAT.ZAI_STOP": "Stop",
+
   "CHAT.ENTITY_ANALYZING": "✨ Analyzing…",
   "CHAT.ENTITY_INFO_LOADING": "Loading information…",
   "CHAT.ENTITY_INFO_ERROR": "Unable to load information. Please try again.",

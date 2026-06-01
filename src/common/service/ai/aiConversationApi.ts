@@ -12,6 +12,11 @@ export interface CatchUpResult {
   generatedAt: number;
 }
 
+/** Response shape from BFF `POST /api/ai-assist/conversations/zai`. */
+interface ZaiConversationResponse {
+  conversationId: string;
+}
+
 /**
  * AI conversation HTTP endpoints.
  *
@@ -19,7 +24,9 @@ export interface CatchUpResult {
  * the summary. Returns the full result including `hadUnread` (false when the
  * user has no unread messages, in which case `summary` is empty).
  *
- * `getOrCreateZaiConversation` will be added here in B3.
+ * `getOrCreateZaiConversation` — idempotent POST that returns the existing or
+ * newly-created Zai personal conversation ID for the current user.
+ * Rate-limited by BFF (10 req / 60 s). Throws on HTTP error.
  */
 export const aiConversationApi = {
   catchUp: async (conversationId: string): Promise<CatchUpResult> => {
@@ -32,5 +39,23 @@ export const aiConversationApi = {
       throw new Error(msg ?? `catch-up failed (${res.statusCode})`);
     }
     return res.payload.data;
+  },
+
+  // B3: ported from Frontend_mobile src/services/ai/aiConversationApi.ts
+  // Adaptation: apiCallWithRefresh → web http.post() + res.ok guard.
+  getOrCreateZaiConversation: async (): Promise<string> => {
+    const res = await http.post<IApiResponse<ZaiConversationResponse>>(
+      API.API_AI_ZAI_CONVERSATION,
+      {},
+    );
+    if (!res.ok) {
+      const msg = (res.payload as unknown as { message?: string })?.message;
+      throw new Error(msg ?? `zai-conversation failed (${res.statusCode})`);
+    }
+    // Handle potential BFF double-wrap (mobile parity — unwrap both shapes).
+    const data = res.payload.data as ZaiConversationResponse & { conversationId?: string };
+    const convId = data?.conversationId;
+    if (!convId) throw new Error("zai-conversation: missing conversationId in response");
+    return convId;
   },
 };
