@@ -92,6 +92,13 @@ function ConversationListItem({
   const updateConversationPinStatus = useChatStore(
     (s) => s.updateConversationPinStatus
   );
+  // Detail is loaded when the conversation is opened; use its members[] (which
+  // includes userId + avatarUrl) so isZaiBot() can fire the Zai logo fallback.
+  // The list response omits members[], so without this we'd have no userId to
+  // check and the bot would render the generic "A" fallback.
+  const detailMembers = useChatStore(
+    (s) => s.conversationDetailById?.[item.id]?.members ?? null
+  );
 
   const [anchorEl, setAnchorEl] = useState<HTMLElement | null>(null);
   const openMenu = Boolean(anchorEl);
@@ -127,8 +134,10 @@ function ConversationListItem({
   };
   const isGroup = item.type === "group";
 
+  // members[] is absent in the list DTO; fall back to detail when loaded.
+  const membersSource = detailMembers ?? item.members ?? [];
   const otherMember = !isGroup
-    ? item.members?.find((m) => m.userId !== currentUserId)
+    ? membersSource.find((m) => m.userId !== currentUserId)
     : null;
 
   const displayName = isGroup
