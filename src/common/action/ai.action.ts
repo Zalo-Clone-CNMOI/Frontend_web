@@ -6,6 +6,10 @@ import {
   WsAiSmartReplyResultPayload,
   WsAiSummaryResultPayload,
   WsAiTranslateResultPayload,
+  WsAiStreamCancelPayload,
+  WsAiStreamChunkPayload,
+  WsAiStreamCompletePayload,
+  WsAiZaiTypingPayload,
   WsMessageEntitiesPayload,
 } from "../socket/aiEvents";
 import { useChatStore } from "../store/useChatStore";
@@ -13,6 +17,8 @@ import { useAISmartReplyStore } from "../store/useAISmartReplyStore";
 import { useAISummaryStore } from "../store/useAISummaryStore";
 import { useAITranslationStore } from "../store/useAITranslationStore";
 import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
+import { useZaiChatStore } from "../store/useZaiChatStore";
+import { getSocket } from "../socket/socket";
 import { toast } from "../store/useToastStore";
 import i18n from "../i18n/i18n";
 
@@ -146,6 +152,55 @@ function handleMessageEntities(payload: WsMessageEntitiesPayload): void {
   useEntityDetectionStore.getState().setEntities(message_id, entities || []);
 }
 
+/* ───────────────────────── B3 — Zai Chat Streaming ─────────────────────────
+ * Ported 1:1 from Frontend_mobile `AIHandler.ts` (Zai-related methods).
+ *
+ * Payload shapes follow the BE contracts in `../socket/aiEvents.ts` (not the
+ * older mobile payload, which uses `chunk` and `message_id`; the BE uses
+ * `content`, `chunk_index`, and `stream_id`).
+ *
+ * Stall-watchdog note: BE sends NO terminal event on stream break or after
+ * cancel. The 30s watchdog in `useZaiChatStore.addStreamChunk` auto-clears
+ * frozen streams — this is a documented deviation; mobile has no equivalent.
+ */
+
+function handleZaiTyping(payload: WsAiZaiTypingPayload): void {
+  const { conversation_id, is_typing } = payload || {};
+  if (!conversation_id) return;
+  useZaiChatStore.getState().setZaiTyping(conversation_id, Boolean(is_typing));
+}
+
+function handleStreamChunk(payload: WsAiStreamChunkPayload): void {
+  const { conversation_id, stream_id, chunk_index, content } = payload || {};
+  if (!conversation_id || !stream_id) return;
+  useZaiChatStore
+    .getState()
+    .addStreamChunk(conversation_id, stream_id, chunk_index ?? 0, content ?? "");
+}
+
+function handleStreamComplete(payload: WsAiStreamCompletePayload): void {
+  const { conversation_id, stream_id } = payload || {};
+  if (!conversation_id || !stream_id) return;
+  useZaiChatStore.getState().completeStream(conversation_id, stream_id);
+}
+
+/**
+ * Emit `ai:stream:cancel` to the server and immediately clear local streaming
+ * state. The server sends nothing in response (mobile parity: fire-and-forget).
+ * Exported so `ZaiStreamBar` can call it directly.
+ */
+export function emitStreamCancel(conversationId: string): void {
+  if (!conversationId) return;
+  const socket = getSocket();
+  if (socket?.connected) {
+    socket.emit(AiWsEvents.AiStreamCancel, {
+      conversation_id: conversationId,
+    } satisfies WsAiStreamCancelPayload);
+  }
+  // Optimistic local clear regardless of socket state.
+  useZaiChatStore.getState().clearStreaming(conversationId);
+}
+
 /**
  * Central registration point for all AI-feature socket listeners.
  *
@@ -180,6 +235,11 @@ export function registerAiSocketHandlers(socket: Socket): void {
 
   // ── B2 Entity Detection ──
   socket.on(AiWsEvents.MessageEntities, handleMessageEntities);
+
+  // ── B3 Zai Streaming ──
+  socket.on(AiWsEvents.AiZaiTyping, handleZaiTyping);
+  socket.on(AiWsEvents.AiStreamChunk, handleStreamChunk);
+  socket.on(AiWsEvents.AiStreamComplete, handleStreamComplete);
 }
 
 /**

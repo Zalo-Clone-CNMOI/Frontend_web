@@ -27,6 +27,8 @@ import { formatTypingIndicator } from "@/src/common/service/typingIndicatorServi
 import { usePinnedMessages } from "@/src/common/hooks/usePinnedMessages";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
 import MediaPreviewModal, { MediaPreviewItem } from "@/src/common/components/MediaPreviewModal";
+import ZaiStreamBar from "./ZaiStreamBar";
+import { useZaiChatStore } from "@/src/common/store/useZaiChatStore";
 
 interface ChatPanelProps {
   accessToken: string;
@@ -148,6 +150,11 @@ export default function ChatPanel({
   const { pinnedMessages, refetch: refetchPinnedMessages } = usePinnedMessages(conversationId);
   const { togglePin } = useMessagePin();
   const t = useTrans();
+
+  // B3: Zai streaming — show the stream bar when Zai is typing OR actively streaming.
+  const isZaiTyping = useZaiChatStore((s) => s.isZaiTyping(conversationId));
+  const isZaiStreaming = useZaiChatStore((s) => s.isStreamActive(conversationId));
+  const showZaiBar = isZaiTyping || isZaiStreaming;
 
   const pinnedMessagesByConversation = useChatStore((s) => s.pinnedMessagesByConversation[conversationId]);
   const realtimePinnedMessages = useMemo(() => {
@@ -541,6 +548,9 @@ onOpenMedia={handleOpenMediaPreview}
 />
 {typingState.visible && <TypingIndicator text={typingState.text} />}
 </MessageListWrap>
+
+{/* B3: Zai stream bar — appears above the composer when Zai is replying */}
+{showZaiBar && <ZaiStreamBar conversationId={conversationId} />}
 
 <InputWrap>
 {canSendMessages ? (
