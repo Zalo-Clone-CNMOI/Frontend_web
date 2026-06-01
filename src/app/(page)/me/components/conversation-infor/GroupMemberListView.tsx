@@ -6,7 +6,7 @@ import { styled } from "@mui/material/styles";
 import ArrowBackIosNewRoundedIcon from "@mui/icons-material/ArrowBackIosNewRounded";
 import MoreHorizRoundedIcon from "@mui/icons-material/MoreHorizRounded";
 import PersonAddAlt1OutlinedIcon from "@mui/icons-material/PersonAddAlt1Outlined";
-import AppAvatar from "@/src/shared/component/Avatar";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import MenuPopover, { PopoverMenuItem } from "@/src/shared/component/MenuPopover";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { ConversationMemberDto } from "@/src/common/interface/chat-interface";
@@ -266,10 +266,7 @@ export default function GroupMemberListView({
       </SectionTitle>
 
       {members.map((member) => {
-        const avatarSrc = member.avatarUrl
-          ? `${(process.env.NEXT_PUBLIC_S3_BASE_URL || "")
-            .replace(/\/+$/, "")}/${member.avatarUrl.replace(/^\/+/, "")}`
-          : "";
+        const avatarSrc = buildS3Url(member.avatarUrl) ?? "";
 
         const isSelf = member.userId === currentUserId;
 
