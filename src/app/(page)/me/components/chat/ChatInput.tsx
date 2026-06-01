@@ -27,6 +27,20 @@ import AdminMentionPopover from "./AdminMentionPopover";
 import MentionSuggestions from "./MentionSuggestions";
 import SmartReplyChips from "./SmartReplyChips";
 
+// Synthetic Zai member prepended to group @mention list so users can discover
+// and select @Zai without having to remember to type it manually.
+const ZAI_BOT_ID =
+  process.env.NEXT_PUBLIC_ZAI_BOT_ID ?? "00000000-0000-4000-8000-0000000000a1";
+const ZAI_MEMBER: ConversationMemberDto = {
+  id: ZAI_BOT_ID,
+  userId: ZAI_BOT_ID,
+  fullName: "Zai",
+  avatarUrl: null,
+  role: "member",
+  nickname: "AI Assistant",
+  joinedAt: "",
+};
+
 const EmojiPicker = dynamic(() => import("emoji-picker-react"), {
   ssr: false,
 });
@@ -272,13 +286,19 @@ export default function ChatInput({
   };
 
   const allMembers: ConversationMemberDto[] = conversationDetail?.members ?? [];
+  // Zai is always first; then all other members excluding self and deduping
+  // the Zai bot entry (since ZAI_MEMBER is already prepended manually).
+  const otherMembers = allMembers.filter(
+    (m) => m.userId !== currentUserId && m.userId !== ZAI_BOT_ID,
+  );
+  const mentionMembers: ConversationMemberDto[] = [ZAI_MEMBER, ...otherMembers];
 
   const getFilteredMembers = (query: string) => {
     const lower = query
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .toLowerCase();
-    return allMembers.filter((m) => {
+    return mentionMembers.filter((m) => {
       const name = m.fullName
         .normalize("NFD")
         .replace(/[\u0300-\u036f]/g, "")
@@ -358,22 +378,20 @@ export default function ChatInput({
       setShowAdminMention(false);
     }
 
-    if (isGroup) {
-      const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
-      if (mentionMatch) {
-        const rawQuery = mentionMatch[1];
-        const atIndex = mentionMatch.index! + (textBeforeCursor[mentionMatch.index!] === "@" ? 0 : 1);
-        setMentionQuery(rawQuery);
-        setMentionStart(atIndex);
-        setMentionOpen(true);
-        setSelectedMentionIdx(0);
-      } else {
-        setMentionOpen(false);
-        setMentionQuery("");
-        setMentionStart(-1);
-      }
+    // @-mention detection runs in all conversation types — Zai is always
+    // available; human members only appear in groups (via mentionMembers).
+    const mentionMatch = textBeforeCursor.match(/(?:^|\s)@([^\s@]*)$/);
+    if (mentionMatch) {
+      const rawQuery = mentionMatch[1];
+      const atIndex = mentionMatch.index! + (textBeforeCursor[mentionMatch.index!] === "@" ? 0 : 1);
+      setMentionQuery(rawQuery);
+      setMentionStart(atIndex);
+      setMentionOpen(true);
+      setSelectedMentionIdx(0);
     } else {
       setMentionOpen(false);
+      setMentionQuery("");
+      setMentionStart(-1);
     }
   };
 
@@ -453,17 +471,21 @@ export default function ChatInput({
         />
       )}
 
+      {/* @mention dropdown — rendered inline above ComposerWrap so it never
+          overlaps the toolbar. Position is determined by normal document flow. */}
+      {mentionOpen && !showAdminMention && (
+        <MentionSuggestions
+          members={mentionMembers}
+          query={mentionQuery}
+          selectedIndex={selectedMentionIdx}
+          onSelect={handleSelectMention}
+          zaiMemberId={ZAI_BOT_ID}
+        />
+      )}
+
       <ComposerWrap sx={{ position: "relative" }}>
         {showAdminMention && (
           <AdminMentionPopover admins={adminMembers} />
-        )}
-        {mentionOpen && !showAdminMention && (
-          <MentionSuggestions
-            members={allMembers}
-            query={mentionQuery}
-            selectedIndex={selectedMentionIdx}
-            onSelect={handleSelectMention}
-          />
         )}
         <ComposerRow>
           <StyledTextField

@@ -15,6 +15,13 @@ import { registerAiSocketHandlers, unregisterAiSocketHandlers } from "./ai.actio
 import { smartReplyService } from "../service/ai/smartReplyService";
 import { useAISummaryStore } from "../store/useAISummaryStore";
 import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
+import { toast } from "../store/useToastStore";
+
+// ─── @Zai mention — ported 1:1 from mobile useChatDetailScreen.ts ───────────
+const ZAI_BOT_ID =
+  process.env.NEXT_PUBLIC_ZAI_BOT_ID ?? "00000000-0000-4000-8000-0000000000a1";
+// Per-conversation timestamp of last @Zai mention (5 s cooldown, same as mobile).
+const zaiMentionCooldown = new Map<string, number>();
 type MessagePreviewType =
   | "poll"
   | "video"
@@ -1043,6 +1050,36 @@ export const sendMessage = async (
   };
   if (replyMessage?.messageId) {
     payload.reply_to_message_id = replyMessage.messageId;
+  }
+
+  // ── @Zai mention (ported 1:1 from mobile useChatDetailScreen.ts:584-594) ──
+  // Detect literal "@Zai" in the body; build a mention object so the BE can
+  // route the message to ai-core-service for a Zai reply.
+  const zaiIdx = displayBody.indexOf("@Zai");
+  if (zaiIdx >= 0) {
+    const last = zaiMentionCooldown.get(conversationId) ?? 0;
+    if (now - last < 5_000) {
+      // Same guard as mobile: show feedback and abort — Zai is still processing.
+      toast.warning("Zai đang bận, vui lòng thử lại sau vài giây");
+      // Roll back the optimistic message we already appended above.
+      useChatStore
+        .getState()
+        .setMessages(
+          conversationId,
+          (useChatStore.getState().messagesByConversation[conversationId] ?? [])
+            .filter((m: any) => m.messageId !== clientMessageId),
+        );
+      return;
+    }
+    zaiMentionCooldown.set(conversationId, now);
+    payload.mentions = [
+      {
+        user_id: ZAI_BOT_ID,
+        mention_type: "user",
+        offset: zaiIdx,
+        length: 4, // "@Zai".length
+      },
+    ];
   }
 
   socket.emit("chat:send", payload, (ack: any) => {

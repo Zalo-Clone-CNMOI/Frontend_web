@@ -9,20 +9,19 @@ interface MentionSuggestionsProps {
   query: string;
   selectedIndex: number;
   onSelect: (member: ConversationMemberDto) => void;
+  /** userId of the Zai bot — triggers special AI badge rendering for that row. */
+  zaiMemberId?: string;
 }
 
 const Wrapper = styled(Box)({
-  position: "absolute",
-  bottom: "100%",
-  left: 16,
-  zIndex: 30,
   background: "#fff",
   borderRadius: 12,
   boxShadow: "0 4px 20px rgba(0,0,0,0.12)",
-  minWidth: 240,
-  maxHeight: 260,
+  maxHeight: 220,
   overflowY: "auto",
   marginBottom: 6,
+  marginLeft: 8,
+  marginRight: 8,
   padding: "6px 0",
 });
 
@@ -57,6 +56,17 @@ const RoleBadge = styled(Typography)({
   marginLeft: "auto",
 });
 
+const AiBadge = styled(Typography)({
+  fontSize: 10,
+  fontWeight: 700,
+  color: "#6366F1",
+  background: "#EEF2FF",
+  borderRadius: 4,
+  padding: "1px 5px",
+  marginLeft: "auto",
+  letterSpacing: 0.4,
+});
+
 const EmptyText = styled(Typography)({
   fontSize: 13,
   color: "#94A3B8",
@@ -75,6 +85,7 @@ export default function MentionSuggestions({
   query,
   selectedIndex,
   onSelect,
+  zaiMemberId,
 }: MentionSuggestionsProps) {
   const lowerQuery = normalize(query);
   const filtered = members.filter((m) => {
@@ -93,22 +104,33 @@ export default function MentionSuggestions({
 
   return (
     <Wrapper>
-      {filtered.map((member, idx) => (
-        <SuggestionRow
-          key={member.userId}
-          active={idx === selectedIndex}
-          onClick={() => onSelect(member)}
-          onMouseEnter={() => {}}
-        >
-          <StyledAvatar src={member.avatarUrl ?? undefined}>
-            {member.fullName.charAt(0).toUpperCase()}
-          </StyledAvatar>
-          <NameText>{member.fullName}</NameText>
-          {member.nickname && (
-            <RoleBadge>{member.nickname}</RoleBadge>
-          )}
-        </SuggestionRow>
-      ))}
+      {filtered.map((member, idx) => {
+        const isZai = !!zaiMemberId && member.userId === zaiMemberId;
+        return (
+          <SuggestionRow
+            key={member.userId}
+            active={idx === selectedIndex}
+            onClick={() => onSelect(member)}
+            onMouseEnter={() => {}}
+          >
+            {isZai ? (
+              <StyledAvatar sx={{ bgcolor: "#0058DC", fontSize: 15 }}>
+                🤖
+              </StyledAvatar>
+            ) : (
+              <StyledAvatar src={member.avatarUrl ?? undefined}>
+                {member.fullName.charAt(0).toUpperCase()}
+              </StyledAvatar>
+            )}
+            <NameText>{member.fullName}</NameText>
+            {isZai ? (
+              <AiBadge>AI</AiBadge>
+            ) : member.nickname ? (
+              <RoleBadge>{member.nickname}</RoleBadge>
+            ) : null}
+          </SuggestionRow>
+        );
+      })}
     </Wrapper>
   );
 }

@@ -254,7 +254,7 @@ export default function MessageItem({
 
   const avatarSrc = member?.avatarUrl
     ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
-    : "";
+    : undefined;
 
   return (
     <MessageRow
