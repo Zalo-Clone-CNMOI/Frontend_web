@@ -146,6 +146,8 @@ export const API = {
         `/api/ai-assist/conversations/${conversationId}/catch-up`,
     // Entity Info panel (B2) — GET with ?text=&type=&lang=
     API_AI_ENTITY_INFO: "/api/entity-info",
+    // Entity Detection hydration — GET with ?conversation_id=
+    API_ENTITY_DETECTIONS: "/api/entity-detections",
     // Zai conversation bootstrap (B3)
     API_AI_ZAI_CONVERSATION: "/api/ai-assist/conversations/zai",
 } as const;

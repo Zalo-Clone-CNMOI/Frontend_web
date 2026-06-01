@@ -17,6 +17,7 @@ import { useAISummaryStore } from "../store/useAISummaryStore";
 import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
 import { toast } from "../store/useToastStore";
 import { ZAI_BOT_ID } from "../constants/zai";
+import { entityDetectionService } from "../service/entityDetectionService";
 
 // ─── @Zai mention — ported 1:1 from mobile useChatDetailScreen.ts ───────────
 // Per-conversation timestamp of last @Zai mention (5 s cooldown, same as mobile).
@@ -840,6 +841,10 @@ export const openConversation = async (conversationId: string) => {
   if (socket?.connected) {
     socket.emit("chat:join", { conversation_id: conversationId });
   }
+
+  // Restore persisted entity highlights (live WS only delivers NEW detections;
+  // historical ones are gone after reload/leave-return). Best-effort.
+  void entityDetectionService.hydrateConversation(conversationId);
 
   state.setPagination(conversationId, {
     loading: true,
