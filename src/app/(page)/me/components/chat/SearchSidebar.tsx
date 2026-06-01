@@ -10,6 +10,8 @@ import { chatService } from "@/src/common/service/chat-service";
 import { UiMessage } from "@/src/common/interface/chat-interface";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useTrans } from "@/src/common/utilities/hook/trans";
+import { resolveUserAvatarSrc } from "@/src/shared/component/Avatar";
+import { isZaiBot, ZAI_DISPLAY_NAME } from "@/src/common/constants/zai";
 
 interface SearchSidebarProps {
   conversationId: string;
@@ -303,12 +305,18 @@ export default function SearchSidebar({ conversationId, onClose, onMessageClick 
 
   const getSenderName = (senderId: string) => {
     const member = members.find((m) => m.userId === senderId);
-    return member?.nickname || member?.fullName || t("CHAT.USER");
+    // Zai posts into groups where it isn't a member → fall back to "Zai".
+    return (
+      member?.nickname ||
+      member?.fullName ||
+      (isZaiBot(senderId) ? ZAI_DISPLAY_NAME : t("CHAT.USER"))
+    );
   };
 
   const getSenderAvatar = (senderId: string): string | undefined => {
     const member = members.find((m) => m.userId === senderId);
-    return member?.avatarUrl || undefined;
+    // resolveUserAvatarSrc builds the S3 URL AND special-cases the Zai bot.
+    return resolveUserAvatarSrc(senderId, member?.avatarUrl) ?? undefined;
   };
 
   const highlightKeyword = (text: string, keyword: string) => {

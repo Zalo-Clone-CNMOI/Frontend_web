@@ -16,10 +16,9 @@ import { smartReplyService } from "../service/ai/smartReplyService";
 import { useAISummaryStore } from "../store/useAISummaryStore";
 import { useEntityDetectionStore } from "../store/useEntityDetectionStore";
 import { toast } from "../store/useToastStore";
+import { ZAI_BOT_ID } from "../constants/zai";
 
 // ─── @Zai mention — ported 1:1 from mobile useChatDetailScreen.ts ───────────
-const ZAI_BOT_ID =
-  process.env.NEXT_PUBLIC_ZAI_BOT_ID ?? "00000000-0000-4000-8000-0000000000a1";
 // Per-conversation timestamp of last @Zai mention (5 s cooldown, same as mobile).
 const zaiMentionCooldown = new Map<string, number>();
 type MessagePreviewType =

@@ -7,6 +7,7 @@ import MoreVertIcon from "@mui/icons-material/MoreVert";
 import { UiMessage, ConversationMemberDto } from "@/src/common/interface/chat-interface";
 import { useTrans } from "@/src/common/utilities/hook/trans";
 import { useChatStore } from "@/src/common/store/useChatStore";
+import { isZaiBot, ZAI_DISPLAY_NAME } from "@/src/common/constants/zai";
 
 interface PinnedItemProps {
   message: UiMessage;
@@ -125,8 +126,8 @@ export default function PinnedItem({
   const senderName =
     member?.nickname ||
     member?.fullName ||
-    // message.senderName ||
-    "Người dùng";
+    // Zai pins into groups where it isn't a member → fall back to "Zai".
+    (isZaiBot(message.senderId) ? ZAI_DISPLAY_NAME : "Người dùng");
   return (
     <Container onClick={onPress}>
       <LeftSection>

@@ -26,16 +26,15 @@ import ComposerActionPreview from "./ComposerActionPreview";
 import AdminMentionPopover from "./AdminMentionPopover";
 import MentionSuggestions from "./MentionSuggestions";
 import SmartReplyChips from "./SmartReplyChips";
+import { ZAI_BOT_ID, ZAI_AVATAR_URL, ZAI_DISPLAY_NAME } from "@/src/common/constants/zai";
 
 // Synthetic Zai member prepended to group @mention list so users can discover
 // and select @Zai without having to remember to type it manually.
-const ZAI_BOT_ID =
-  process.env.NEXT_PUBLIC_ZAI_BOT_ID ?? "00000000-0000-4000-8000-0000000000a1";
 const ZAI_MEMBER: ConversationMemberDto = {
   id: ZAI_BOT_ID,
   userId: ZAI_BOT_ID,
-  fullName: "Zai",
-  avatarUrl: null,
+  fullName: ZAI_DISPLAY_NAME,
+  avatarUrl: ZAI_AVATAR_URL || null,
   role: "member",
   nickname: "AI Assistant",
   joinedAt: "",
