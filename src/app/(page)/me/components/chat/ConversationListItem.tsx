@@ -3,7 +3,7 @@
 import { memo, useMemo, useState } from "react";
 import { Badge, Box, IconButton, Stack, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
+import AppAvatar, { resolveUserAvatarSrc } from "@/src/shared/component/Avatar";
 import type { ConversationDto } from "@/src/common/interface/chat-interface";
 import { getConversationLastMessageText } from "@/src/common/helpers/conversation.helpers";
 import PushPinOutlinedIcon from "@mui/icons-material/PushPinOutlined";
@@ -135,9 +135,14 @@ function ConversationListItem({
     ? item.name
     : otherMember?.nickname || otherMember?.fullName || item.name;
 
+  // For direct convs: prefer the member's avatarUrl; resolveUserAvatarSrc also
+  // handles the Zai bot fallback when the member lookup or avatarUrl is absent.
   const displaySrc = isGroup
-    ? buildS3Url(item.avatarUrl)
-    : buildS3Url(otherMember?.avatarUrl || item.avatarUrl);
+    ? resolveUserAvatarSrc(null, item.avatarUrl)
+    : resolveUserAvatarSrc(
+        otherMember?.userId,
+        otherMember?.avatarUrl ?? item.avatarUrl,
+      );
 
 
   return (

@@ -4,7 +4,7 @@ import { useChatStore } from "@/src/common/store/useChatStore";
 import { usePresenceStore } from "@/src/common/store/usePresenceStore";
 import { Box, Typography, IconButton } from "@mui/material";
 import { styled } from "@mui/material/styles";
-import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
+import AppAvatar, { resolveUserAvatarSrc } from "@/src/shared/component/Avatar";
 import SearchIcon from "@mui/icons-material/Search";
 import PhoneIcon from "@mui/icons-material/Phone";
 import VideoCallIcon from "@mui/icons-material/VideoCall";
@@ -108,6 +108,16 @@ export default function ChatHeader({
     : otherMember?.nickname || otherMember?.fullName || currentConversation?.name || "";
 
   const otherUserId = !isGroup ? otherMember?.userId : null;
+
+  // For direct convs the detail response sets avatarUrl=null (group field only).
+  // Prefer the other member's avatarUrl from the members list, with a fallback
+  // to conversationDto.avatarUrl which the list endpoint resolves correctly.
+  const avatarSrc = isGroup
+    ? resolveUserAvatarSrc(null, currentConversation?.avatarUrl)
+    : resolveUserAvatarSrc(
+        otherMember?.userId,
+        otherMember?.avatarUrl ?? currentConversation?.avatarUrl,
+      );
   const otherUserPresence = otherUserId ? presenceMap[otherUserId] : null;
 
   const getStatusText = () => {
@@ -160,7 +170,7 @@ export default function ChatHeader({
       <HeaderTop>
         <HeaderInfo>
           <AppAvatar
-            src={buildS3Url(currentConversation?.avatarUrl)}
+            src={avatarSrc}
             name={displayName}
             size={40}
             fontSize={16}
