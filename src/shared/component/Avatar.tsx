@@ -4,6 +4,7 @@ import { Box } from "@mui/material";
 import MuiAvatar, { AvatarProps } from "@mui/material/Avatar";
 import { styled } from "@mui/material/styles";
 import { getInitialsName } from "../../common/helpers/getInitName.helpers";
+import { isZaiBot, ZAI_AVATAR_URL } from "../../common/constants/zai";
 
 interface AppAvatarProps extends Omit<AvatarProps, "src"> {
   src?: string | null;
@@ -53,6 +54,23 @@ const buildS3Url = (key?: string | null) => {
   // Return absolute URLs untouched; only relative keys get the base prefix.
   if (/^https?:\/\//i.test(key)) return key;
   return `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${key}`;
+};
+
+/**
+ * Resolve an avatar src for a message sender / member, special-casing the Zai
+ * bot. Zai posts into conversations where it isn't a listed member (group
+ * @mentions), so `avatarUrl` is often undefined there and the members-list
+ * lookup fails. For Zai's fixed id we fall back to the known Zai avatar so it
+ * renders consistently everywhere, not just in the 1:1 Zai conversation.
+ */
+const resolveUserAvatarSrc = (
+  userId?: string | null,
+  avatarUrl?: string | null,
+): string | null => {
+  if (isZaiBot(userId)) {
+    return buildS3Url(avatarUrl) ?? buildS3Url(ZAI_AVATAR_URL);
+  }
+  return buildS3Url(avatarUrl);
 };
 
 function GroupFallbackAvatar({
@@ -307,4 +325,4 @@ export default function AppAvatar({
   );
 }
 
-export { buildS3Url };
+export { buildS3Url, resolveUserAvatarSrc };

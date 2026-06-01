@@ -19,7 +19,8 @@ const EMPTY_ENTITIES: DetectedEntity[] = [];
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
-import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
+import AppAvatar, { resolveUserAvatarSrc } from "@/src/shared/component/Avatar";
+import { isZaiBot, ZAI_DISPLAY_NAME } from "@/src/common/constants/zai";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
@@ -249,7 +250,12 @@ export default function MessageItem({
       }
       : message.replyTo;
 
-  const avatarSrc = buildS3Url(member?.avatarUrl) ?? undefined;
+  // Zai posts into groups where it isn't a member, so member lookup is null
+  // there — resolveUserAvatarSrc/senderName fall back to Zai's known identity.
+  const avatarSrc =
+    resolveUserAvatarSrc(message.senderId, member?.avatarUrl) ?? undefined;
+  const senderName =
+    member?.fullName ?? (isZaiBot(message.senderId) ? ZAI_DISPLAY_NAME : "");
 
   return (
     <MessageRow
@@ -262,9 +268,9 @@ export default function MessageItem({
       {!mine ? (
         <LeftMessageWrap>
           <AppAvatar
-            name={member?.fullName ?? ""}
+            name={senderName}
             src={avatarSrc}
-            alt={member?.nickname || member?.fullName || "User"}
+            alt={member?.nickname || senderName || "User"}
           />
 
           <MessageContent mine={mine}>
