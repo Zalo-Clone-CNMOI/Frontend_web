@@ -47,6 +47,11 @@ const CountBadge = styled(Box)({
 
 const buildS3Url = (key?: string | null) => {
   if (!key) return null;
+  // Some avatars (e.g. the Zai bot) are stored as a full absolute URL, not an
+  // S3 key. Prepending the base URL to an already-absolute URL produces a
+  // broken "https://{base}/https://..." string → 404 → initials fallback.
+  // Return absolute URLs untouched; only relative keys get the base prefix.
+  if (/^https?:\/\//i.test(key)) return key;
   return `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${key}`;
 };
 

@@ -19,7 +19,7 @@ const EMPTY_ENTITIES: DetectedEntity[] = [];
 import { formatMessageTime, getMessageTextContent, shouldShowMessageBubble, splitMessageAttachments } from "@/src/common/helpers/message.helpers";
 import { useChatStore } from "@/src/common/store/useChatStore";
 import { useMessagePin } from "@/src/common/hooks/useMessagePin";
-import AppAvatar from "@/src/shared/component/Avatar";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import PushPinIcon from "@mui/icons-material/PushPin";
 import { MediaPreviewItem } from "@/src/shared/component/MediaPreviewModal";
 import { useTrans } from "@/src/common/utilities/hook/trans";
@@ -249,9 +249,7 @@ export default function MessageItem({
       }
       : message.replyTo;
 
-  const avatarSrc = member?.avatarUrl
-    ? `${process.env.NEXT_PUBLIC_S3_BASE_URL}/${member.avatarUrl}`
-    : undefined;
+  const avatarSrc = buildS3Url(member?.avatarUrl) ?? undefined;
 
   return (
     <MessageRow

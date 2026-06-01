@@ -15,7 +15,7 @@ import {
 import { styled } from "@mui/material/styles";
 import SearchIcon from "@mui/icons-material/Search";
 import AppModal from "@/src/shared/component/AppModal";
-import AppAvatar from "@/src/shared/component/Avatar";
+import AppAvatar, { buildS3Url } from "@/src/shared/component/Avatar";
 import { useFriendStore } from "@/src/common/store/useFriendStore";
 import CheckBoxOutlineBlankIcon from "@mui/icons-material/CheckBoxOutlineBlank";
 import CheckIcon from "@mui/icons-material/Check";
@@ -215,7 +215,7 @@ export default function AddMemberGroupDialog({
               <AppAvatar
                 size={40}
                 name={item.fullName || "U"}
-                src={`${process.env.NEXT_PUBLIC_S3_BASE_URL}/${item.avatarUrl}`}
+                src={buildS3Url(item.avatarUrl) ?? undefined}
               />
 
               <ListItemText
