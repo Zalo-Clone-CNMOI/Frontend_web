@@ -34,12 +34,11 @@ const nextConfig: NextConfig = {
     ],
   },
 
-  // ===== Proxy API để né CORS =====
   async rewrites() {
     return [
       {
         source: "/api/:path*",
-        destination: "http://175.41.136.189:5000/:path*",
+        destination: `${process.env.NEXT_PUBLIC_API_BASE_URL}/:path*`,
       },
     ];
   },
