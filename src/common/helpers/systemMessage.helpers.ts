@@ -1,4 +1,6 @@
 import {
+    CallEndedMetadata,
+    CallMissedMetadata,
     GroupDisbandedMetadata,
     MemberAddedMetadata,
     MemberLeftMetadata,
@@ -67,6 +69,26 @@ export const buildSystemMessageText = (message: UiMessage) => {
             const actor = data?.disbanded_by_name || "Ai đó";
 
             return `${actor} đã giải tán nhóm`;
+        }
+
+        case SystemEventType.CALL_ENDED: {
+            const data = message.metadata as CallEndedMetadata;
+            const name = data?.initiator_name || "Ai đó";
+            const type = data?.call_type === "video" ? "video" : "thoại";
+            const duration = data?.duration_seconds;
+            if (duration) {
+                const m = Math.floor(duration / 60);
+                const s = duration % 60;
+                return `Cuộc gọi ${type} với ${name} kết thúc (${m}:${s.toString().padStart(2, "0")})`;
+            }
+            return `Cuộc gọi ${type} với ${name} kết thúc`;
+        }
+
+        case SystemEventType.CALL_MISSED: {
+            const data = message.metadata as CallMissedMetadata;
+            const name = data?.initiator_name || "Ai đó";
+            const type = data?.call_type === "video" ? "video" : "thoại";
+            return `Cuộc gọi ${type} nhỡ từ ${name}`;
         }
 
         default:

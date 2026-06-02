@@ -20,7 +20,26 @@ let cacheExpiry = 0;
 let refreshTimeout: ReturnType<typeof setTimeout> | null = null;
 
 export async function getIceServers(): Promise<RTCIceServer[]> {
-  // Backend ICE server API not deployed yet - using default servers only
+  if (Date.now() < cacheExpiry && cachedIceServers.length > 0) {
+    return cachedIceServers;
+  }
+
+  try {
+    const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
+    const data = res?.data;
+    if (data?.ice_servers && data.ice_servers.length > 0) {
+      cachedIceServers = data.ice_servers.map((s) => ({
+        urls: s.urls,
+        username: s.username || data.username,
+        credential: s.credential || data.credential,
+      }));
+      cacheExpiry = Date.now() + (data.ttl || 86400) * 1000;
+      return cachedIceServers;
+    }
+  } catch (err) {
+    console.warn("[IceServerService] Failed to fetch ICE servers, using defaults", err);
+  }
+
   return getDefaultIceServers();
 }
 

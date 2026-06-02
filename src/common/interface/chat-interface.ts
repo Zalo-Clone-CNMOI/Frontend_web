@@ -12,6 +12,8 @@ export enum SystemEventType {
   GROUP_DISBANDED = "group_disbanded",
   MESSAGE_PINNED = "message_pinned",
   MESSAGE_UNPINNED = "message_unpinned",
+  CALL_ENDED = "call_ended",
+  CALL_MISSED = "call_missed",
 }
 export interface MessagePinnedMetadata {
   pinned_by: string;
@@ -68,6 +70,21 @@ export interface GroupDisbandedMetadata {
   disbanded_by_name: string;
 }
 
+export interface CallEndedMetadata {
+  initiator_id: string;
+  initiator_name: string;
+  call_type: "audio" | "video";
+  duration_seconds?: number;
+  ended_at?: number;
+}
+
+export interface CallMissedMetadata {
+  initiator_id: string;
+  initiator_name: string;
+  call_type: "audio" | "video";
+  missed_at?: number;
+}
+
 export type SystemMessageMetadata =
   | MemberAddedMetadata
   | MemberRemovedMetadata
@@ -76,7 +93,9 @@ export type SystemMessageMetadata =
   | OwnerTransferredMetadata
   | GroupDisbandedMetadata
   | MessagePinnedMetadata
-  | MessageUnpinnedMetadata;
+  | MessageUnpinnedMetadata
+  | CallEndedMetadata
+  | CallMissedMetadata;
 
 type MessageMap = Record<string, UiMessage[]>;
 type PaginationMap = Record<string, PaginationState>;
