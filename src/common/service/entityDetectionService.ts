@@ -42,10 +42,15 @@ export const entityDetectionService = {
 
       if (!res?.ok) return;
 
-      const items = res?.payload?.data?.items ?? res?.payload?.items;
+      // BFF wraps responses as {success, data: {items}}; the TypeScript generic
+      // types payload as EntityDetectionsResponse (no `data` field) but the
+      // runtime shape has the extra envelope layer.
+      const raw = res?.payload as any;
+      const items: EntityDetectionItem[] = raw?.data?.items ?? raw?.items;
       if (!Array.isArray(items)) return;
 
       const store = useEntityDetectionStore.getState();
+      let storedCount = 0;
 
       for (const item of items) {
         // Skip items without a valid message_id
@@ -55,6 +60,13 @@ export const entityDetectionService = {
         const entities = Array.isArray(item.entities) ? item.entities : [];
 
         store.setEntities(messageId, entities);
+        if (entities.length > 0) storedCount++;
+      }
+
+      if (process.env.NODE_ENV !== 'production') {
+        console.log(
+          `[entity-hydrate] conv=${conversationId} items=${items.length} with_entities=${storedCount}`,
+        );
       }
     } catch {
       // Intentionally swallowed — best-effort hydration must never surface

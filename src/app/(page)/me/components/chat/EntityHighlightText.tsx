@@ -4,6 +4,8 @@ import React from "react";
 import { getEntityColor } from "@/src/common/constants/entityColors";
 import type { DetectedEntity } from "@/src/common/store/useEntityDetectionStore";
 
+// BE keeps entities with confidence >= 0.75 (MIN_CONFIDENCE); use >=
+// here to match — a strict > would silently drop the boundary value.
 const CONFIDENCE_THRESHOLD = 0.75;
 
 interface Segment {
@@ -16,7 +18,7 @@ function buildSegments(body: string, entities: DetectedEntity[]): Segment[] {
   const valid = entities
     .filter(
       (e) =>
-        e.confidence > CONFIDENCE_THRESHOLD &&
+        e.confidence >= CONFIDENCE_THRESHOLD &&
         e.start_index >= 0 &&
         e.end_index > e.start_index &&
         e.start_index < body.length,
