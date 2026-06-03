@@ -42,7 +42,7 @@ export const entityDetectionService = {
 
       if (!res?.ok) return;
 
-      const items = res?.payload?.items;
+      const items = res?.payload?.data?.items ?? res?.payload?.items;
       if (!Array.isArray(items)) return;
 
       const store = useEntityDetectionStore.getState();
