@@ -37,10 +37,10 @@ export async function getIceServers(): Promise<RTCIceServer[]> {
 
   try {
     const res = await http.get<IceServerResponse>(API.API_ICE_SERVERS);
-    const data = res.data;
+    const data = res.payload;
 
     if (data?.ice_servers && data.ice_servers.length > 0) {
-      cachedIceServers = data.ice_servers.map((s) => ({
+      cachedIceServers = data.ice_servers.map((s: IceServerConfig) => ({
         urls: s.urls,
         username: s.username || data.username,
         credential: s.credential || data.credential,
