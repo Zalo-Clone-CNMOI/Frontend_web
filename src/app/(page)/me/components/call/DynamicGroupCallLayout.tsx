@@ -513,6 +513,7 @@ function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefine
     audio.addEventListener("ended", handleEnded);
     
     // Add event listeners to audio tracks
+    const trackHandlers: Array<{ track: MediaStreamTrack; unMute: () => void; mute: () => void }> = [];
     audioTracks.forEach((track, index) => {
       console.log(`[DynamicGroupCallLayout] Track ${index} state:`, track.enabled, track.readyState, track.muted);
       
@@ -527,6 +528,7 @@ function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefine
 
       track.addEventListener("unmute", handleTrackUnmute);
       track.addEventListener("mute", handleTrackMute);
+      trackHandlers.push({ track, unMute: handleTrackUnmute, mute: handleTrackMute });
       
       // Try to play if track is already enabled and not muted
       if (!track.muted && track.enabled) {
@@ -549,9 +551,9 @@ function RemoteAudio({ stream, userId }: { stream: MediaStream | null | undefine
       audio.removeEventListener("pause", handlePause);
       audio.removeEventListener("ended", handleEnded);
       
-      audioTracks.forEach((track) => {
-        track.removeEventListener("unmute", () => {});
-        track.removeEventListener("mute", () => {});
+      trackHandlers.forEach(({ track, unMute, mute }) => {
+        track.removeEventListener("unmute", unMute);
+        track.removeEventListener("mute", mute);
       });
       
       // Clean up audio element

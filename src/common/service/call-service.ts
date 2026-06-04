@@ -98,8 +98,13 @@ function toBackendCandidate(signal: SimplePeer.SignalData): {
       ? { candidate: rawCandidate }
       : rawCandidate;
 
+  // Send raw candidate string (not JSON-encoded) for symmetry with mobile
+  // RTCIceCandidateInit.candidate is the raw SDP a=candidate line
+  const candidateStr = candidateInit.candidate;
+  if (!candidateStr) return {};
+
   return {
-    candidate: JSON.stringify(candidateInit),
+    candidate: candidateStr,
     sdpMid: candidateInit.sdpMid,
     sdpMLineIndex: candidateInit.sdpMLineIndex,
   };
@@ -430,13 +435,19 @@ async function processCallSignal(payload: CallSignalPayload): Promise<void> {
 
   const iceServers = await getIceServers();
 
+  // Re-check store state after async call to prevent race conditions
+  const currentState = useCallStore.getState();
+  if (!currentState.localStream || !currentState.activeCall) {
+    return;
+  }
+
   if (!hasPeer(payload.sender_id)) {
     createPeer({
       userId: payload.sender_id,
       initiator: false,
-      localStream,
+      localStream: currentState.localStream,
       iceServers,
-      onSignal: (signal) => emitSignal(activeCall, payload.sender_id, signal),
+      onSignal: (signal) => emitSignal(currentState.activeCall!, payload.sender_id, signal),
       onStream: (stream) => {
         useCallStore.getState().setRemoteStream(payload.sender_id, stream);
         useCallStore.getState().setScreen("active");
@@ -530,12 +541,18 @@ export function registerCallHandlers(myUserId: string): () => void {
 
       const iceServers = await getIceServers();
 
+      // Re-check store state after async call
+      const currentState = useCallStore.getState();
+      if (!currentState.activeCall || !currentState.localStream) {
+        return;
+      }
+
       createPeer({
         userId: payload.user_id,
         initiator: true,
-        localStream,
+        localStream: currentState.localStream,
         iceServers,
-        onSignal: (signal) => emitSignal(activeCall, payload.user_id, signal),
+        onSignal: (signal) => emitSignal(currentState.activeCall, payload.user_id, signal),
         onStream: (stream) => {
           useCallStore.getState().setRemoteStream(payload.user_id, stream);
           useCallStore.getState().setScreen("active");
