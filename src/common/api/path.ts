@@ -150,4 +150,10 @@ export const API = {
     API_ENTITY_DETECTIONS: "/api/entity-detections",
     // Zai conversation bootstrap (B3)
     API_AI_ZAI_CONVERSATION: "/api/ai-assist/conversations/zai",
+
+    /* ================= MONITORING (admin) ================= */
+    API_MONITORING_CONTAINERS: "/api/monitoring/containers",
+    API_MONITORING_LOGS: (id: string) =>
+        `/api/monitoring/containers/${id}/logs`,
+    API_MONITORING_AI_ANALYZE: "/api/monitoring/ai-analyze",
 } as const;

@@ -548,5 +548,21 @@
   "INVITE.GROUP_DISBANDED": "Nhóm đã giải tán hoặc lời mời không còn hợp lệ",
   "INVITE.ERROR_ACCEPT_FAILED": "Không thể chấp nhận lời mời",
 
-  "ERROR.OWNER_TRANSFER_REQUIRED": "Vui lòng dùng tính năng Chuyển quyền chủ nhóm để đổi Owner."
+  "ERROR.OWNER_TRANSFER_REQUIRED": "Vui lòng dùng tính năng Chuyển quyền chủ nhóm để đổi Owner.",
+
+  "// ============================== MONITORING ==============================": "",
+  "COMMON.ERROR": "Đã có lỗi xảy ra",
+  "COMMON.NETWORK_ERROR": "Lỗi kết nối mạng",
+  "MONITORING.TITLE": "Giám sát hệ thống",
+  "MONITORING.ACCESS_DENIED": "Bạn không có quyền truy cập trang này",
+  "MONITORING.CONTAINERS": "Containers",
+  "MONITORING.SERVICE": "Dịch vụ",
+  "MONITORING.STATE": "Trạng thái",
+  "MONITORING.RESTARTS": "Restart (24h)",
+  "MONITORING.HEALTH": "Sức khỏe",
+  "MONITORING.LOGS": "Nhật ký",
+  "MONITORING.REFRESH": "Làm mới",
+  "MONITORING.AI_CHAT": "Phân tích AI",
+  "MONITORING.AI_PLACEHOLDER": "Hỏi về trạng thái container...",
+  "MONITORING.SEND": "Gửi"
 }

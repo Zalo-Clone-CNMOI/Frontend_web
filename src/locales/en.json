@@ -553,5 +553,21 @@
   "INVITE.GROUP_DISBANDED": "Group has been disbanded or invite is no longer valid",
   "INVITE.ERROR_ACCEPT_FAILED": "Cannot accept invite",
 
-  "ERROR.OWNER_TRANSFER_REQUIRED": "Please use Transfer Ownership to change the Owner role."
+  "ERROR.OWNER_TRANSFER_REQUIRED": "Please use Transfer Ownership to change the Owner role.",
+
+  "// ============================== MONITORING ==============================": "",
+  "COMMON.ERROR": "Something went wrong",
+  "COMMON.NETWORK_ERROR": "Network error",
+  "MONITORING.TITLE": "System Monitoring",
+  "MONITORING.ACCESS_DENIED": "You do not have permission to access this page",
+  "MONITORING.CONTAINERS": "Containers",
+  "MONITORING.SERVICE": "Service",
+  "MONITORING.STATE": "State",
+  "MONITORING.RESTARTS": "Restarts (24h)",
+  "MONITORING.HEALTH": "Health",
+  "MONITORING.LOGS": "Logs",
+  "MONITORING.REFRESH": "Refresh",
+  "MONITORING.AI_CHAT": "AI Analysis",
+  "MONITORING.AI_PLACEHOLDER": "Ask about container status...",
+  "MONITORING.SEND": "Send"
 }
