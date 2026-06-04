@@ -98,13 +98,8 @@ function toBackendCandidate(signal: SimplePeer.SignalData): {
       ? { candidate: rawCandidate }
       : rawCandidate;
 
-  // Send raw candidate string (not JSON-encoded) for symmetry with mobile
-  // RTCIceCandidateInit.candidate is the raw SDP a=candidate line
-  const candidateStr = candidateInit.candidate;
-  if (!candidateStr) return {};
-
   return {
-    candidate: candidateStr,
+    candidate: JSON.stringify(candidateInit),
     sdpMid: candidateInit.sdpMid,
     sdpMLineIndex: candidateInit.sdpMLineIndex,
   };
