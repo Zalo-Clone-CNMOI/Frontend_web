@@ -21,7 +21,7 @@ const ringtoneAudio: HTMLAudioElement | null = null;
 interface CallStartedPayload {
   call_id: string;
   conversation_id: string;
-  conversation_type?: CallConversationType;
+  conversation_type: CallConversationType;
   call_type: CallType;
   initiator_id: string;
   participant_ids: string[];
@@ -82,6 +82,9 @@ type SimplePeerCandidateSignal = SimplePeer.SignalData & {
   type?: "candidate";
   candidate?: RTCIceCandidateInit | string;
 };
+
+const normalizeConversationType = (value: unknown): CallConversationType =>
+  value === "group" ? "group" : "direct";
 
 function toBackendCandidate(signal: SimplePeer.SignalData): {
   candidate?: string;
@@ -430,13 +433,19 @@ async function processCallSignal(payload: CallSignalPayload): Promise<void> {
 
   const iceServers = await getIceServers();
 
+  // Re-check store state after async call to prevent race conditions
+  const currentState = useCallStore.getState();
+  if (!currentState.localStream || !currentState.activeCall) {
+    return;
+  }
+
   if (!hasPeer(payload.sender_id)) {
     createPeer({
       userId: payload.sender_id,
       initiator: false,
-      localStream,
+      localStream: currentState.localStream,
       iceServers,
-      onSignal: (signal) => emitSignal(activeCall, payload.sender_id, signal),
+      onSignal: (signal) => emitSignal(currentState.activeCall!, payload.sender_id, signal),
       onStream: (stream) => {
         useCallStore.getState().setRemoteStream(payload.sender_id, stream);
         useCallStore.getState().setScreen("active");
@@ -479,7 +488,7 @@ export function registerCallHandlers(myUserId: string): () => void {
     useCallStore.getState().setActiveCall({
       call_id: payload.call_id,
       conversation_id: payload.conversation_id,
-      conversation_type: payload.conversation_type ?? "direct",
+      conversation_type: normalizeConversationType(payload.conversation_type),
       call_type: payload.call_type,
       status: "ringing",
       initiator_id: payload.initiator_id,
@@ -530,10 +539,17 @@ export function registerCallHandlers(myUserId: string): () => void {
 
       const iceServers = await getIceServers();
 
+      // Re-check store state after async call
+      const currentState = useCallStore.getState();
+      const activeCall = currentState.activeCall;
+      if (!activeCall || !currentState.localStream) {
+        return;
+      }
+
       createPeer({
         userId: payload.user_id,
         initiator: true,
-        localStream,
+        localStream: currentState.localStream,
         iceServers,
         onSignal: (signal) => emitSignal(activeCall, payload.user_id, signal),
         onStream: (stream) => {
