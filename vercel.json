@@ -2,7 +2,7 @@
   "framework": "nextjs",
   "buildCommand": "npm run build",
   "devCommand": "npm run dev",
-  "installCommand": "npm install",
+  "installCommand": "rm -f package-lock.json && npm install",
   "regions": ["sin1"],
   "headers": [
     {

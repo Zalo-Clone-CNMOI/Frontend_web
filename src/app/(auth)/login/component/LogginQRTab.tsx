@@ -194,8 +194,12 @@ export default function LoginQrTab() {
       const handleBindIssued = async (data: QrBindIssuedPayload) => {
         if (bindFlowIdRef.current !== flowId) return;
 
+        console.log("[QR] qr:bind:issued raw data:", data);
+
         const socketBindingToken = String(data?.socketBindingToken ?? "").trim();
         const expires = Number(data?.expiresInSeconds ?? 0);
+
+        console.log("[QR] socketBindingToken:", socketBindingToken);
 
         if (!socketBindingToken) {
           setQrStatus("ERROR");
@@ -205,11 +209,14 @@ export default function LoginQrTab() {
 
         try {
           const deviceInfo = navigator.userAgent;
+          console.log("[QR] deviceInfo length:", deviceInfo.length, "| value:", deviceInfo);
+          console.log("[QR] calling qrService.generate with:", { socketBindingToken, deviceInfo });
           const response = await qrService.generate({
             socketBindingToken,
             deviceInfo,
           });
 
+          console.log("[QR] generate response full:", JSON.stringify(response, null, 2));
           const qrData = response?.payload?.data;
           const qrToken = qrData?.qrToken;
           const sessionId = qrData?.sessionId;
